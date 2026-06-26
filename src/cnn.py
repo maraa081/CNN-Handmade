@@ -174,7 +174,7 @@ def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
 
     # Hauteur et largeur de la sortie après convolution
     H_out = (H + 2 * pad - kernel_h) // stride + 1
-    W_out = (W + 2 * pad - kernel_h) // stride + 1
+    W_out = (W + 2 * pad - kernel_w) // stride + 1
 
     # Padding
     if pad > 0:
