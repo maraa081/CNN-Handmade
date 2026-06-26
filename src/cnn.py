@@ -154,26 +154,138 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  ██  À VENIR : ARCHITECTURE DU RÉSEAU                                   ║
+# ║  4️⃣  COUCHE DE CONVOLUTION (Conv2D)                                      ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
-# Chaque couche implémentera :
-#   - forward(inputs)  → outputs
-#   - backward(grad)   → grad_inputs
-#   - update(lr)       → ajuste les poids
+def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
+    """
+    Transforme un batch d'images en colonnes pour faire la convolution
+    comme un produit matriciel.
 
-# ─── Couches à venir ───
-# class Dense:       ...
-# class Conv2D:      ...
-# class MaxPool2D:   ...
-# class Flatten:     ...
-# class ReLU:        ...
-# class Softmax:     ...
-# class Sequential:  ...
+    Principe :
+      Au lieu de faire des boucles pour chaque position du kernel,
+      on "déroule" tous les patchs de l'image en colonnes d'une grande matrice.
+      Puis la convolution = cette matrice × le kernel aplati.
 
-# ─── Loss, Optimizer, Entraînement ───
-# class CrossEntropy:  ...
-# class SGD:           ...
+    Entrée : images (N, C, H, W)
+    Sortie : cols (N * H_out * W_out, C * kH * kW)
+    """
+    N, C, H, W = images.shape
+
+    # Hauteur et largeur de la sortie après convolution
+    H_out = (H + 2 * pad - kernel_h) // stride + 1
+    W_out = (W + 2 * pad - kernel_h) // stride + 1
+
+    # Padding
+    if pad > 0:
+        images = np.pad(images, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode="constant")
+
+    # Pour chaque position du kernel, on extrait un patch et on l'aplatit
+    cols = np.zeros((N * H_out * W_out, C * kernel_h * kernel_w))
+    idx = 0
+    for y in range(H_out):
+        for x in range(W_out):
+            # Coordonnées du patch dans l'image (avec stride)
+            y_start = y * stride
+            x_start = x * stride
+            # Patch : (N, C, kH, kW) → (N, C*kH*kW)
+            patch = images[:, :, y_start:y_start + kernel_h, x_start:x_start + kernel_w]
+            cols[idx::H_out * W_out] = patch.reshape(N, -1)
+            idx += 1
+
+    return cols, H_out, W_out
+
+
+class Conv2D:
+    """
+    Couche de convolution 2D.
+
+    Transforme une entrée (N, C_in, H, W) en sortie (N, C_out, H_out, W_out)
+    en faisant glisser C_out kernels sur l'image.
+
+    Le calcul utilise im2col pour transformer la convolution en produit matriciel.
+    """
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, pad=0):
+        """
+        in_channels  : nombre de canaux d'entrée (1 pour MNIST en niveaux de gris)
+        out_channels : nombre de filtres / canaux de sortie
+        kernel_size  : taille du kernel (3 = 3x3, 5 = 5x5)
+        stride       : pas de déplacement du kernel
+        pad          : padding (0 = pas de padding)
+        """
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.pad = pad
+
+        # Initialisation des poids (He init : / sqrt(fan_in / 2))
+        fan_in = in_channels * kernel_size * kernel_size
+        self.kernels = np.random.randn(out_channels, in_channels, kernel_size, kernel_size) * np.sqrt(2.0 / fan_in)
+        self.bias = np.zeros((out_channels, 1))
+
+        # Pour la backprop (sera rempli par forward)
+        self.input = None
+        self.cols = None
+
+    def forward(self, x):
+        """
+        x : entrée (N, C_in, H, W)
+        retourne : (N, C_out, H_out, W_out)
+        """
+        N, C_in, H, W = x.shape
+        assert C_in == self.in_channels, \
+            f"Canaux d'entrée : {C_in}, attendu {self.in_channels}"
+
+        self.input = x
+
+        # im2col : on transforme l'image en matrice de colonnes
+        cols, H_out, W_out = im2col(x, self.kernel_size, self.kernel_size,
+                                     self.stride, self.pad)
+        self.cols = cols  # (N*H_out*W_out, C_in*k*k)
+
+        # On aplatit les kernels en une matrice (C_out, C_in*k*k)
+        kernels_flat = self.kernels.reshape(self.out_channels, -1)
+
+        # Produit matriciel : (N*H_out*W_out, C_in*k*k) × (C_in*k*k, C_out)
+        # Puis on ajoute le biais
+        out = cols @ kernels_flat.T  # (N*H_out*W_out, C_out)
+        out += self.bias.T
+
+        # Reshape en sortie 4D
+        out = out.reshape(N, H_out, W_out, self.out_channels)
+        # On permute pour avoir (N, C_out, H_out, W_out) — format standard
+        out = out.transpose(0, 3, 1, 2)
+
+        return out
+
+    def backward(self, grad_output):
+        """
+        grad_output : gradient de la perte par rapport à la sortie (N, C_out, H_out, W_out)
+        → retourne le gradient par rapport à l'entrée
+
+        TODO : sera implémenté après le forward
+        """
+        raise NotImplementedError("Backward Conv2D — à venir !")
+
+    def update(self, lr):
+        """
+        Met à jour les poids avec le learning rate.
+
+        TODO : sera implémenté après le forward
+        """
+        raise NotImplementedError("Update Conv2D — à venir !")
+
+    def __repr__(self):
+        return (f"Conv2D({self.in_channels}→{self.out_channels}, "
+                f"kernel={self.kernel_size}x{self.kernel_size}, "
+                f"stride={self.stride}, pad={self.pad})")
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  ██  PROCHAINE COUCHE : MAXPOOLING / RELU / DENSE / ...                ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -221,3 +333,31 @@ if __name__ == "__main__":
     plt.suptitle("10 chiffres MNIST (train)", fontsize=14)
     plt.tight_layout()
     plt.show()  # ← ouvre une fenêtre avec les images
+
+    # --- Test rapide de Conv2D ---
+    print("\n" + "═" * 50)
+    print("🧪 Test Conv2D forward")
+    print("═" * 50)
+
+    # On crée une image de test (batch=1, canal=1, 28x28)
+    test_img = x_train[:4]  # 4 images
+    test_img = normalize(test_img)
+    test_img = add_channel_dim(test_img)  # (4, 28, 28, 1)
+    # On permute en (N, C, H, W) pour la convolution
+    test_img = test_img.transpose(0, 3, 1, 2)
+    print(f"Entrée Conv2D : {test_img.shape}")
+
+    # 1 filtre 3x3, stride=1, pad=0
+    conv = Conv2D(in_channels=1, out_channels=4, kernel_size=3, stride=1, pad=1)
+    print(f"Couche créée : {conv}")
+
+    out = conv.forward(test_img)
+    print(f"Sortie Conv2D  : {out.shape}")
+    print(f"  (devrait être 4 × 4 × 28 × 28 avec padding)")
+
+    # Test sans padding
+    conv2 = Conv2D(in_channels=1, out_channels=8, kernel_size=5, stride=2, pad=0)
+    out2 = conv2.forward(test_img)
+    print(f"\nConv2D(1→8, kernel=5, stride=2, pad=0)")
+    print(f"  Entrée : {test_img.shape}  →  Sortie : {out2.shape}")
+    print(f"  (devrait être 4 × 8 × 12 × 12)")
