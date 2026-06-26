@@ -1,5 +1,8 @@
-# Données MNIST (trop lourdes pour GitHub)
-data/
+# Fichiers temporaires / visualisations (pas nécessaires dans le repo)
+data/mnist_*.png
+data/voir_mnist.py
+data/npz2idx.py
+data/mnist.npz
 
 # Python caching
 __pycache__/
