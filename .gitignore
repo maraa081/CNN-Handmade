@@ -1,0 +1,11 @@
+# Données MNIST (trop lourdes pour GitHub)
+data/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
