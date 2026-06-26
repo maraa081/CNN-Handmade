@@ -14,9 +14,12 @@ Fait à la main, de A à Z. Pas de TensorFlow, pas de PyTorch.
 import numpy as np
 import struct
 from array import array
-from os.path import join
+from os.path import join, dirname, abspath
 import matplotlib.pyplot as plt
 import random
+
+# Chemin racine du projet (dossier parent de src/)
+ROOT_DIR = dirname(dirname(abspath(__file__)))
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -59,6 +62,7 @@ class MNISTLoader:
         Retourne :
             (x_train, y_train), (x_test, y_test)
         """
+        # Appel avec ROOT_DIR pour être sûr du chemin
         x_train = self.read_images(join(data_dir, "train-images-idx3-ubyte"))
         y_train = self.read_labels(join(data_dir, "train-labels-idx1-ubyte"))
         x_test = self.read_images(join(data_dir, "t10k-images-idx3-ubyte"))
@@ -179,7 +183,7 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
 if __name__ == "__main__":
     # --- Chargement ---
     loader = MNISTLoader()
-    (x_train, y_train), (x_test, y_test) = loader.load("data")
+    (x_train, y_train), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
 
     print(f"[OK] MNIST chargé")
     print(f"  x_train : {x_train.shape}  ({x_train.dtype})")
