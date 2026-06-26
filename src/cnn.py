@@ -205,3 +205,19 @@ if __name__ == "__main__":
     # Vérification test
     batch_x_t, batch_y_t = next(iter(test_loader))
     print(f"\n[OK] Batch test : {batch_x_t.shape}, {batch_y_t.shape}")
+
+    # --- Affichage de 10 images du train avec leur label ---
+    n_cols = 5
+    n_rows = 2
+    plt.figure(figsize=(10, 4))
+    indices = np.random.choice(len(x_train), size=n_cols * n_rows, replace=False)
+
+    for i, idx in enumerate(indices):
+        plt.subplot(n_rows, n_cols, i + 1)
+        plt.imshow(x_train[idx], cmap="gray")
+        plt.title(f"Label: {y_train[idx]}", fontsize=10)
+        plt.axis("off")
+
+    plt.suptitle("10 chiffres MNIST (train)", fontsize=14)
+    plt.tight_layout()
+    plt.show()  # ← ouvre une fenêtre avec les images
