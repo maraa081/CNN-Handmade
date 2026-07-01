@@ -453,6 +453,51 @@ class ReLU:
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  7️⃣  FLATTEN                                                                ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+class Flatten:
+    """
+    Aplatit les dimensions spatiales en un seul vecteur par échantillon.
+
+    C'est le pont entre les couches convolutionnelles (spatiales)
+    et les couches fully connected (vectorielles).
+
+    Forward : (N, C, H, W) → (N, C × H × W)
+    Backward : (N, C × H × W) → (N, C, H, W)  [reshape inverse]
+
+    Pas de paramètres à apprendre.
+    """
+
+    def __init__(self):
+        self.input_shape = None  # pour le backward
+
+    def forward(self, x):
+        """
+        x : (N, ...)  — n'importe quelle forme, au moins 2D
+        retourne : (N, produit des dimensions)
+        """
+        self.input_shape = x.shape
+        N = x.shape[0]
+        return x.reshape(N, -1)
+
+    def backward(self, grad_output):
+        """
+        grad_output : (N, C*H*W)
+        retourne : (N, C, H, W)  — reshape exact vers la forme d'entrée originale
+        """
+        return grad_output.reshape(self.input_shape)
+
+    def update(self, lr):
+        """Flatten n'a pas de paramètres."""
+        pass
+
+    def __repr__(self):
+        return f"Flatten()"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║  ██  PROCHAINES COUCHES : DENSE / SOFTMAX / CROSS-ENTROPY / ...       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
@@ -598,3 +643,41 @@ if __name__ == "__main__":
     print(f"    Gradient sortant : {dx[0].tolist()}")
     print(f"    Négatifs tués (0) : {'✅' if dx[0, 0] == 0 and dx[0, 1] == 0 else '❌'}")
     print(f"    Positifs passent   : {'✅' if dx[0, 3] == 2.0 and dx[0, 4] == 2.0 else '❌'}")
+
+    # --- Test rapide de Flatten ---
+    print("\n" + "═" * 50)
+    print("🧪 Test Flatten forward + backward")
+    print("═" * 50)
+
+    flat = Flatten()
+    print(f"Couche créée : {flat}")
+
+    # On prend la sortie du MaxPool (4, 4, 14, 14) et on l'aplatit
+    flat_in = pool_out  # (4, 4, 14, 14)
+    flat_out = flat.forward(flat_in)
+
+    print(f"\n  Forward :")
+    print(f"    Entrée  : {flat_in.shape}")
+    print(f"    Sortie  : {flat_out.shape}")
+    expected_flat = (4, 4 * 14 * 14)
+    print(f"    (devrait être {expected_flat})")
+    shape_ok = flat_out.shape == expected_flat
+    print(f"    {'✅' if shape_ok else '❌'} shape correcte")
+
+    # Vérif : on compare avec un reshape numpy direct
+    ref = flat_in.reshape(4, -1)
+    match = np.allclose(flat_out, ref)
+    print(f"    {'✅' if match else '❌'} valeurs identiques à reshape numpy")
+
+    # Backward
+    print(f"\n  Backward :")
+    dout = np.ones_like(flat_out) * 3.0
+    dx = flat.backward(dout)
+    print(f"    Gradient entrant : {dout.shape}")
+    print(f"    Gradient sortant : {dx.shape}")
+    print(f"    (devrait être {flat_in.shape})")
+    shape_bk = dx.shape == flat_in.shape
+    print(f"    {'✅' if shape_bk else '❌'} shape restaurée")
+    print(f"    Somme gradient : {dx.sum():.2f} (doit = 3.0 × {flat_out.shape[1]} × {flat_out.shape[0]})")
+    expected_sum = 3.0 * flat_out.shape[1] * flat_out.shape[0]
+    print(f"    {'✅' if abs(dx.sum() - expected_sum) < 1e-5 else '❌'} valeurs préservées")
