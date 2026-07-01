@@ -284,7 +284,130 @@ class Conv2D:
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  ██  PROCHAINE COUCHE : MAXPOOLING / RELU / DENSE / ...                ║
+# ║  5️⃣  MAX POOLING 2D                                                      ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+class MaxPool2D:
+    """
+    Couche de Max Pooling 2D.
+
+    Réduit la dimension spatiale en prenant la valeur maximale
+    dans chaque fenêtre (pool_h × pool_w).
+
+    Entrée : (N, C, H, W)
+    Sortie : (N, C, H_out, W_out)
+
+    Pas de paramètres à apprendre — utile pour réduire la taille
+    et rendre le réseau invariant aux petites translations.
+    """
+
+    def __init__(self, pool_size=2, stride=None):
+        """
+        pool_size : taille de la fenêtre (2 = 2×2, ou tuple (h, w))
+        stride    : pas de déplacement (défaut = pool_size, pas de chevauchement)
+        """
+        self.pool_size = pool_size if isinstance(pool_size, tuple) else (pool_size, pool_size)
+        self.stride = stride if stride is not None else self.pool_size[0]
+        self.stride = self.stride if isinstance(self.stride, tuple) else (self.stride, self.stride)
+
+        # Stockage pour la backprop
+        self.input = None
+        self.max_indices = None  # (N, C, H_out, W_out) → index du max dans chaque fenêtre
+
+    def forward(self, x):
+        """
+        x : (N, C, H, W)
+        retourne : (N, C, H_out, W_out)
+        """
+        N, C, H, W = x.shape
+        pool_h, pool_w = self.pool_size
+        stride_h, stride_w = self.stride
+
+        # Dimensions de sortie
+        H_out = (H - pool_h) // stride_h + 1
+        W_out = (W - pool_w) // stride_w + 1
+
+        self.input = x
+
+        # Découpage en fenêtres : (N, C, H_out, W_out, pool_h, pool_w)
+        windows = np.zeros((N, C, H_out, W_out, pool_h, pool_w))
+
+        for i in range(H_out):
+            for j in range(W_out):
+                h_start = i * stride_h
+                w_start = j * stride_w
+                windows[:, :, i, j, :, :] = x[
+                    :, :,
+                    h_start:h_start + pool_h,
+                    w_start:w_start + pool_w
+                ]
+
+        # Max sur les dimensions spatiales de la fenêtre
+        out = np.max(windows, axis=(4, 5))  # (N, C, H_out, W_out)
+
+        # Stockage des indices des max pour backward
+        # On aplatit chaque fenêtre (pool_h * pool_w) et on prend l'argmax
+        windows_flat = windows.reshape(N, C, H_out, W_out, -1)  # (N, C, H_out, W_out, pool_h*pool_w)
+        self.max_indices = np.argmax(windows_flat, axis=4)      # (N, C, H_out, W_out)
+
+        return out
+
+    def backward(self, grad_output):
+        """
+        grad_output : (N, C, H_out, W_out)
+        retourne    : (N, C, H, W)
+
+        Le gradient ne passe que par les neurones qui ont "gagné" le max.
+        Les autres reçoivent 0.
+        """
+        N, C, H, W = self.input.shape
+        pool_h, pool_w = self.pool_size
+        stride_h, stride_w = self.stride
+        H_out, W_out = grad_output.shape[2], grad_output.shape[3]
+
+        grad_input = np.zeros_like(self.input)
+
+        # Pour chaque fenêtre, on route le gradient vers l'élément max
+        for i in range(H_out):
+            for j in range(W_out):
+                h_start = i * stride_h
+                w_start = j * stride_w
+
+                # Indices du max dans la fenêtre courante : (N, C)
+                max_idx = self.max_indices[:, :, i, j]
+
+                # Gradient à distribuer : (N, C)
+                grad_val = grad_output[:, :, i, j]
+
+                # Conversion index plat → coordonnées (ph, pw) dans la fenêtre
+                ph = max_idx // pool_w  # (N, C)
+                pw = max_idx % pool_w   # (N, C)
+
+                # Coordonnées absolues dans l'image d'origine
+                h_abs = h_start + ph
+                w_abs = w_start + pw
+
+                # Distribution vectorisée du gradient
+                n_idx = np.arange(N)[:, None]  # (N, 1)
+                c_idx = np.arange(C)[None, :]  # (1, C)
+                grad_input[n_idx, c_idx, h_abs, w_abs] += grad_val
+
+        return grad_input
+
+    def update(self, lr):
+        """MaxPooling : pas de paramètres à apprendre."""
+        pass
+
+    def __repr__(self):
+        return (
+            f"MaxPool2D(pool={self.pool_size[0]}×{self.pool_size[1]}, "
+            f"stride={self.stride[0]}×{self.stride[1]})"
+        )
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  ██  PROCHAINES COUCHES : RELU / DENSE / SOFTMAX / ...                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
@@ -361,3 +484,43 @@ if __name__ == "__main__":
     print(f"\nConv2D(1→8, kernel=5, stride=2, pad=0)")
     print(f"  Entrée : {test_img.shape}  →  Sortie : {out2.shape}")
     print(f"  (devrait être 4 × 8 × 12 × 12)")
+
+    # --- Test rapide de MaxPool2D ---
+    print("\n" + "═" * 50)
+    print("🧪 Test MaxPool2D forward")
+    print("═" * 50)
+
+    pool = MaxPool2D(pool_size=2, stride=2)
+    print(f"Couche créée : {pool}")
+
+    # On prend la sortie de la première Conv (4, 4, 28, 28) et on la pool
+    pool_in = out  # (4, 4, 28, 28) — déjà produit par conv.forward
+    pool_out = pool.forward(pool_in)
+
+    print(f"  Entrée  : {pool_in.shape}")
+    print(f"  Sortie  : {pool_out.shape}")
+    print(f"  (devrait être 4 × 4 × 14 × 14)")
+
+    # Vérif : on s'assure que les max sont bien les valeurs dominantes
+    print(f"\n  Vérification rapide :")
+    for n in range(min(2, 4)):
+        for c in range(min(2, 4)):
+            slice_in = pool_in[n, c, :2, :2]  # première fenêtre 2×2
+            max_in = slice_in.max()
+            max_out = pool_out[n, c, 0, 0]
+            ok = "✅" if abs(max_in - max_out) < 1e-5 else "❌"
+            print(f"    [{n},{c}] fenêtre top-left : max={max_in:.4f} → pool={max_out:.4f} {ok}")
+
+    # Test backward : gradient fictif pour vérifier qu'il ne crash pas
+    print(f"\n  🧪 Test MaxPool2D backward :")
+    grad_fake = np.ones_like(pool_out) * 0.5
+    grad_back = pool.backward(grad_fake)
+    print(f"    grad_output : {grad_fake.shape}")
+    print(f"    grad_input  : {grad_back.shape}")
+    print(f"    (devrait être {pool_in.shape})")
+    print(f"    Somme grad_input : {grad_back.sum():.2f} (doit égaler somme grad_output × 1 max par fenêtre)")
+    print(f"    Somme grad_output : {grad_fake.sum():.2f}")
+    # Chaque fenêtre 2×2 ne transmet le gradient qu'à 1 pixel sur 4
+    expected_sum = grad_fake.sum()  # chaque fenêtre reçoit exactement le gradient
+    ratio = grad_back.sum() / expected_sum if expected_sum != 0 else 0
+    print(f"    Ratio gradient transmis : {ratio:.2f} (doit être 1.00)")
