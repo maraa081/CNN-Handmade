@@ -407,7 +407,53 @@ class MaxPool2D:
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  ██  PROCHAINES COUCHES : RELU / DENSE / SOFTMAX / ...                ║
+# ║  6️⃣  ACTIVATION : RELU                                                     ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+class ReLU:
+    """
+    Fonction d'activation ReLU (Rectified Linear Unit).
+
+    Forward : f(x) = max(0, x)
+    Backward : f'(x) = 1 si x > 0, sinon 0
+
+    C'est simple, efficace, et ça règle le problème de vanishing gradient
+    des sigmoides (du moins en partie).
+    """
+
+    def __init__(self):
+        self.input = None
+        self.mask = None  # True là où x > 0
+
+    def forward(self, x):
+        """
+        x : entrée (n'importe quelle forme)
+        retourne : max(0, x) (même forme)
+        """
+        self.input = x
+        self.mask = x > 0
+        return np.maximum(0, x)
+
+    def backward(self, grad_output):
+        """
+        grad_output : gradient de la perte par rapport à la sortie
+        retourne : gradient par rapport à l'entrée
+
+        Le gradient passe si x > 0, sinon il est tué.
+        """
+        return grad_output * self.mask
+
+    def update(self, lr):
+        """ReLU n'a pas de paramètres."""
+        pass
+
+    def __repr__(self):
+        return "ReLU()"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  ██  PROCHAINES COUCHES : DENSE / SOFTMAX / CROSS-ENTROPY / ...       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
@@ -524,3 +570,31 @@ if __name__ == "__main__":
     expected_sum = grad_fake.sum()  # chaque fenêtre reçoit exactement le gradient
     ratio = grad_back.sum() / expected_sum if expected_sum != 0 else 0
     print(f"    Ratio gradient transmis : {ratio:.2f} (doit être 1.00)")
+
+    # --- Test rapide de ReLU ---
+    print("\n" + "═" * 50)
+    print("🧪 Test ReLU forward + backward")
+    print("═" * 50)
+
+    relu = ReLU()
+    print(f"Couche créée : {relu}")
+
+    # Données de test avec un mix de positifs, négatifs et zéro
+    x_test = np.array([[-2.0, -1.0, 0.0, 0.5, 3.0]], dtype=np.float32)
+    out = relu.forward(x_test)
+
+    print(f"\n  Forward :")
+    print(f"    Entrée : {x_test[0].tolist()}")
+    print(f"    Sortie : {out[0].tolist()}")
+    print(f"    Négatifs → 0 : {'✅' if out[0, 0] == 0 and out[0, 1] == 0 else '❌'}")
+    print(f"    Zéro reste 0  : {'✅' if out[0, 2] == 0 else '❌'}")
+    print(f"    Positifs inchangés : {'✅' if out[0, 3] == 0.5 and out[0, 4] == 3.0 else '❌'}")
+
+    dout = np.ones_like(out) * 2.0
+    dx = relu.backward(dout)
+
+    print(f"\n  Backward :")
+    print(f"    Gradient entrant : {dout[0].tolist()}")
+    print(f"    Gradient sortant : {dx[0].tolist()}")
+    print(f"    Négatifs tués (0) : {'✅' if dx[0, 0] == 0 and dx[0, 1] == 0 else '❌'}")
+    print(f"    Positifs passent   : {'✅' if dx[0, 3] == 2.0 and dx[0, 4] == 2.0 else '❌'}")
