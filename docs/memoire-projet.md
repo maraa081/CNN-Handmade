@@ -35,6 +35,7 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 | Étape | Statut |
 |---|---|
+| **Refactoring modules** | ✅ |
 | Dense (forward, backward, update) | ❌ |
 | Softmax | ❌ |
 | CrossEntropyLoss | ❌ |
@@ -43,18 +44,31 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 ---
 
-## 🔧 Refactoring à prévoir
+## 🔧 Refactoring — fait ✅
 
-`cnn.py` va devenir trop gros. Il faudra découper en modules :
+`cnn.py` découpé en modules propres :
 
-- **`layers.py`** — Conv2D, ReLU, MaxPool2D, Flatten, Dense
-- **`losses.py`** — Softmax, CrossEntropyLoss
-- **`data.py`** — MNISTLoader, preprocessing, DataLoader
-- **`model.py`** — classe CNN qui assemble tout
+| Module | Contenu |
+|---|---|
+| **`data.py`** | MNISTLoader, preprocessing, DataLoader |
+| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense (stub) |
+| **`losses.py`** | Softmax, CrossEntropyLoss (stubs) |
+| **`model.py`** | classe CNN (stub) |
+
+`cnn.py` est devenu un simple script de démonstration qui importe les modules.
 
 ---
 
 ## 📜 Historique
+
+### 2026-07-04 — Refactoring en modules
+
+- Découpage de `cnn.py` en `data.py`, `layers.py`, `losses.py`, `model.py`
+- `cnn.py` réécrit comme script de démo/test
+- Ajout du stub `Dense` dans layers (prêt à implémenter)
+- README mis à jour avec la structure
+
+### 2026-07-04 — Conv2D backward + col2im
 
 ### 2026-07-04 — Conv2D backward + col2im
 

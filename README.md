@@ -14,14 +14,19 @@ Implémenter un CNN capable de classifier le dataset MNIST (0-9) **sans framewor
 |---|---|---|
 | Chargement MNIST (IDX) | ✅ | `MNISTLoader` — lecture des fichiers binaires |
 | Preprocessing | ✅ | Normalisation [0,1], one-hot encoding, DataLoader par batches |
-| **Conv2D forward** | ✅ | Implémentation par **im2col + produit matriciel** (kernel 3×3, stride, padding) |
-| **Conv2D backward** | ✅ | rétropropagation complète (gradients kernels, bias, col2im vers entrée) |
-| **MaxPool2D** | ✅ | Forward + backward fonctionnels (stockage des indices pour rétropropagation) |
+| Partie | Statut | Notes |
+|---|---|---|
+| Chargement MNIST (IDX) | ✅ | `MNISTLoader` — lecture des fichiers binaires |
+| Preprocessing | ✅ | Normalisation [0,1], one-hot encoding, DataLoader par batches |
+| **Conv2D forward** | ✅ | Implémentation par **im2col + produit matriciel** |
+| **Conv2D backward** | ✅ | rétropropagation complète (gradients kernels, bias, col2im) |
+| **MaxPool2D** | ✅ | Forward + backward (indices des max stockés) |
 | **ReLU** | ✅ | Forward + backward (masque x > 0) |
 | **Flatten** | ✅ | Forward + backward (reshape inverse) |
-| Dense / Fully Connected | ❌ | |
-| Softmax + Cross-Entropy | ❌ | |
-| Training loop | ❌ | |
+| **Découpage en modules** | ✅ | `data.py`, `layers.py`, `losses.py`, `model.py` |
+| Dense / Fully Connected | ❌ | Stub dans layers.py — à implémenter |
+| Softmax + Cross-Entropy | ❌ | Stubs dans losses.py |
+| Training loop | ❌ | Stub dans model.py |
 | Évaluation / Accuracy | ❌ | |
 
 ## 🧱 Architecture prévue
@@ -44,21 +49,29 @@ Entrée : (N, 1, 28, 28)
     └── Softmax                                →  (N, 10)
 ```
 
-## 📦 Fichier unique
-
-Pour l'instant tout est dans `src/cnn.py` — le code évoluera vers une séparation en modules propres une fois les bases posées.
+## 📦 Structure du projet
 
 ```
 CNN-Handmade/
 ├── README.md
-├── requirements.txt      (numpy + matplotlib)
+├── requirements.txt          (numpy + matplotlib)
+├── docs/
+│   ├── data-flow.md          — trace complète d'une image dans le réseau
+│   └── memoire-projet.md     — carnet de bord, concepts à retenir
 ├── data/
 │   ├── train-images-idx3-ubyte
 │   ├── train-labels-idx1-ubyte
 │   ├── t10k-images-idx3-ubyte
 │   └── t10k-labels-idx1-ubyte
+├── traces/
+│   └── forward_trace.py
 └── src/
-    └── cnn.py
+    ├── __init__.py
+    ├── data.py      — MNISTLoader, preprocessing, DataLoader
+    ├── layers.py    — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense (stub)
+    ├── losses.py    — Softmax, CrossEntropyLoss (stubs)
+    ├── model.py     — CNN (stub)
+    └── cnn.py       — script de démonstration / tests
 ```
 
 ## 📈 Prochaines étapes (ordre)
