@@ -196,6 +196,51 @@ def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
     return cols, H_out, W_out
 
 
+def col2im(cols, input_shape, kernel_h, kernel_w, stride=1, pad=0):
+    """
+    Opération inverse de im2col.
+
+    Prend les gradients sous forme de colonnes et les redistribue
+    dans l'image d'origine, en accumulant aux positions qui se chevauchent
+    (un pixel peut contribuer à plusieurs positions de sortie).
+
+    Entrée :
+        cols         : (N * H_out * W_out, C_in * kH * kW)
+        input_shape  : (N, C, H, W)
+        kernel_h, kernel_w : taille du noyau
+        stride, pad
+
+    Sortie :
+        grad : (N, C, H, W)
+    """
+    N, C, H, W = input_shape
+    H_out = (H + 2 * pad - kernel_h) // stride + 1
+    W_out = (W + 2 * pad - kernel_w) // stride + 1
+
+    # On travaille sur une version paddée, on rognera à la fin
+    H_pad = H + 2 * pad
+    W_pad = W + 2 * pad
+    grad_padded = np.zeros((N, C, H_pad, W_pad), dtype=cols.dtype)
+
+    for y in range(H_out):
+        for x in range(W_out):
+            y_start = y * stride
+            x_start = x * stride
+
+            # Indices des lignes dans cols pour tous les N échantillons
+            # à cette position (y, x)
+            row_indices = np.arange(N) * H_out * W_out + y * W_out + x
+            grads = cols[row_indices]  # (N, C * kH * kW)
+            grads_reshaped = grads.reshape(N, C, kernel_h, kernel_w)
+
+            grad_padded[:, :, y_start:y_start + kernel_h, x_start:x_start + kernel_w] += grads_reshaped
+
+    # Retirer le padding si nécessaire
+    if pad > 0:
+        return grad_padded[:, :, pad:-pad, pad:-pad]
+    return grad_padded
+
+
 class Conv2D:
     """
     Couche de convolution 2D.
@@ -263,19 +308,63 @@ class Conv2D:
     def backward(self, grad_output):
         """
         grad_output : gradient de la perte par rapport à la sortie (N, C_out, H_out, W_out)
-        → retourne le gradient par rapport à l'entrée
 
-        TODO : sera implémenté après le forward
+        Calcule :
+          - d_kernels : gradient pour les poids de la convolution
+          - d_bias    : gradient pour le biais
+          - d_input   : gradient à rétropropager à la couche précédente
+
+        Retourne :
+            d_input : (N, C_in, H, W)
         """
-        raise NotImplementedError("Backward Conv2D — à venir !")
+        N, C_out, H_out, W_out = grad_output.shape
+        assert C_out == self.out_channels, \
+            f"Canaux du gradient : {C_out}, attendu {self.out_channels}"
+
+        # ── 1. Remettre grad_output en forme matricielle ──
+        # forward : (N, H_out, W_out, C_out) après transpose
+        # donc on transpose grad_output de (N, C_out, H_out, W_out) → (N, H_out, W_out, C_out)
+        dout = grad_output.transpose(0, 2, 3, 1)  # (N, H_out, W_out, C_out)
+        dout_flat = dout.reshape(-1, C_out)        # (N*H_out*W_out, C_out)
+
+        # ── 2. Gradient des kernels ──
+        # forward : out = cols @ kernels_flat.T
+        # d_kernels_flat = dout_flat.T @ cols → (C_out, C_in*k*k)
+        self.d_kernels_flat = dout_flat.T @ self.cols  # (C_out, C_in*k*k)
+        self.d_kernels = self.d_kernels_flat.reshape(
+            self.out_channels, self.in_channels,
+            self.kernel_size, self.kernel_size
+        )
+
+        # ── 3. Gradient du biais ──
+        # Le biais est ajouté à chaque position spatiale
+        # d_bias = somme de dout_flat sur tous les échantillons × positions
+        self.d_bias = dout_flat.sum(axis=0, keepdims=True).T  # (C_out, 1)
+
+        # ── 4. Gradient de l'entrée (col2im) ──
+        # forward : cols = im2col(x)
+        # d_cols = dout_flat @ kernels_flat → (N*H_out*W_out, C_in*k*k)
+        kernels_flat = self.kernels.reshape(self.out_channels, -1)  # (C_out, C_in*k*k)
+        d_cols = dout_flat @ kernels_flat  # (N*H_out*W_out, C_in*k*k)
+
+        # col2im : redistribue d_cols dans l'espace image
+        N_in, C_in, H_in, W_in = self.input.shape
+        d_input = col2im(d_cols, (N_in, C_in, H_in, W_in),
+                         self.kernel_size, self.kernel_size,
+                         self.stride, self.pad)
+
+        return d_input
 
     def update(self, lr):
         """
-        Met à jour les poids avec le learning rate.
-
-        TODO : sera implémenté après le forward
+        Met à jour les poids avec la descente de gradient :
+            W ← W - lr * dW
         """
-        raise NotImplementedError("Update Conv2D — à venir !")
+        if not hasattr(self, 'd_kernels'):
+            raise RuntimeError("update() appelé avant backward()")
+
+        self.kernels -= lr * self.d_kernels
+        self.bias -= lr * self.d_bias
 
     def __repr__(self):
         return (f"Conv2D({self.in_channels}→{self.out_channels}, "
@@ -498,7 +587,7 @@ class Flatten:
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  ██  PROCHAINES COUCHES : DENSE / SOFTMAX / CROSS-ENTROPY / ...       ║
+# ║  ██  PROCHAINES COUCHES : DENSE / SOFTMAX / CROSS-ENTROPY / TRAINING ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
@@ -681,3 +770,80 @@ if __name__ == "__main__":
     print(f"    Somme gradient : {dx.sum():.2f} (doit = 3.0 × {flat_out.shape[1]} × {flat_out.shape[0]})")
     expected_sum = 3.0 * flat_out.shape[1] * flat_out.shape[0]
     print(f"    {'✅' if abs(dx.sum() - expected_sum) < 1e-5 else '❌'} valeurs préservées")
+
+    # --- Test Conv2D backward ---
+    print("\n" + "═" * 50)
+    print("🧪 Test Conv2D backward (vérification par différences finies)")
+    print("═" * 50)
+
+    # On reprend un batch minimal : 1 image, 1 canal
+    tiny_batch = test_img[:2, :1, :5, :5].copy()  # (2, 1, 5, 5)
+
+    conv_bw = Conv2D(in_channels=1, out_channels=2, kernel_size=3, stride=1, pad=0)
+
+    # Forward
+    fwd = conv_bw.forward(tiny_batch)
+    N, C_out, H_out, W_out = fwd.shape
+    print(f"  Forward : {tiny_batch.shape} → {fwd.shape}")
+
+    # Gradient factice (on simule un gradient de loss = 1 partout)
+    dout = np.ones_like(fwd)
+
+    # Backward
+    dx = conv_bw.backward(dout)
+    print(f"  Backward : d_input  → {dx.shape} (devrait être {tiny_batch.shape})")
+    shape_bk = dx.shape == tiny_batch.shape
+    print(f"    {'✅' if shape_bk else '❌'} shape gradient entrée")
+
+    # Vérif : somme du gradient d'entrée
+    # (le ratio dépend des poids aléatoires, pas une métrique fixe)
+    # Le vrai test est le gradient check par différences finies ci-dessous
+    print(f"    Somme d_input : {dx.sum():.4f}")
+    print(f"    Somme d_output : {dout.sum():.4f}")
+    print(f"    Ratio d_input/d_output : {dx.sum() / dout.sum():.2f}")
+
+    # Vérification du gradient des kernels par différences finies
+    print(f"\n  🧪 Vérification gradient kernels par différences finies :")
+
+    # On prend un seul kernel pour le test
+    eps = 1e-6
+    k_idx = 0  # on teste le filtre 0
+
+    # Forward de référence : loss = somme de l'activation
+    original_kernel = conv_bw.kernels[k_idx].copy()
+
+    # Petite perturbation positive
+    conv_bw.kernels[k_idx, 0, 0, 0] += eps
+    fwd_plus = conv_bw.forward(tiny_batch)
+    loss_plus = fwd_plus.sum()
+
+    # Petite perturbation négative
+    conv_bw.kernels[k_idx, 0, 0, 0] -= 2 * eps
+    fwd_minus = conv_bw.forward(tiny_batch)
+    loss_minus = fwd_minus.sum()
+
+    # Restore
+    conv_bw.kernels[k_idx] = original_kernel
+
+    # Gradient numérique
+    num_grad = (loss_plus - loss_minus) / (2 * eps)
+    # Gradient analytique (backprop)
+    ana_grad = conv_bw.d_kernels[k_idx, 0, 0, 0]
+
+    rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
+    print(f"    kernel[{k_idx},0,0,0] : num_grad={num_grad:.6f}, ana_grad={ana_grad:.6f}")
+    print(f"    Erreur relative : {rel_error:.8f}")
+    print(f"    {'✅' if rel_error < 1e-4 else '❌'} gradient check passé")
+
+    # Test update
+    print(f"\n  🧪 Test update() :")
+    old_k = conv_bw.kernels[0, 0, :3, :3].copy()
+    old_b = conv_bw.bias[0, 0]
+    lr = 0.01
+    conv_bw.update(lr)
+    expected_k = old_k - lr * conv_bw.d_kernels[0, 0, :3, :3]
+    expected_b = old_b - lr * conv_bw.d_bias[0, 0]
+    k_match = np.allclose(conv_bw.kernels[0, 0, :3, :3], expected_k)
+    b_match = np.allclose(conv_bw.bias[0, 0], expected_b)
+    print(f"    {'✅' if k_match else '❌'} kernels mis à jour")
+    print(f"    {'✅' if b_match else '❌'} bias mis à jour")

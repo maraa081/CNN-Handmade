@@ -15,9 +15,10 @@ Implémenter un CNN capable de classifier le dataset MNIST (0-9) **sans framewor
 | Chargement MNIST (IDX) | ✅ | `MNISTLoader` — lecture des fichiers binaires |
 | Preprocessing | ✅ | Normalisation [0,1], one-hot encoding, DataLoader par batches |
 | **Conv2D forward** | ✅ | Implémentation par **im2col + produit matriciel** (kernel 3×3, stride, padding) |
+| **Conv2D backward** | ✅ | rétropropagation complète (gradients kernels, bias, col2im vers entrée) |
 | **MaxPool2D** | ✅ | Forward + backward fonctionnels (stockage des indices pour rétropropagation) |
-| Conv2D backward | ⏳ | Stub — `NotImplementedError` |
-| ReLU | ❌ | |
+| **ReLU** | ✅ | Forward + backward (masque x > 0) |
+| **Flatten** | ✅ | Forward + backward (reshape inverse) |
 | Dense / Fully Connected | ❌ | |
 | Softmax + Cross-Entropy | ❌ | |
 | Training loop | ❌ | |
