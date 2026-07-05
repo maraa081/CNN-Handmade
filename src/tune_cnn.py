@@ -4,30 +4,26 @@
   🎮   TUNE CNN — Joue avec les paramètres du réseau !
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Tu n'as besoin de toucher qu'aux paramètres dans la section "⛽ RÉGLAGES".
   Lance le script :   python3 src/tune_cnn.py
-  Magic ✨
 
-  Ce que tu peux changer :
-     - LEARNING_RATE  → rapidité d'apprentissage (trop haut = instable, trop bas = lent)
-     - BATCH_SIZE     → nombre d'images vues à la fois (32, 64, 128…)
-     - EPOCHS         → nombre de passages sur toutes les données
-     - ARCHITECTURE   → tu peux modifier les couches du réseau plus bas
+  Tout se règle dans la section "⛽ RÉGLAGES" juste en dessous.
+  Le résultat (graphique) est sauvegardé dans tune_result.png.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 import sys
+import time
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # ← pas besoin d'écran, sauvegarde en fichier
+matplotlib.use("Agg")  # sauvegarde en fichier (pas besoin d'écran)
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-# Forcer l'affichage immédiat dans le terminal (pas de buffer)
-sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
+# Débufferisation
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
 
-# ── Chemin racine du projet ──
 ROOT_DIR = dirname(dirname(abspath(__file__)))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -36,49 +32,51 @@ from model import CNN
 
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  ⛽ RÉGLAGES — Change ces valeurs pour voir l'effet sur l'entraînement  ║
+# ║  ⛽ RÉGLAGES — Modifie ces valeurs pour voir l'effet sur l'entraînement ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-LEARNING_RATE = 0.01   # ← Pas d'apprentissage (essaie 0.1, 0.01, 0.001, 0.0001)
-BATCH_SIZE    = 64     # ← Taille des lots (32, 64, 128, 256… plus gros = +stable mais +lent)
-EPOCHS        = 5      # ← Nombre de répétitions sur les données (5, 10, 20…)
+LEARNING_RATE = 0.01      # ← Pas d'apprentissage (0.1, 0.01, 0.001, 0.0001…)
+BATCH_SIZE    = 64         # ← Taille des lots (32, 64, 128, 256…)
+EPOCHS        = 5          # ← Nombre de passages sur les données (5, 10, 20…)
+DATA_LIMIT    = 2000       # ← Nbre d'images utilisé (2000 = rapide ; mets None pour tout)
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  Tu peux aussi modifier l'architecture du réseau plus bas :
-#     - ligne "Conv2D(1→32)…"  → changer le nombre de filtres
-#     - ligne "Dense(128→10)"  → changer la taille de la couche cachée
+#  Modifie aussi l'architecture du réseau plus bas si tu veux :
+#     - Les lignes "Conv2D(1→32)" → change les filtres
+#     - Les lignes "Dense(…→128)" → change les neurones
 # ═══════════════════════════════════════════════════════════════════════════
 
 
 # ──────────────────────────────────────────────────────────────────────────
-#  CHARGEMENT DES DONNÉES
+#  📥 CHARGEMENT
 # ──────────────────────────────────────────────────────────────────────────
 
 print("📥 Chargement de MNIST…")
+t0 = time.time()
 loader = MNISTLoader()
 (x_train, y_train), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
 
-# ── Construction des DataLoaders ──
+# Sous-ensemble optionnel (pour aller vite)
+if DATA_LIMIT is not None:
+    x_train = x_train[:DATA_LIMIT]
+    y_train = y_train[:DATA_LIMIT]
+
 train_loader = preprocess_pipeline(x_train, y_train,
                                    batch_size=BATCH_SIZE, shuffle=True)
 test_loader  = preprocess_pipeline(x_test, y_test,
                                    batch_size=BATCH_SIZE, shuffle=False)
 
-# Affiche un petit échantillon pour vérifier
-print(f"\n📦 Batch d'entraînement : {next(iter(train_loader))[0].shape}")
-print(f"📦 Batch de test        : {next(iter(test_loader))[0].shape}")
-print(f"🧮 Total entraînement   : {x_train.shape[0]} images")
-print(f"🧮 Total test           : {x_test.shape[0]} images")
+n_batches = len(train_loader)
+print(f"  ✔ Images : {x_train.shape[0]} train / {x_test.shape[0]} test")
+print(f"  ✔ Format : {next(iter(train_loader))[0].shape}")
+print(f"  ✔ ~{n_batches} batches par epoch")
 
 
 # ──────────────────────────────────────────────────────────────────────────
-#  🔧 ARCHITECTURE DU RÉSEAU
+#  🔧 ARCHITECTURE
 # ──────────────────────────────────────────────────────────────────────────
-#  Modifie les lignes ci-dessous pour changer la structure du CNN.
-#  Chaque ligne est une couche, lues dans l'ordre.
-#
 #  Couches disponibles :
-#     Conv2D(canaux_entrée, canaux_sortie, taille_kernel, pad=?)
+#     Conv2D(canaux_entrée, canaux_sortie, taille_ kernel, pad=?)
 #     MaxPool2D(facteur)
 #     ReLU()
 #     Flatten()
@@ -87,32 +85,39 @@ print(f"🧮 Total test           : {x_test.shape[0]} images")
 
 model = CNN()
 
-model.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))   # 28×28 → 32 canaux de 28×28
+model.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))   # 28×28 → 32 canaux
 model.add(ReLU())
-model.add(MaxPool2D(2))                                     # 28×28 → 14×14
+model.add(MaxPool2D(2))                                     # → 14×14
 
-model.add(Conv2D(32, 64, kernel_size=3, stride=1, pad=1))  # 14×14 → 64 canaux de 14×14
+model.add(Conv2D(32, 64, kernel_size=3, stride=1, pad=1))  # 14×14 → 64 canaux
 model.add(ReLU())
-model.add(MaxPool2D(2))                                     # 14×14 → 7×7
+model.add(MaxPool2D(2))                                     # → 7×7
 
-model.add(Flatten())                                        # (64, 7, 7) → vecteur de 3136
+model.add(Flatten())                                        # vecteur de 3136
 
 model.add(Dense(3136, 128))                                 # 3136 → 128 neurones
 model.add(ReLU())
-model.add(Dense(128, 10))                                   # 128 → 10 classes (chiffres 0-9)
+model.add(Dense(128, 10))                                   # → 10 chiffres
 
-print(f"\n🧠 Réseau construit :\n{model}")
+print(f"\n🧠 Réseau :\n{model}")
+print(f"⚡ {n_batches * EPOCHS} passages forward/backward au total")
 
 
 # ──────────────────────────────────────────────────────────────────────────
-#  🏋️ ENTRAÎNEMENT
+#  🏋️  ENTRAÎNEMENT
 # ──────────────────────────────────────────────────────────────────────────
 
 print(f"\n{'═' * 50}")
-print(f"🏋️  Entraînement — lr={LEARNING_RATE}, batch={BATCH_SIZE}, epochs={EPOCHS}")
+print(f"🏋️  Entraînement")
+print(f"    lr={LEARNING_RATE}, batch={BATCH_SIZE}, epochs={EPOCHS}")
 print(f"{'═' * 50}\n")
 
+t_start = time.time()
 history = model.train(train_loader, epochs=EPOCHS, lr=LEARNING_RATE, verbose=True)
+t_elapsed = time.time() - t_start
+
+m, s = divmod(t_elapsed, 60)
+print(f"\n⏱️  Temps d'entraînement : {int(m)}m {int(s)}s")
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -120,66 +125,62 @@ history = model.train(train_loader, epochs=EPOCHS, lr=LEARNING_RATE, verbose=Tru
 # ──────────────────────────────────────────────────────────────────────────
 
 print(f"\n{'═' * 50}")
-print(f"📊 Évaluation sur le jeu de test…")
-print(f"{'═' * 50}")
-
+print(f"📊 Évaluation sur {x_test.shape[0]} images de test…")
 test_acc = model.evaluate(test_loader)
-print(f"\n🎯 Accuracy sur le test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+print(f"{'═' * 50}\n")
+print(f"🎯 Accuracy : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
 
 # ──────────────────────────────────────────────────────────────────────────
-#  📈 GRAPHIQUE DE LA LOSS ET DE L'ACCURACY
+#  📈 GRAPHIQUE → tune_result.png
 # ──────────────────────────────────────────────────────────────────────────
 
-plt.figure(figsize=(12, 4))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
-# Loss
-plt.subplot(1, 2, 1)
-plt.plot(history["loss"], marker="o", linewidth=2, markersize=6)
-plt.title(f"Loss (entraînement)\nlr={LEARNING_RATE}, batch={BATCH_SIZE}", fontsize=12)
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.grid(True, alpha=0.3)
+ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
+ax1.set_title(f"Loss (entraînement)\nlr={LEARNING_RATE}, batch={BATCH_SIZE}", fontsize=12)
+ax1.set_xlabel("Epoch")
+ax1.set_ylabel("Loss")
+ax1.grid(True, alpha=0.3)
 
-# Accuracy
-plt.subplot(1, 2, 2)
-plt.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
-plt.title(f"Accuracy (entraînement)\nTest final : {test_acc:.1%}", fontsize=12)
-plt.xlabel("Epoch")
-plt.ylabel("Accuracy")
-plt.grid(True, alpha=0.3)
-plt.ylim(0, 1)
+ax2.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
+ax2.set_title(f"Accuracy (entraînement)\nTest final : {test_acc:.1%}", fontsize=12)
+ax2.set_xlabel("Epoch")
+ax2.set_ylabel("Accuracy")
+ax2.grid(True, alpha=0.3)
+ax2.set_ylim(0, 1)
 
 plt.tight_layout()
-
-# Sauvegarde en PNG (pas besoin d'écran)
 output_path = join(ROOT_DIR, "tune_result.png")
 plt.savefig(output_path, dpi=150, bbox_inches="tight")
-print(f"\n📁 Graphique sauvegardé : {output_path}")
+print(f"📁 Graphique sauvegardé : {output_path}")
 
 
 # ──────────────────────────────────────────────────────────────────────────
-#  🧠 CONSEILS POUR JOUER AVEC LES PARAMÈTRES
+#  🧠  CONSEILS
 # ──────────────────────────────────────────────────────────────────────────
 #
-#   LEARNING RATE :
-#     - 0.01  → bon équilibre pour commencer
-#     - 0.1   → apprend vite mais peut "sauter" par-dessus la solution (instable)
-#     - 0.001 → apprend lentement mais stable, il faut + d'epochs
-#     - 0.0001 → très lent, probablement pas assez pour 5 epochs
+#  LEARNING RATE :
+#    0.01   → bon équilibre pour commencer
+#    0.1    → apprend vite, mais peut être instable
+#    0.001  → stable, mais lent (besoin de + d'epochs)
 #
-#   BATCH SIZE :
-#     - 32    → plus de mises à jour par epoch, un peu de bruit (régularise)
-#     - 64    → bon compromis (défaut recommandé)
-#     - 128   → plus stable, plus rapide, mais généralise parfois moins bien
-#     - 256   → risque de "sur-apprentissage" (memorise plutôt qu'apprend)
+#  BATCH SIZE :
+#    32     → + de mises à jour par epoch (bruit régularisant)
+#    64     → bon compromis (recommandé)
+#    128    → plus rapide, parfois moins bonne généralisation
 #
-#   EPOCHS :
-#     - 5     → donne une première idée rapide
-#     - 10    → pour voir la convergence
-#     - 20+   → pour atteindre le maximum de performance
+#  EPOCHS :
+#    5      → premier aperçu rapide
+#    10     → pour voir converger
+#    20+    → pour aller chercher les ~99%
 #
-#   ASTUCE : essaie de trouver la meilleure accuracy possible !
-#   Un CNN comme celui-ci peut atteindre ~99% sur MNIST.
+#  DATA_LIMIT :
+#    2000   → entraînement rapide (~1 min)
+#    5000   → un peu plus long (~3 min)
+#    None   → tout MNIST (60000 images, ~15-20 min)
+#
+#  ASTUCE : essaie DATA_LIMIT=None avec lr=0.001 et EPOCHS=10
+#           Le CNN peut atteindre ~99% sur MNIST !
 #
 # ═══════════════════════════════════════════════════════════════════════════
