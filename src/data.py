@@ -123,6 +123,9 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
     """
     Enchaîne normalisation + reshape one-hot et retourne un DataLoader.
 
+    Les images sont en format channels_first (N, C, H, W) pour correspondre
+    aux couches Conv2D du projet.
+
     Args :
         images    → numpy array (N, 28, 28)  brut
         labels    → numpy array (N,)         brut
@@ -133,6 +136,7 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
         DataLoader prêt à itérer
     """
     images = normalize(images)
-    images = add_channel_dim(images)
+    images = add_channel_dim(images)         # (N, 28, 28, 1)
+    images = images.transpose(0, 3, 1, 2)    # (N, 1, 28, 28) channels_first
     labels = to_one_hot(labels)
     return DataLoader(images, labels, batch_size, shuffle)

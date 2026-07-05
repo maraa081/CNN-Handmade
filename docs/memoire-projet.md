@@ -39,8 +39,8 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 | Dense (forward, backward, update) | ✅ |
 | Softmax | ✅ |
 | CrossEntropyLoss | ✅ |
-| Boucle d'entraînement (forward → loss → backward → update) | ❌ |
-| Évaluation / accuracy | ❌ |
+| Boucle d'entraînement (forward → loss → backward → update) | ✅ |
+| Évaluation / accuracy | ✅ |
 
 ---
 
@@ -53,13 +53,22 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 | **`data.py`** | MNISTLoader, preprocessing, DataLoader |
 | **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅ |
 | **`losses.py`** | Softmax ✅, CrossEntropyLoss ✅ |
-| **`model.py`** | classe CNN (stub) |
+| **`model.py`** | CNN (forward, backward, update, train, evaluate) ✅ |
+| **`tune_cnn.py`** | fichier de tuning interactif (paramètres en haut) ✅ |
 
 `cnn.py` est devenu un simple script de démonstration qui importe les modules.
 
 ---
 
 ## 📜 Historique
+
+### 2026-07-05 — Entraînement + évaluation + fichier tuning 🎉
+
+- **model.py** : CNN.forward, backward, update, train (avec historique), evaluate.
+- **tune_cnn.py** : fichier de tuning ultra-simple avec tous les paramètres en haut.
+- **Optimisation :** im2col/col2im vectorisés avec `numpy.lib.stride_tricks.as_strided` (fini les boucles Python).
+- **Données :** format channels_first dans le DataLoader (transparent pour l'utilisateur).
+- Tests : loss décroissante, accuracy croissante ✅ sur un mini-entraînement.
 
 ### 2026-07-05 — Softmax + CrossEntropyLoss implémentés ✅
 

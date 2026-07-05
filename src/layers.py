@@ -25,10 +25,8 @@ def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
     Transforme un batch d'images en colonnes pour faire la convolution
     comme un produit matriciel.
 
-    Principe :
-      Au lieu de faire des boucles pour chaque position du kernel,
-      on "déroule" tous les patchs de l'image en colonnes d'une grande matrice.
-      Puis la convolution = cette matrice × le kernel aplati.
+    Version vectorisée : extrait tous les patchs d'un coup via
+    numpy.lib.stride_tricks.as_strided sans boucles Python.
 
     Entrée : images (N, C, H, W)
     Sortie : cols (N * H_out * W_out, C * kH * kW)
@@ -43,16 +41,22 @@ def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
     if pad > 0:
         images = np.pad(images, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode="constant")
 
-    # Pour chaque position du kernel, on extrait un patch et on l'aplatit
-    cols = np.zeros((N * H_out * W_out, C * kernel_h * kernel_w))
-    idx = 0
-    for y in range(H_out):
-        for x in range(W_out):
-            y_start = y * stride
-            x_start = x * stride
-            patch = images[:, :, y_start:y_start + kernel_h, x_start:x_start + kernel_w]
-            cols[idx::H_out * W_out] = patch.reshape(N, -1)
-            idx += 1
+    # Vue stride_tricks : (N, C, H_out, W_out, kH, kW)
+    # Chaque élément (h,w) est le début d'un patch de taille (kH,kW)
+    from numpy.lib.stride_tricks import as_strided
+
+    view_shape = (N, C, H_out, W_out, kernel_h, kernel_w)
+    C_stride = images.strides[1]
+    H_stride = images.strides[2] * stride
+    W_stride = images.strides[3] * stride
+    view_strides = (images.strides[0], C_stride,
+                    H_stride, W_stride,
+                    images.strides[2], images.strides[3])
+
+    windows = as_strided(images, shape=view_shape, strides=view_strides)
+
+    # Fusion : (N, H_out, W_out, C, kH, kW) → (N*H_out*W_out, C*kH*kW)
+    cols = windows.transpose(0, 2, 3, 1, 4, 5).reshape(N * H_out * W_out, -1)
 
     return cols, H_out, W_out
 
@@ -64,6 +68,8 @@ def col2im(cols, input_shape, kernel_h, kernel_w, stride=1, pad=0):
     Prend les gradients sous forme de colonnes et les redistribue
     dans l'image d'origine, en accumulant aux positions qui se chevauchent
     (un pixel peut contribuer à plusieurs positions de sortie).
+
+    Version vectorisée avec as_strided + np.add.at pour l'accumulation.
 
     Entrée :
         cols         : (N * H_out * W_out, C_in * kH * kW)
@@ -80,18 +86,28 @@ def col2im(cols, input_shape, kernel_h, kernel_w, stride=1, pad=0):
 
     H_pad = H + 2 * pad
     W_pad = W + 2 * pad
+
+    # Reshape cols en patches : (N, H_out, W_out, C, kH, kW)
+    patches = cols.reshape(N, H_out, W_out, C, kernel_h, kernel_w)
+    patches = patches.transpose(0, 3, 1, 2, 4, 5)  # (N, C, H_out, W_out, kH, kW)
+
+    # Vue stride_tricks sur l'image (gradient accumulé)
+    from numpy.lib.stride_tricks import as_strided
+
     grad_padded = np.zeros((N, C, H_pad, W_pad), dtype=cols.dtype)
 
-    for y in range(H_out):
-        for x in range(W_out):
-            y_start = y * stride
-            x_start = x * stride
+    view_shape = (N, C, H_out, W_out, kernel_h, kernel_w)
+    C_stride = grad_padded.strides[1]
+    H_stride = grad_padded.strides[2] * stride
+    W_stride = grad_padded.strides[3] * stride
+    view_strides = (grad_padded.strides[0], C_stride,
+                    H_stride, W_stride,
+                    grad_padded.strides[2], grad_padded.strides[3])
 
-            row_indices = np.arange(N) * H_out * W_out + y * W_out + x
-            grads = cols[row_indices]  # (N, C * kH * kW)
-            grads_reshaped = grads.reshape(N, C, kernel_h, kernel_w)
+    grad_view = as_strided(grad_padded, shape=view_shape, strides=view_strides)
 
-            grad_padded[:, :, y_start:y_start + kernel_h, x_start:x_start + kernel_w] += grads_reshaped
+    # np.add.at additionne les valeurs aux positions qui se chevauchent
+    np.add.at(grad_view, (), patches)
 
     if pad > 0:
         return grad_padded[:, :, pad:-pad, pad:-pad]
