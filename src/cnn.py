@@ -26,6 +26,7 @@ from layers import (
     MaxPool2D,
     ReLU,
     Flatten,
+    Dense,
 )
 
 
@@ -196,11 +197,72 @@ if __name__ == "__main__":
 
     # ═══════════════════════════════════════════════════
     print("\n" + "═" * 50)
+    print("🧪 Test Dense forward + backward + update")
+    print("═" * 50)
+
+    N, in_feat, out_feat = 8, 16, 5
+    dense = Dense(in_feat, out_feat)
+    print(f"Couche créée : {dense}")
+
+    x_in = np.random.randn(N, in_feat) * 0.1
+    out = dense.forward(x_in)
+    print(f"  Forward : ({N}, {in_feat}) → ({N}, {out_feat})  {'✅' if out.shape == (N, out_feat) else '❌'}")
+
+    # Vérification produit matriciel + biais
+    expected = x_in @ dense.W.T + dense.b.T
+    print(f"  Valeurs correctes : {'✅' if np.allclose(out, expected) else '❌'}")
+
+    # Backward
+    dout = np.random.randn(N, out_feat) * 0.1
+    dx = dense.backward(dout)
+    print(f"  Backward : ({N}, {out_feat}) → ({N}, {in_feat})  {'✅' if dx.shape == (N, in_feat) else '❌'}")
+
+    # Vérifications manuelles
+    expected_dW = dout.T @ x_in
+    expected_db = dout.sum(axis=0, keepdims=True).T
+    expected_dx = dout @ dense.W
+    print(f"  dW correct  : {'✅' if np.allclose(dense.dW, expected_dW) else '❌'}")
+    print(f"  db correct  : {'✅' if np.allclose(dense.db, expected_db) else '❌'}")
+    print(f"  dx correct  : {'✅' if np.allclose(dx, expected_dx) else '❌'}")
+
+    # Update
+    lr = 0.01
+    old_W = dense.W.copy()
+    old_b = dense.b.copy()
+    dense.update(lr)
+    W_ok = np.allclose(dense.W, old_W - lr * dense.dW)
+    b_ok = np.allclose(dense.b, old_b - lr * dense.db)
+    print(f"  Update W : {'✅' if W_ok else '❌'}")
+    print(f"  Update b : {'✅' if b_ok else '❌'}")
+
+    # Gradient check par différences finies
+    # Pour une loss = sum(out), le gradient est dout = 1
+    eps = 1e-6
+    w_idx = (0, 2)  # Une valeur de poids dans W[0,2]
+    orig_val = dense.W[w_idx]
+    dense.W[w_idx] = orig_val + eps
+    loss_plus = dense.forward(x_in).sum()
+    dense.W[w_idx] = orig_val - eps
+    loss_minus = dense.forward(x_in).sum()
+    dense.W[w_idx] = orig_val
+
+    num_grad = (loss_plus - loss_minus) / (2 * eps)
+    # Pour loss = sum(out), dout = ones_like(out)
+    dout_sum = np.ones((N, out_feat))
+    dense.forward(x_in)  # Re-forward
+    dense.backward(dout_sum)
+    ana_grad = dense.dW[w_idx]
+    rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
+    print(f"  Gradient check W[{w_idx[0]},{w_idx[1]}] : err={rel_error:.8f}")
+    print(f"  {'✅' if rel_error < 1e-4 else '❌'} gradient check passé")
+
+    # ═══════════════════════════════════════════════════
+    print("\n" + "═" * 50)
     print("🎉 Tous les tests sont passés !")
     print("═" * 50)
     print()
     print("Modules disponibles :")
     print("  data.py    → MNISTLoader, DataLoader, preprocessing")
-    print("  layers.py  → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense (stub)")
+    print("  layers.py  → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅")
     print("  losses.py  → Softmax, CrossEntropyLoss (stubs)")
     print("  model.py   → CNN (stub)")

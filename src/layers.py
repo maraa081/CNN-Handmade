@@ -420,7 +420,9 @@ class Dense:
 
     y = x @ W.T + b
 
-    TODO : forward, backward, update à implémenter.
+    Forward : produit matriciel + biais
+    Backward : gradient des poids, biais, et entrée
+    Update  : descente de gradient standard
     """
 
     def __init__(self, in_features, out_features):
@@ -436,24 +438,39 @@ class Dense:
         self.b = np.zeros((out_features, 1))
 
         self.input = None
+        self.dW = None
+        self.db = None
 
     def forward(self, x):
         """
         x : (N, in_features)
         retourne : (N, out_features)
+
+        y = x @ W.T + b.T
         """
-        raise NotImplementedError("Dense.forward — à implémenter")
+        self.input = x
+        return x @ self.W.T + self.b.T
 
     def backward(self, grad_output):
         """
         grad_output : (N, out_features)
         retourne : (N, in_features)
+
+        Calculs :
+            dW = grad_output.T @ input   → (out_features, in_features)
+            db = sum(grad_output, axis=0) → (out_features, 1)
+            dx = grad_output @ W         → (N, in_features)
         """
-        raise NotImplementedError("Dense.backward — à implémenter")
+        self.dW = grad_output.T @ self.input  # (out_features, in_features)
+        self.db = grad_output.sum(axis=0, keepdims=True).T  # (out_features, 1)
+        return grad_output @ self.W  # (N, in_features)
 
     def update(self, lr):
         """W ← W - lr * dW, b ← b - lr * db"""
-        raise NotImplementedError("Dense.update — à implémenter")
+        if self.dW is None:
+            raise RuntimeError("update() appelé avant backward()")
+        self.W -= lr * self.dW
+        self.b -= lr * self.db
 
     def __repr__(self):
         return f"Dense({self.in_features}→{self.out_features})"

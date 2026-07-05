@@ -36,7 +36,7 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 | Étape | Statut |
 |---|---|
 | **Refactoring modules** | ✅ |
-| Dense (forward, backward, update) | ❌ |
+| Dense (forward, backward, update) | ✅ |
 | Softmax | ❌ |
 | CrossEntropyLoss | ❌ |
 | Boucle d'entraînement (forward → loss → backward → update) | ❌ |
@@ -51,7 +51,7 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 | Module | Contenu |
 |---|---|
 | **`data.py`** | MNISTLoader, preprocessing, DataLoader |
-| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense (stub) |
+| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅ |
 | **`losses.py`** | Softmax, CrossEntropyLoss (stubs) |
 | **`model.py`** | classe CNN (stub) |
 
@@ -60,6 +60,14 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 ---
 
 ## 📜 Historique
+
+### 2026-07-05 — Dense implémenté ✅
+
+- Implémentation de `Dense` (forward, backward, update).
+- Forward : `y = x @ W.T + b`
+- Backward : `dW = d_out.T @ x`, `db = d_out.sum(axis=0)`, `dx = d_out @ W`
+- Gradient check par différences finies ✅ (erreur relative < 1e-4).
+- Tests unitaires dans cnn.py.
 
 ### 2026-07-04 — Refactoring en modules
 
