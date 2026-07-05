@@ -37,8 +37,8 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 |---|---|
 | **Refactoring modules** | ✅ |
 | Dense (forward, backward, update) | ✅ |
-| Softmax | ❌ |
-| CrossEntropyLoss | ❌ |
+| Softmax | ✅ |
+| CrossEntropyLoss | ✅ |
 | Boucle d'entraînement (forward → loss → backward → update) | ❌ |
 | Évaluation / accuracy | ❌ |
 
@@ -52,7 +52,7 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 |---|---|
 | **`data.py`** | MNISTLoader, preprocessing, DataLoader |
 | **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅ |
-| **`losses.py`** | Softmax, CrossEntropyLoss (stubs) |
+| **`losses.py`** | Softmax ✅, CrossEntropyLoss ✅ |
 | **`model.py`** | classe CNN (stub) |
 
 `cnn.py` est devenu un simple script de démonstration qui importe les modules.
@@ -60,6 +60,14 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 ---
 
 ## 📜 Historique
+
+### 2026-07-05 — Softmax + CrossEntropyLoss implémentés ✅
+
+- **Softmax :** forward stable (shift max), backward avec Jacobienne complète.
+- **CrossEntropyLoss :** prend des **logits** (pas des probas), softmax intégré en interne.
+- **Gradient combiné magique :** `(softmax(logits) - y_true) / N` — pas besoin de multiplier les Jacobiennes.
+- Tests : loss manuelle, logits uniformes → log(C), logits parfaits → 0, gradient check ✅
+- Ajouté `accuracy()` directement dans CrossEntropyLoss.
 
 ### 2026-07-05 — Dense implémenté ✅
 

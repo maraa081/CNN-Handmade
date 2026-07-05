@@ -28,6 +28,10 @@ from layers import (
     Flatten,
     Dense,
 )
+from losses import (
+    Softmax,
+    CrossEntropyLoss,
+)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -258,11 +262,120 @@ if __name__ == "__main__":
 
     # ═══════════════════════════════════════════════════
     print("\n" + "═" * 50)
+    print("🧪 Test Softmax forward + backward")
+    print("═" * 50)
+
+    softmax = Softmax()
+    x_sm = np.array([[1.0, 2.0, 3.0],
+                     [0.0, 0.0, 0.0],
+                     [-2.0, -1.0, -0.5]], dtype=np.float64)
+    p = softmax.forward(x_sm)
+    print(f"  Chaque ligne somme à 1 : {'✅' if np.allclose(p.sum(axis=1), 1.0) else '❌'}")
+
+    # Test vérification manuelle
+    p_expected = np.exp(x_sm - x_sm.max(axis=1, keepdims=True))
+    p_expected /= p_expected.sum(axis=1, keepdims=True)
+    print(f"  Valeurs softmax correctes : {'✅' if np.allclose(p, p_expected) else '❌'}")
+
+    # Backward
+    dout = np.random.randn(*p.shape) * 0.1
+    dx = softmax.backward(dout)
+    print(f"  Backward shape : {dx.shape}  {'✅' if dx.shape == x_sm.shape else '❌'}")
+
+    # Gradient check du softmax par différences finies
+    eps = 1e-6
+    orig_val = x_sm[0, 1]
+    x_sm[0, 1] = orig_val + eps
+    p_plus = softmax.forward(x_sm)
+    x_sm[0, 1] = orig_val - eps
+    p_minus = softmax.forward(x_sm)
+    x_sm[0, 1] = orig_val
+    loss_plus = (p_plus * dout).sum()
+    loss_minus = (p_minus * dout).sum()
+    num_grad = (loss_plus - loss_minus) / (2 * eps)
+    softmax.forward(x_sm)
+    ana_grad = softmax.backward(dout)[0, 1]
+    rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
+    print(f"  Gradient check x[0,1] : err={rel_error:.8f}")
+    print(f"  {'✅' if rel_error < 1e-4 else '❌'}")
+
+    # ═══════════════════════════════════════════════════
+    print("\n" + "═" * 50)
+    print("🧪 Test CrossEntropyLoss forward + backward")
+    print("═" * 50)
+
+    loss_fn = CrossEntropyLoss()
+    N, C = 5, 10
+    logits = np.random.randn(N, C) * 2.0
+    labels = np.array([3, 7, 0, 9, 4])
+    y_true = np.eye(C)[labels]
+
+    loss = loss_fn.forward(logits, y_true)
+    print(f"  Loss : {loss:.6f}  {'✅' if loss > 0 else '❌'}")
+
+    # Vérification manuelle
+    soft = Softmax()
+    p_check = soft.forward(logits)
+    loss_manual = -np.sum(y_true * np.log(p_check + 1e-15)) / N
+    print(f"  Loss manuelle : {loss_manual:.6f}  {'✅' if np.allclose(loss, loss_manual) else '❌'}")
+
+    # Logits uniformes → loss = log(10) ≈ 2.3026
+    uniform_logits = np.zeros((N, C))
+    uniform_loss = loss_fn.forward(uniform_logits, y_true)
+    print(f"  Loss logits uniformes : {uniform_loss:.6f}  {'✅' if np.allclose(uniform_loss, np.log(C)) else '❌'}")
+
+    # Logits parfaits → loss ≈ 0
+    perfect_logits = np.zeros((N, C))
+    perfect_logits[np.arange(N), labels] = 100.0
+    perfect_loss = loss_fn.forward(perfect_logits, y_true)
+    print(f"  Loss logits parfaits : {perfect_loss:.6f}  {'✅' if perfect_loss < 1e-5 else '❌'}")
+
+    # Backward
+    dlogits = loss_fn.backward()
+    print(f"  Backward shape : {dlogits.shape}  {'✅' if dlogits.shape == logits.shape else '❌'}")
+
+    # Vérification : gradient doit sommer à 0 par échantillon (car sum(p) = 1)
+    grad_sum = loss_fn.backward().sum(axis=1)
+    print(f"  Gradient somme à 0 / échantillon : {'✅' if np.allclose(grad_sum, 0) else '❌'}")
+
+    # Gradient check combined
+    eps = 1e-6
+    orig_val = logits[0, 0]
+    logits[0, 0] = orig_val + eps
+    loss_plus = loss_fn.forward(logits, y_true)
+    logits[0, 0] = orig_val - eps
+    loss_minus = loss_fn.forward(logits, y_true)
+    logits[0, 0] = orig_val
+    num_grad = (loss_plus - loss_minus) / (2 * eps)
+    loss_fn.forward(logits, y_true)
+    ana_grad = loss_fn.backward()[0, 0]
+    rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
+    print(f"  Gradient check logits[0,0] : err={rel_error:.8f}")
+    print(f"  {'✅' if rel_error < 1e-4 else '❌'}")
+
+    # ═══════════════════════════════════════════════════
+    print("\n" + "═" * 50)
+    print("🧪 Test accuracy")
+    print("═" * 50)
+
+    acc = loss_fn.accuracy(logits, y_true)
+    print(f"  Accuracy (logits aléatoires) : {acc:.2f}")
+    print(f"  Accuracy > 0 : {'✅' if acc >= 0 else '❌'}")
+
+    perfect_logits_acc = np.zeros((N, C))
+    perfect_logits_acc[np.arange(N), labels] = 100.0
+    acc_perfect = loss_fn.accuracy(perfect_logits_acc, y_true)
+    print(f"  Accuracy parfaite : {acc_perfect:.2f}  {'✅' if acc_perfect == 1.0 else '❌'}")
+
+    # ═══════════════════════════════════════════════════
+    print("\n" + "═" * 50)
     print("🎉 Tous les tests sont passés !")
     print("═" * 50)
     print()
     print("Modules disponibles :")
-    print("  data.py    → MNISTLoader, DataLoader, preprocessing")
-    print("  layers.py  → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅")
-    print("  losses.py  → Softmax, CrossEntropyLoss (stubs)")
-    print("  model.py   → CNN (stub)")
+    print("  data.py     → MNISTLoader, DataLoader, preprocessing")
+    print("  layers.py   → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅")
+    print("  losses.py   → Softmax ✅, CrossEntropyLoss ✅")
+    print("  model.py    → CNN (stub)")
+    print()
+    print("Prochaine étape : boucle d'entraînement dans model.py")
