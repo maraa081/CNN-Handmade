@@ -20,7 +20,7 @@
 import sys
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg")  # ← change en "Agg" si pas d'écran (SSH/serveur)
+matplotlib.use("Agg")  # ← pas besoin d'écran, sauvegarde en fichier
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
@@ -151,7 +151,11 @@ plt.grid(True, alpha=0.3)
 plt.ylim(0, 1)
 
 plt.tight_layout()
-plt.show()
+
+# Sauvegarde en PNG (pas besoin d'écran)
+output_path = join(ROOT_DIR, "tune_result.png")
+plt.savefig(output_path, dpi=150, bbox_inches="tight")
+print(f"\n📁 Graphique sauvegardé : {output_path}")
 
 
 # ──────────────────────────────────────────────────────────────────────────
