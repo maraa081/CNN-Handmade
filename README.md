@@ -4,49 +4,47 @@
 
 Pas de TensorFlow, pas de PyTorch, pas de Keras. Juste Python, NumPy, et moi. 🔧
 
-## 🎯 Objectif
+## 🎯 Pourquoi ?
 
-Implémenter un CNN capable de classifier le dataset MNIST (0-9) **sans framework de deep learning**. Comprendre chaque brique en la codant soi-même plutôt que d'appeler une API.
+Comprendre chaque brique du deep learning en la codant soi-même — im2col, rétropropagation, descente de gradient… plutôt que d'appeler une API magique.
 
-## ✅ Avancement actuel
+## ✅ Ce qui est implémenté
 
-| Partie | Statut | Notes |
-|---|---|---|
-| Chargement MNIST (IDX) | ✅ | `MNISTLoader` — lecture des fichiers binaires |
-| Preprocessing | ✅ | Normalisation [0,1], one-hot encoding, DataLoader par batches |
-| Partie | Statut | Notes |
-|---|---|---|
-| Chargement MNIST (IDX) | ✅ | `MNISTLoader` — lecture des fichiers binaires |
-| Preprocessing | ✅ | Normalisation [0,1], one-hot encoding, DataLoader par batches |
-| **Conv2D forward** | ✅ | Implémentation par **im2col + produit matriciel** |
-| **Conv2D backward** | ✅ | rétropropagation complète (gradients kernels, bias, col2im) |
-| **MaxPool2D** | ✅ | Forward + backward (indices des max stockés) |
-| **ReLU** | ✅ | Forward + backward (masque x > 0) |
-| **Flatten** | ✅ | Forward + backward (reshape inverse) |
-| **Découpage en modules** | ✅ | `data.py`, `layers.py`, `losses.py`, `model.py` |
-| Dense / Fully Connected | ❌ | Stub dans layers.py — à implémenter |
-| Softmax + Cross-Entropy | ❌ | Stubs dans losses.py |
-| Training loop | ❌ | Stub dans model.py |
-| Évaluation / Accuracy | ❌ | |
+| Module | Statut |
+|---|---|
+| **MNISTLoader** (fichiers IDX bruts) | ✅ |
+| **Preprocessing** (normalisation, one-hot, DataLoader) | ✅ |
+| **Conv2D** (forward par im2col, backward, update) | ✅ |
+| **MaxPool2D** (forward + backward avec indices) | ✅ |
+| **ReLU** (forward + backward) | ✅ |
+| **Flatten** (forward + backward) | ✅ |
+| **Dense / Fully Connected** (forward + backward + update) | ✅ |
+| **Softmax** (forward + backward) | ✅ |
+| **CrossEntropyLoss** (forward + backward + accuracy) | ✅ |
+| **Training loop** (CNN.train avec historique) | ✅ |
+| **Évaluation** (accuracy sur test set) | ✅ |
+| **Sauvegarde / Chargement des poids** | ✅ |
+| **Predict** (classifier une image chargée) | ✅ |
+| **Graphiques d'entraînement** (loss + accuracy) | ✅ |
 
-## 🧱 Architecture prévue
+## 🧱 Architecture
 
 ```
 Entrée : (N, 1, 28, 28)
     │
-    ├── Conv2D  (1 → 32, kernel=3, pad=1)     →  (N, 32, 28, 28)
+    ├── Conv2D   (1 → 32,  kernel=3, pad=1)     →  (N, 32, 28, 28)
     ├── ReLU
-    ├── MaxPool2D  (2×2, stride=2)             →  (N, 32, 14, 14)
+    ├── MaxPool2D  (2×2, stride=2)               →  (N, 32, 14, 14)
     │
-    ├── Conv2D  (32 → 64, kernel=3, pad=1)     →  (N, 64, 14, 14)
+    ├── Conv2D   (32 → 64, kernel=3, pad=1)      →  (N, 64, 14, 14)
     ├── ReLU
-    ├── MaxPool2D  (2×2, stride=2)             →  (N, 64, 7, 7)
+    ├── MaxPool2D  (2×2, stride=2)               →  (N, 64, 7, 7)
     │
-    ├── Flatten                                →  (N, 3136)
-    ├── Dense (3136 → 128)
+    ├── Flatten                                  →  (N, 3136)
+    ├── Dense   (3136 → 128)
     ├── ReLU
-    ├── Dense (128 → 10)
-    └── Softmax                                →  (N, 10)
+    ├── Dense   (128 → 10)
+    └── Softmax                                  →  (N, 10)
 ```
 
 ## 📦 Structure du projet
@@ -54,43 +52,93 @@ Entrée : (N, 1, 28, 28)
 ```
 CNN-Handmade/
 ├── README.md
-├── requirements.txt          (numpy + matplotlib)
+├── requirements.txt
+├── predict.py              ← charge le modèle et classifie
 ├── docs/
-│   ├── data-flow.md          — trace complète d'une image dans le réseau
-│   └── memoire-projet.md     — carnet de bord, concepts à retenir
+│   ├── data-flow.md
+│   └── memoire-projet.md
 ├── data/
-│   ├── train-images-idx3-ubyte
-│   ├── train-labels-idx1-ubyte
-│   ├── t10k-images-idx3-ubyte
-│   └── t10k-labels-idx1-ubyte
+│   └── (fichiers MNIST .ubyte)
 ├── traces/
 │   └── forward_trace.py
 └── src/
     ├── __init__.py
     ├── data.py      — MNISTLoader, preprocessing, DataLoader
-    ├── layers.py    — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense (stub)
-    ├── losses.py    — Softmax, CrossEntropyLoss (stubs)
-    ├── model.py     — CNN (stub)
-    └── cnn.py       — script de démonstration / tests
+    ├── layers.py    — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense
+    ├── losses.py    — Softmax, CrossEntropyLoss
+    ├── model.py     — CNN (train, evaluate, save_weights, load_weights, predict)
+    ├── tune_cnn.py  — réglages interactifs des hyperparamètres
+    └── cnn.py       — script principal de démo
 ```
 
-## 📈 Prochaines étapes (ordre)
+## 🚀 Utilisation
 
-1. **ReLU** — forward `max(0, x)` et backward
-2. **Flatten** — transformation (N, C, H, W) → (N, C×H×W)
-3. **Dense (Fully Connected)** — couche linéaire + backward
-4. **Softmax + Cross-Entropy Loss** — fonction de perte
-5. **Training loop** — descente de gradient, epochs, évaluation
-6. **Tests & tuning** — faire converger le modèle sur MNIST (> 95%)
-
-## 🚀 Lancer le test
+### 1. Installer les dépendances
 
 ```bash
-cd src/
-python3 cnn.py
+pip install numpy matplotlib
 ```
 
-Affiche le chargement MNIST, un test Conv2D forward, et un test MaxPool2D (forward + backward).
+### 2. Lancer les tests + entraînement rapide
+
+```bash
+python src/cnn.py
+```
+
+- Teste toutes les couches une par une (forward, backward, gradient check)
+- Entraîne sur **2000 images** (3 epochs)
+- Sauvegarde les poids dans `model_weights.npz`
+- Génère le graphique `training_result.png`
+
+### 3. Entraînement complet (recommandé)
+
+```bash
+python src/cnn.py --full
+```
+
+- Entraîne sur **les 60000 images** MNIST (10 epochs, ~15-20 min)
+- Sauvegarde les poids dans `model_weights_full.npz`
+- Génère `training_result_full.png`
+
+Options supplémentaires :
+```bash
+python src/cnn.py --full --epochs 15      # 15 epochs au lieu de 10
+python src/cnn.py --train-only            # saute les tests, entraîne direct
+```
+
+### 4. Prédire sans réentraîner
+
+```bash
+python predict.py                          # 10 prédictions → predictions.png
+python predict.py --all                    # accuracy sur les 10000 images de test
+python predict.py --weights model_weights_full.npz   # choisir les poids
+python predict.py --interactive            # mode pas à pas avec affichage
+```
+
+## ⚙️ Tuning interactif
+
+```bash
+python src/tune_cnn.py
+```
+
+Ouvre un fichier de réglages où tu peux modifier :
+- `LEARNING_RATE` (0.1, 0.01, 0.001…)
+- `BATCH_SIZE` (32, 64, 128…)
+- `EPOCHS` (5, 10, 20…)
+- `DATA_LIMIT` (2000, 5000, None pour tout)
+- Architecture du réseau
+
+Résultat sauvegardé dans `tune_result.png`.
+
+## 💡 Exemple rapide
+
+```python
+from predict import load_model
+
+model = load_model("model_weights_full.npz")
+pred = model.predict(mon_image)   # mon_image: (1, 28, 28) normalisée
+print(f"Prédiction : {pred}")
+```
 
 ---
 
