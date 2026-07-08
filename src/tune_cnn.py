@@ -38,7 +38,7 @@ from model import CNN
 LEARNING_RATE = 0.01      # ← Pas d'apprentissage (0.1, 0.01, 0.001, 0.0001…)
 BATCH_SIZE    = 64         # ← Taille des lots (32, 64, 128, 256…)
 EPOCHS        = 5          # ← Nombre de passages sur les données (5, 10, 20…)
-DATA_LIMIT    = 2000       # ← Nbre d'images utilisé (2000 = rapide ; mets None pour tout)
+DATA_LIMIT    = None       # ← Nbre d'images utilisé (2000 = rapide ; mets None pour tout)
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Modifie aussi l'architecture du réseau plus bas si tu veux :
