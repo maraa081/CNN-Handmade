@@ -6,9 +6,13 @@ Importe les modules découpés (data, layers, losses, model) et lance
 les tests de toutes les couches implémentées.
 
 Usage :
-    python3 src/cnn.py
+    python3 src/cnn.py               # Tests + entraînement rapide (2000 images)
+    python3 src/cnn.py --full         # Tests + entraînement complet (60000 images)
+    python3 src/cnn.py --train-only   # Entraînement complet sans les tests
+    python3 src/cnn.py --full --epochs 15  # 15 epochs au lieu de 10
 """
 
+import sys
 import time
 import numpy as np
 import matplotlib
@@ -388,12 +392,21 @@ if __name__ == "__main__":
     print("  predict.py    → charger le modèle entraîné et classifier 🖼️")
 
     # ╔══════════════════════════════════════════════════════════════════╗
-    # ║  ENTRAÎNEMENT RAPIDE + SAUVEGARDE + GRAPHIQUES                  ║
+    # ║  ENTRAÎNEMENT + SAUVEGARDE + GRAPHIQUES                          ║
     # ╚══════════════════════════════════════════════════════════════════╝
 
-    print("\n" + "═" * 50)
-    print("🏋️  Entraînement rapide (sous-ensemble 2000 images)")
-    print("═" * 50)
+    # ── Flags ──
+    full = "--full" in sys.argv or "--train-only" in sys.argv
+    train_only = "--train-only" in sys.argv
+    epochs_override = None
+    for i, arg in enumerate(sys.argv):
+        if arg == "--epochs" and i + 1 < len(sys.argv):
+            epochs_override = int(sys.argv[i + 1])
+
+    if not train_only:
+        print("\n" + "═" * 50)
+        print("🏋️  Entraînement rapide (sous-ensemble 2000 images)")
+        print("═" * 50)
 
     from model import CNN
 
@@ -410,52 +423,99 @@ if __name__ == "__main__":
     model.add(ReLU())
     model.add(Dense(128, 10))
 
-    print(f"🧠 {model}")
+    if full:
+        print(f"\n{'═' * 50}")
+        print(f"🚀  ENTRAÎNEMENT COMPLET  ({len(x_train)} images)")
+        print(f"{'═' * 50}")
+        print(f"🧠 {model}")
 
-    # Sous-ensemble rapide
-    x_sub = x_train[:2000]
-    y_sub = y_train[:2000]
-    train_sub = preprocess_pipeline(x_sub, y_sub, batch_size=64, shuffle=True)
-    test_sub  = preprocess_pipeline(x_test[:500], y_test[:500], batch_size=64, shuffle=False)
+        batch_size = 128
+        n_epochs = epochs_override or 10
 
-    print(f"\n📦 {x_sub.shape[0]} train, batch=64, epochs=3")
+        train_loader_full = preprocess_pipeline(x_train, y_train, batch_size=batch_size, shuffle=True)
+        test_loader_full  = preprocess_pipeline(x_test, y_test, batch_size=batch_size, shuffle=False)
 
-    t_start = time.time()
-    history = model.train(train_sub, epochs=3, lr=0.01, verbose=True)
-    t_elapsed = time.time() - t_start
+        print(f"\n📦 {len(x_train)} train / {len(x_test)} test")
+        print(f"   batch={batch_size}, epochs={n_epochs}")
+        print(f"   ~{len(train_loader_full)} batches/epoch")
 
-    m, s = divmod(t_elapsed, 60)
-    print(f"⏱️  {int(m)}m {int(s)}s")
+        t_start = time.time()
+        history = model.train(train_loader_full, epochs=n_epochs, lr=0.01, verbose=True)
+        t_elapsed = time.time() - t_start
 
-    # Évaluation
-    test_acc = model.evaluate(test_sub)
-    print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+        h, m, s = int(t_elapsed // 3600), int((t_elapsed % 3600) // 60), int(t_elapsed % 60)
+        print(f"\n⏱️  {h}h {m}m {s}s" if h else f"⏱️  {m}m {s}s")
 
-    # ── 1. Sauvegarde des poids ──
-    save_path = join(ROOT_DIR, "model_weights.npz")
-    model.save_weights(save_path)
+        # Évaluation
+        print(f"\n{'═' * 50}")
+        print(f"📊 Évaluation sur {len(x_test)} images de test…")
+        test_acc = model.evaluate(test_loader_full)
+        print(f"{'═' * 50}")
+        print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
-    # ── 2. Génération du graphique ──
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+        # Sauvegarde
+        save_path = join(ROOT_DIR, "model_weights_full.npz")
+        model.save_weights(save_path)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        # Graphique
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
+        ax1.set_title(f"Loss (full, {n_epochs} epochs)", fontsize=12)
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.grid(True, alpha=0.3)
+        ax2.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
+        ax2.set_title(f"Accuracy (full)\nTest final : {test_acc:.1%}", fontsize=12)
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Accuracy")
+        ax2.grid(True, alpha=0.3)
+        ax2.set_ylim(0, 1)
+        plt.tight_layout()
+        graph_path = join(ROOT_DIR, "training_result_full.png")
+        plt.savefig(graph_path, dpi=150, bbox_inches="tight")
+        print(f"📊 Graphique → {graph_path}")
 
-    ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
-    ax1.set_title("Loss (entraînement)", fontsize=12)
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("Loss")
-    ax1.grid(True, alpha=0.3)
+    else:
+        print(f"🧠 {model}")
 
-    ax2.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
-    ax2.set_title(f"Accuracy\nTest final : {test_acc:.1%}", fontsize=12)
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Accuracy")
-    ax2.grid(True, alpha=0.3)
-    ax2.set_ylim(0, 1)
+        # Sous-ensemble rapide
+        x_sub = x_train[:2000]
+        y_sub = y_train[:2000]
+        n_epochs = epochs_override or 3
+        train_sub = preprocess_pipeline(x_sub, y_sub, batch_size=64, shuffle=True)
+        test_sub  = preprocess_pipeline(x_test[:500], y_test[:500], batch_size=64, shuffle=False)
 
-    plt.tight_layout()
-    graph_path = join(ROOT_DIR, "training_result.png")
-    plt.savefig(graph_path, dpi=150, bbox_inches="tight")
-    print(f"📊 Graphique → {graph_path}")
+        print(f"\n📦 {x_sub.shape[0]} train, batch=64, epochs={n_epochs}")
+
+        t_start = time.time()
+        history = model.train(train_sub, epochs=n_epochs, lr=0.01, verbose=True)
+        t_elapsed = time.time() - t_start
+
+        m, s = divmod(t_elapsed, 60)
+        print(f"⏱️  {int(m)}m {int(s)}s")
+
+        # Évaluation
+        test_acc = model.evaluate(test_sub)
+        print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+
+        # Sauvegarde
+        save_path = join(ROOT_DIR, "model_weights.npz")
+        model.save_weights(save_path)
+
+        # Graphique
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
+        ax1.set_title(f"Loss (rapide, {n_epochs} epochs)", fontsize=12)
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.grid(True, alpha=0.3)
+        ax2.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
+        ax2.set_title(f"Accuracy (rapide)\nTest final : {test_acc:.1%}", fontsize=12)
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Accuracy")
+        ax2.grid(True, alpha=0.3)
+        ax2.set_ylim(0, 1)
+        plt.tight_layout()
+        graph_path = join(ROOT_DIR, "training_result.png")
+        plt.savefig(graph_path, dpi=150, bbox_inches="tight")
+        print(f"📊 Graphique → {graph_path}")

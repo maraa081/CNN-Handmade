@@ -15,4 +15,5 @@ __pycache__/
 tune_result.png
 preview_samples.png
 training_result.png
+training_result_full.png
 predictions.png

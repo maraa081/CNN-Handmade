@@ -3,12 +3,26 @@
 predict.py — Charge le modèle entraîné et classifie des chiffres MNIST
 
 Usage :
-    python3 predict.py                          # Test sur 10 images aléatoires
-    python3 predict.py --interactive            # Affiche image par image
-    python3 predict.py --all                    # Accuracy complète (10000 test)
+    python3 predict.py                                    # Rapide (model_weights.npz)
+    python3 predict.py --weights model_weights_full.npz   # Complet
+    python3 predict.py --all                              # Accuracy complète (10000 test)
+    python3 predict.py --interactive                      # Affiche image par image
 
-Fichier de poids attendu : model_weights.npz (généré par cnn.py ou tune_cnn.py)
+Poids disponibles :
+    model_weights.npz       → entraînement rapide (2000 images, 3 epochs)
+    model_weights_full.npz  → entraînement complet  (60000 images)
 """
+
+import sys
+import numpy as np
+from os.path import join, dirname, abspath, exists
+
+ROOT_DIR = dirname(abspath(__file__))
+sys.path.insert(0, join(ROOT_DIR, "src"))
+
+from data import MNISTLoader, preprocess_pipeline
+from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense
+from model import CNN
 
 import sys
 import numpy as np
@@ -51,24 +65,50 @@ def load_data():
 
 def load_model(weights_path=None):
     if weights_path is None:
-        weights_path = join(ROOT_DIR, "model_weights.npz")
+        # D'abord essayer le rapide, sinon le full
+        quick = join(ROOT_DIR, "model_weights.npz")
+        full  = join(ROOT_DIR, "model_weights_full.npz")
+        if exists(quick):
+            weights_path = quick
+        elif exists(full):
+            weights_path = full
+        else:
+            print(f"❌ Aucun fichier de poids trouvé !")
+            print(f"   Lance d'abord : python3 src/cnn.py  (rapide)")
+            print(f"   Ou bien :       python3 src/cnn.py --full  (complet)")
+            sys.exit(1)
 
     if not exists(weights_path):
-        print(f"❌ Fichier de poids introuvable : {weights_path}")
-        print("   Lance d'abord : python3 src/cnn.py  (ou tune_cnn.py)")
+        print(f"❌ Fichier introuvable : {weights_path}")
         sys.exit(1)
 
     model = build_model()
     model.load_weights(weights_path)
+    tag = "rapide" if "model_weights.npz" in weights_path else "complet"
+    print(f"   ({tag})")
     return model
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    args = sys.argv[1:]
 
-    model = load_model()
+    # Parse --weights option
+    weights_path = None
+    i = 0
+    while i < len(args):
+        if args[i] == "--weights" and i + 1 < len(args):
+            weights_path = join(ROOT_DIR, args[i + 1])
+            # Remove these from args
+            args.pop(i + 1)
+            args.pop(i)
+        else:
+            i += 1
+
+    mode = args[0] if args else ""
+
+    model = load_model(weights_path)
     x_test, y_test = load_data()
 
     if mode == "--all":
