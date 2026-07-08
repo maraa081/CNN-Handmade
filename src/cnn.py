@@ -9,7 +9,10 @@ Usage :
     python3 src/cnn.py
 """
 
+import time
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # pas besoin d'écran
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
@@ -75,7 +78,9 @@ if __name__ == "__main__":
         plt.axis("off")
     plt.suptitle("10 chiffres MNIST (train)", fontsize=14)
     plt.tight_layout()
-    plt.show()
+    preview_path = join(ROOT_DIR, "preview_samples.png")
+    plt.savefig(preview_path, dpi=150, bbox_inches="tight")
+    print(f"📸 Échantillons sauvegardés → {preview_path}")
 
     # ── Image de test pour les couches ──
     test_img = x_train[:4]
@@ -378,4 +383,79 @@ if __name__ == "__main__":
     print("  layers.py     → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅")
     print("  losses.py     → Softmax ✅, CrossEntropyLoss ✅")
     print("  model.py      → CNN (forward, backward, update, train, evaluate) ✅")
+    print("  model.py      → save_weights, load_weights, predict ✅")
     print("  tune_cnn.py   → fichier de réglages interactif 🎮")
+    print("  predict.py    → charger le modèle entraîné et classifier 🖼️")
+
+    # ╔══════════════════════════════════════════════════════════════════╗
+    # ║  ENTRAÎNEMENT RAPIDE + SAUVEGARDE + GRAPHIQUES                  ║
+    # ╚══════════════════════════════════════════════════════════════════╝
+
+    print("\n" + "═" * 50)
+    print("🏋️  Entraînement rapide (sous-ensemble 2000 images)")
+    print("═" * 50)
+
+    from model import CNN
+
+    # Architecture standard
+    model = CNN()
+    model.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))
+    model.add(ReLU())
+    model.add(MaxPool2D(2))
+    model.add(Conv2D(32, 64, kernel_size=3, stride=1, pad=1))
+    model.add(ReLU())
+    model.add(MaxPool2D(2))
+    model.add(Flatten())
+    model.add(Dense(3136, 128))
+    model.add(ReLU())
+    model.add(Dense(128, 10))
+
+    print(f"🧠 {model}")
+
+    # Sous-ensemble rapide
+    x_sub = x_train[:2000]
+    y_sub = y_train[:2000]
+    train_sub = preprocess_pipeline(x_sub, y_sub, batch_size=64, shuffle=True)
+    test_sub  = preprocess_pipeline(x_test[:500], y_test[:500], batch_size=64, shuffle=False)
+
+    print(f"\n📦 {x_sub.shape[0]} train, batch=64, epochs=3")
+
+    t_start = time.time()
+    history = model.train(train_sub, epochs=3, lr=0.01, verbose=True)
+    t_elapsed = time.time() - t_start
+
+    m, s = divmod(t_elapsed, 60)
+    print(f"⏱️  {int(m)}m {int(s)}s")
+
+    # Évaluation
+    test_acc = model.evaluate(test_sub)
+    print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+
+    # ── 1. Sauvegarde des poids ──
+    save_path = join(ROOT_DIR, "model_weights.npz")
+    model.save_weights(save_path)
+
+    # ── 2. Génération du graphique ──
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
+    ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
+    ax1.set_title("Loss (entraînement)", fontsize=12)
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Loss")
+    ax1.grid(True, alpha=0.3)
+
+    ax2.plot(history["accuracy"], marker="s", linewidth=2, markersize=6, color="green")
+    ax2.set_title(f"Accuracy\nTest final : {test_acc:.1%}", fontsize=12)
+    ax2.set_xlabel("Epoch")
+    ax2.set_ylabel("Accuracy")
+    ax2.grid(True, alpha=0.3)
+    ax2.set_ylim(0, 1)
+
+    plt.tight_layout()
+    graph_path = join(ROOT_DIR, "training_result.png")
+    plt.savefig(graph_path, dpi=150, bbox_inches="tight")
+    print(f"📊 Graphique → {graph_path}")

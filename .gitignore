@@ -13,3 +13,6 @@ __pycache__/
 .vscode/
 .idea/
 tune_result.png
+preview_samples.png
+training_result.png
+predictions.png

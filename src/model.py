@@ -157,6 +157,68 @@ class CNN:
 
         return correct / total
 
+    def save_weights(self, path):
+        """
+        Sauvegarde tous les poids du réseau dans un fichier .npz.
+
+        Chargeable plus tard avec load_weights() pour éviter
+        de réentraîner le modèle.
+
+        Args :
+            path : chemin du fichier .npz (ex: "model_weights.npz")
+        """
+        import os
+        params = {}
+        for i, layer in enumerate(self.layers):
+            if hasattr(layer, 'kernels'):
+                params[f'conv_{i}_kernels'] = layer.kernels
+                params[f'conv_{i}_bias'] = layer.bias
+            elif hasattr(layer, 'W'):
+                params[f'dense_{i}_W'] = layer.W
+                params[f'dense_{i}_b'] = layer.b
+        np.savez(path, **params)
+        size = os.path.getsize(path)
+        print(f"\n  💾 Poids sauvegardés → {path}  ({size / 1024:.1f} Ko)")
+
+    def load_weights(self, path):
+        """
+        Charge les poids depuis un fichier .npz dans l'architecture
+        actuelle du modèle.
+
+        Le modèle doit AVOIR LA MÊME ARCHITECTURE qu'au moment
+        de la sauvegarde (mêmes couches dans le même ordre).
+
+        Args :
+            path : chemin du fichier .npz (ex: "model_weights.npz")
+        """
+        data = np.load(path)
+        for i, layer in enumerate(self.layers):
+            if hasattr(layer, 'kernels'):
+                layer.kernels = data[f'conv_{i}_kernels']
+                layer.bias = data[f'conv_{i}_bias']
+            elif hasattr(layer, 'W'):
+                layer.W = data[f'dense_{i}_W']
+                layer.b = data[f'dense_{i}_b']
+        print(f"  🔄 Poids chargés depuis → {path}")
+
+    def predict(self, x):
+        """
+        Prédiction rapide pour une image ou un batch.
+
+        Args :
+            x : image (1, 28, 28) ou batch (N, 1, 28, 28) en channels_first
+
+        Retourne :
+            - si une seule image : le chiffre prédit (int)
+            - si un batch : tableau des prédictions (int)
+        """
+        single = x.ndim == 3
+        if single:
+            x = x[np.newaxis, :]
+        logits = self.forward(x)
+        preds = np.argmax(logits, axis=1)
+        return int(preds[0]) if single else preds
+
     def __repr__(self):
         layers_str = "\n  ".join(str(l) for l in self.layers)
         return f"CNN(\n  {layers_str}\n)"
