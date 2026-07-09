@@ -180,33 +180,37 @@ class Adam:
 
         for i, layer in enumerate(layers):
             if hasattr(layer, 'kernels'):       # Conv2D
-                self._apply_adam(f'conv_{i}', layer.kernels, layer.d_kernels, lr, b1, b2, eps)
-                self._apply_adam(f'conv_{i}', layer.bias, layer.d_bias, lr, b1, b2, eps)
+                self._apply_adam(f'conv_{i}_k', layer.kernels, layer.d_kernels, lr, b1, b2, eps)
+                self._apply_adam(f'conv_{i}_b', layer.bias,   layer.d_bias,   lr, b1, b2, eps)
 
             elif hasattr(layer, 'W'):           # Dense
-                self._apply_adam(f'dense_{i}', layer.W, layer.dW, lr, b1, b2, eps)
-                self._apply_adam(f'dense_{i}', layer.b, layer.db, lr, b1, b2, eps)
+                self._apply_adam(f'dense_{i}_W', layer.W, layer.dW, lr, b1, b2, eps)
+                self._apply_adam(f'dense_{i}_b', layer.b,  layer.db, lr, b1, b2, eps)
 
-    def _apply_adam(self, prefix, param, grad, lr, b1, b2, eps):
+    def _apply_adam(self, key, param, grad, lr, b1, b2, eps):
         """
         Applique une étape Adam à un paramètre.
 
+        key   : clé unique pour ce paramètre (ex: 'conv_0_k', 'conv_0_b')
+        param : référence au paramètre à mettre à jour (modifié sur place)
+        grad  : gradient correspondant
+
         Workflow :
-            1. met à jour les moments m, v
-            2. corrige le biais
-            3. applique la mise à jour
+            1. crée les buffers si besoin
+            2. met à jour les moments m, v
+            3. corrige le biais
+            4. applique la mise à jour
         """
-        key_w = f'{prefix}_W' if param.ndim > 1 else f'{prefix}_b'
-        self._ensure_moments(key_w, param)
+        self._ensure_moments(key, param)
         t = self.t
 
         # Mise à jour des moments
-        self.m[key_w] = b1 * self.m[key_w] + (1 - b1) * grad
-        self.v[key_w] = b2 * self.v[key_w] + (1 - b2) * (grad ** 2)
+        self.m[key] = b1 * self.m[key] + (1 - b1) * grad
+        self.v[key] = b2 * self.v[key] + (1 - b2) * (grad ** 2)
 
         # Correction de biais
-        m_hat = self.m[key_w] / (1 - b1 ** t)
-        v_hat = self.v[key_w] / (1 - b2 ** t)
+        m_hat = self.m[key] / (1 - b1 ** t)
+        v_hat = self.v[key] / (1 - b2 ** t)
 
         # Mise à jour
         param -= lr * m_hat / (np.sqrt(v_hat) + eps)
