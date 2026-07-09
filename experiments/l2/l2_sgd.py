@@ -48,7 +48,7 @@ LEARNING_RATE = 0.01
 WEIGHT_DECAY  = 0.001       # ← Coefficient L2 (0.001 = défaut, 0.0 = désactivé)
 BATCH_SIZE    = 64
 EPOCHS        = 5
-DATA_LIMIT    = 2000
+DATA_LIMIT    = None 
 
 # ── Optimiseur avec weight_decay ───────────────────────────────────────────
 #   Le weight_decay est passé directement à l'optimiseur.

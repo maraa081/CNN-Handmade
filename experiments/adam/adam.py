@@ -51,7 +51,7 @@ EPS          = 1e-8         # ← Stabilité numérique (évite division par zé
 
 BATCH_SIZE    = 64
 EPOCHS        = 5
-DATA_LIMIT    = 2000
+DATA_LIMIT    = None
 
 # ── Optimiseur ─────────────────────────────────────────────────────────────
 #   Adam. Tu peux jouer avec beta1 et beta2 pour voir l'effet :

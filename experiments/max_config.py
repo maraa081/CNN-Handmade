@@ -50,7 +50,7 @@ DROPOUT_RATE = 0.5           # Désactive 50% des neurones après le premier Den
 
 # ── Entraînement ──
 BATCH_SIZE = 64
-EPOCHS     = 10
+EPOCHS     = 5
 DATA_LIMIT = None            # None = tout MNIST (60000 images)
 
 # ═══════════════════════════════════════════════════════════════════════════
