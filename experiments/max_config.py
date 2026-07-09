@@ -128,7 +128,7 @@ ax2.set_ylabel("Accuracy")
 ax2.grid(True, alpha=0.3)
 ax2.set_ylim(0, 1)
 
-plt.suptitle("🔥 Max Config — Adam + Dropout + L2", fontsize=14, fontweight="bold", y=1.02)
+plt.suptitle("Max Config — Adam + Dropout + L2", fontsize=14, fontweight="bold", y=1.02)
 plt.tight_layout()
 
 graph_path = join(ROOT, "max_config.png")
