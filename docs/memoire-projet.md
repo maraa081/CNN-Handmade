@@ -29,6 +29,45 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 ---
 
+## 🏁 Expérimentations — Comparaison d'optimiseurs
+
+> Structure en dossiers séparés pour tester et comparer chaque optimisation.
+
+### Principe
+
+Chaque dossier `experiments/<nom>/` contient :
+- `tune_cnn.py` — script d'entraînement indépendant
+- `tune_result.png` — graphiques loss + accuracy
+- `model_weights.npz` — poids sauvegardés
+
+Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimiseur change.
+
+### Optimiseurs disponibles
+
+| Optimiseur | Fichier | Paramètres | Statut |
+|---|---|---|---|
+| **SGD** (vanilla) | `experiments/baseline/` | `lr` | ✅ |
+| **Momentum** (SGD + élan) | `experiments/momentum/` | `lr, momentum` | ✅ |
+| **Adam** (Adaptive Moment Estimation) | `experiments/adam/` | `lr, beta1, beta2, eps` | ✅ |
+
+### Prochaines expériences
+
+| Expérience | Statut |
+|---|---|
+| Learning Rate Scheduler | ⏳ |
+| Dropout (régularisation) | ⏳ |
+| Weight Decay (L2) | ⏳ |
+| Grid Search automatique | ⏳ |
+| Data Augmentation | ⏳ |
+
+### Architecture du framework
+
+- `src/optimizers.py` : définition des optimiseurs (SGD, Momentum, Adam)
+- `model.py` : `CNN(optimizer=...)` — l'optimiseur est passé au constructeur
+- Chaque optimiseur implémente `update(layers, lr=None)`
+
+---
+
 ## ⏭️ Prochaines étapes (code)
 
 > Partie plus mécanique, moins de théorie, avancer sur l'implémentation.
@@ -41,6 +80,10 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 | CrossEntropyLoss | ✅ |
 | Boucle d'entraînement (forward → loss → backward → update) | ✅ |
 | Évaluation / accuracy | ✅ |
+| **Framework d'expérimentations** (optimiseurs) | ✅ |
+| SGD (baseline) | ✅ |
+| Momentum | ✅ |
+| Adam | ✅ |
 
 ---
 

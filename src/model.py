@@ -26,6 +26,7 @@ from layers import (
     Conv2D, MaxPool2D, ReLU, Flatten, Dense,
 )
 from losses import CrossEntropyLoss
+from optimizers import SGD
 
 
 class CNN:
@@ -38,11 +39,17 @@ class CNN:
         Flatten
         Dense(3136→128) → ReLU
         Dense(128→10)
+
+    Optimiseurs disponibles (via optimizers.py) :
+        SGD       — descente de gradient classique (défaut)
+        Momentum  — SGD avec élan (lisse les oscillations)
+        Adam      — lr adaptatif + momentum (recommendé pour tuning)
     """
 
-    def __init__(self):
+    def __init__(self, optimizer=None):
         self.layers = []
         self.loss_fn = CrossEntropyLoss()
+        self.optimizer = optimizer if optimizer is not None else SGD(lr=0.01)
 
     def add(self, layer):
         """Ajoute une couche au réseau."""
@@ -71,16 +78,19 @@ class CNN:
             grad = layer.backward(grad)
         return grad
 
-    def update(self, lr):
+    def update(self, lr=None):
         """
-        Met à jour tous les paramètres apprenables.
+        Met à jour tous les paramètres via l'optimiseur.
 
-        lr : learning rate (pas d'apprentissage)
+        Délègue la mise à jour à self.optimizer.update(layers, lr).
+        Chaque optimiseur (SGD, Momentum, Adam) applique sa propre règle.
+
+        Args :
+            lr : learning rate (optionnel — utilise celui de l'optimiseur par défaut)
         """
-        for layer in self.layers:
-            layer.update(lr)
+        self.optimizer.update(self.layers, lr)
 
-    def train(self, train_loader, epochs=10, lr=0.01, verbose=True):
+    def train(self, train_loader, epochs=10, lr=None, verbose=True):
         """
         Boucle d'entraînement complète.
 
@@ -88,12 +98,12 @@ class CNN:
             1. Forward : passer les batches dans le réseau → logits
             2. Loss : CrossEntropyLoss(logits, y_true)
             3. Backward : rétropropager le gradient
-            4. Update : mettre à jour les poids
+            4. Update : mettre à jour les poids via l'optimiseur
 
         Args :
             train_loader : DataLoader avec les batches (channels_first)
             epochs       : nombre de passes complètes sur les données
-            lr           : learning rate
+            lr           : learning rate (None = utilise celui de l'optimiseur)
             verbose      : afficher la progression ?
 
         Retourne :

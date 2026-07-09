@@ -17,3 +17,12 @@ preview_samples.png
 training_result.png
 training_result_full.png
 predictions.png
+
+# Résultats d'expérimentations (générés, pas dans le repo)
+experiments/*/tune_result.png
+experiments/*/model_weights.npz
+experiments/*/training_result.png
+
+# Benchmark / résultats numériques
+experiments/*/benchmark*.txt
+experiments/*/results*.csv
