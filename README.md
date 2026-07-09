@@ -104,6 +104,8 @@ CNN-Handmade/
     │   ├── l2_sgd.png
     │   └── l2_sgd_weights.npz
     │
+    ├── max_config.py          — 🔥 Adam + Dropout + L2 combinés
+    │
     └── (prochains : lr_scheduler, data_augmentation, grid_search…)
 ```
 
@@ -194,6 +196,7 @@ python experiments/l2/l2_sgd.py              # Weight decay L2(0.001)
 | Weight Decay (L2) | ✅ |
 | Learning Rate Scheduler | ⏳ |
 | Grid Search automatique | ⏳ |
+| Max Config (Adam + Dropout + L2) | ✅ |
 | Data Augmentation | ⏳ |
 
 ### Ajouter une nouvelle expérience
