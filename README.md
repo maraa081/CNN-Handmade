@@ -260,6 +260,33 @@ pred = model.predict(mon_image)   # mon_image: (1, 28, 28) normalisée
 print(f"Prédiction : {pred}")
 ```
 
+## 🏁 Ce qu'on a appris (pour la suite)
+
+### Résultats clés (5 epochs, 2000 images)
+
+| Technique | Test Acc | Temps | Verdict |
+|---|---|---|---|
+| **SGD** (baseline) | 88.4% | 20s | Référence |
+| **Momentum** | 94.2% | 21s | +6% pour presque rien |
+| **Adam** | 95.5% | 24s | 🏆 Meilleur seul |
+| SGD + Dropout | 83.3% | 23s | À réserver aux gros datasets |
+| SGD + L2 | 86.4% | 20s | Idem, peu utile sur MNIST |
+| **Max Config** (10 epochs) | **96.0%** | 49s | Tout cumulé, meilleur long terme |
+
+### Ce qu'il faut retenir
+
+1. **Adam suffit sur MNIST** — 99% sur les 60000 images, pas besoin de régularisation
+2. **Dropout + L2** → utiles sur des vrais problèmes (overfitting), pas sur MNIST propre
+3. **Le meilleur rapport perf/simplicité** : juste Adam
+4. **Max Config** utile quand on monte en epochs ou en données
+
+### Prochaines pistes
+
+- **LR Scheduler** — réduire le lr en cours d'entraînement (step decay, cosine annealing)
+- **Grid Search** — trouver automatiquement les meilleurs hyperparamètres
+- **Data Augmentation** — rotations, décalages pour généraliser
+- **Entraînement complet** (60000 images, 20 epochs) → viser 99%+
+
 ---
 
 **#NoFrameworks #FromScratch #MNIST**

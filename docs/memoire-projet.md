@@ -94,7 +94,8 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 | Module | Contenu |
 |---|---|
 | **`data.py`** | MNISTLoader, preprocessing, DataLoader |
-| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅ |
+| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dropout, Dense ✅ |
+| **`optimizers.py`** | SGD, Momentum, Adam (tous avec L2 weight_decay) ✅ |
 | **`losses.py`** | Softmax ✅, CrossEntropyLoss ✅ |
 | **`model.py`** | CNN (forward, backward, update, train, evaluate) ✅ |
 | **`tune_cnn.py`** | fichier de tuning interactif (paramètres en haut) ✅ |
