@@ -25,10 +25,18 @@ class SGD:
     θ ← θ - lr * ∇θ
 
     C'est l'optimiseur de base, celui utilisé par défaut jusqu'ici.
+
+    Supporte le weight_decay (L2 régularisation) :
+        θ ← θ - lr * (∇θ + weight_decay * θ)
     """
 
-    def __init__(self, lr=0.01):
+    def __init__(self, lr=0.01, weight_decay=0.0):
+        """
+        lr           : learning rate
+        weight_decay : coefficient L2 (0.0 = pas de régularisation)
+        """
         self.lr = lr
+        self.weight_decay = weight_decay
 
     def update(self, layers, lr=None):
         """
@@ -39,18 +47,22 @@ class SGD:
             lr     : learning rate optionnel (sinon utilise self.lr)
         """
         lr = lr if lr is not None else self.lr
+        wd = self.weight_decay
 
         for layer in layers:
             if hasattr(layer, 'kernels'):       # Conv2D
-                layer.kernels -= lr * layer.d_kernels
-                layer.bias    -= lr * layer.d_bias
+                layer.kernels -= lr * (layer.d_kernels + wd * layer.kernels)
+                layer.bias    -= lr * (layer.d_bias    + wd * layer.bias)
             elif hasattr(layer, 'W'):           # Dense
-                layer.W -= lr * layer.dW
-                layer.b -= lr * layer.db
-            # Autres couches (ReLU, MaxPool, Flatten) : pas de paramètres
+                layer.W -= lr * (layer.dW + wd * layer.W)
+                layer.b -= lr * (layer.db + wd * layer.b)
+            # Autres couches (ReLU, MaxPool, Flatten, Dropout) : pas de paramètres
 
     def __repr__(self):
-        return f"SGD(lr={self.lr})"
+        s = f"SGD(lr={self.lr}"
+        if self.weight_decay:
+            s += f", weight_decay={self.weight_decay}"
+        return s + ")"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -68,12 +80,16 @@ class Momentum:
     une "vitesse" qui lisse les oscillations et accélère dans
     les directions stables.
 
+    Supporte le weight_decay (L2 régularisation) :
+        ∇θ_effectif = ∇θ + weight_decay * θ
+
     α (momentum) typique : 0.9
     """
 
-    def __init__(self, lr=0.01, momentum=0.9):
+    def __init__(self, lr=0.01, momentum=0.9, weight_decay=0.0):
         self.lr = lr
         self.momentum = momentum
+        self.weight_decay = weight_decay
         self.v = {}          # dictionnaire des vitesses
 
     def _ensure_shape(self, key, param):
@@ -89,32 +105,37 @@ class Momentum:
         """
         lr = lr if lr is not None else self.lr
         mom = self.momentum
+        wd = self.weight_decay
 
         for i, layer in enumerate(layers):
             if hasattr(layer, 'kernels'):       # Conv2D
                 # ── kernels ──
                 wk = f'conv_{i}_kernels'
+                grad_k = layer.d_kernels + wd * layer.kernels
                 self._ensure_shape(wk, layer.kernels)
-                self.v[wk] = mom * self.v[wk] - lr * layer.d_kernels
+                self.v[wk] = mom * self.v[wk] - lr * grad_k
                 layer.kernels += self.v[wk]
 
                 # ── bias ──
                 wb = f'conv_{i}_bias'
+                grad_b = layer.d_bias + wd * layer.bias
                 self._ensure_shape(wb, layer.bias)
-                self.v[wb] = mom * self.v[wb] - lr * layer.d_bias
+                self.v[wb] = mom * self.v[wb] - lr * grad_b
                 layer.bias += self.v[wb]
 
             elif hasattr(layer, 'W'):           # Dense
                 # ── W ──
                 wk = f'dense_{i}_W'
+                grad_W = layer.dW + wd * layer.W
                 self._ensure_shape(wk, layer.W)
-                self.v[wk] = mom * self.v[wk] - lr * layer.dW
+                self.v[wk] = mom * self.v[wk] - lr * grad_W
                 layer.W += self.v[wk]
 
                 # ── b ──
                 wb = f'dense_{i}_b'
+                grad_b = layer.db + wd * layer.b
                 self._ensure_shape(wb, layer.b)
-                self.v[wb] = mom * self.v[wb] - lr * layer.db
+                self.v[wb] = mom * self.v[wb] - lr * grad_b
                 layer.b += self.v[wb]
 
     def reset(self):
@@ -122,7 +143,10 @@ class Momentum:
         self.v = {}
 
     def __repr__(self):
-        return f"Momentum(lr={self.lr}, momentum={self.momentum})"
+        s = f"Momentum(lr={self.lr}, momentum={self.momentum}"
+        if self.weight_decay:
+            s += f", weight_decay={self.weight_decay}"
+        return s + ")"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -152,11 +176,12 @@ class Adam:
     ε  (stabilité)         : 1e-8
     """
 
-    def __init__(self, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
+    def __init__(self, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8, weight_decay=0.0):
         self.lr = lr
         self.beta1 = beta1
         self.beta2 = beta2
         self.eps = eps
+        self.weight_decay = weight_decay
         self.m = {}          # premier moment (moyenne des gradients)
         self.v = {}          # deuxième moment (variance des gradients)
         self.t = 0           # pas de temps
@@ -173,19 +198,27 @@ class Adam:
 
         Note : le learning rate d'Adam est généralement plus bas
         que SGD (~0.001 au lieu de ~0.01).
+
+        Supporte le weight_decay (L2 régularisation) :
+            grad_effectif = grad + weight_decay * param
         """
         lr = lr if lr is not None else self.lr
         self.t += 1
         b1, b2, eps = self.beta1, self.beta2, self.eps
+        wd = self.weight_decay
 
         for i, layer in enumerate(layers):
             if hasattr(layer, 'kernels'):       # Conv2D
-                self._apply_adam(f'conv_{i}_k', layer.kernels, layer.d_kernels, lr, b1, b2, eps)
-                self._apply_adam(f'conv_{i}_b', layer.bias,   layer.d_bias,   lr, b1, b2, eps)
+                gk = layer.d_kernels + wd * layer.kernels
+                gb = layer.d_bias    + wd * layer.bias
+                self._apply_adam(f'conv_{i}_k', layer.kernels, gk, lr, b1, b2, eps)
+                self._apply_adam(f'conv_{i}_b', layer.bias,   gb, lr, b1, b2, eps)
 
             elif hasattr(layer, 'W'):           # Dense
-                self._apply_adam(f'dense_{i}_W', layer.W, layer.dW, lr, b1, b2, eps)
-                self._apply_adam(f'dense_{i}_b', layer.b,  layer.db, lr, b1, b2, eps)
+                gW = layer.dW + wd * layer.W
+                gb = layer.db + wd * layer.b
+                self._apply_adam(f'dense_{i}_W', layer.W, gW, lr, b1, b2, eps)
+                self._apply_adam(f'dense_{i}_b', layer.b,  gb, lr, b1, b2, eps)
 
     def _apply_adam(self, key, param, grad, lr, b1, b2, eps):
         """
@@ -193,7 +226,7 @@ class Adam:
 
         key   : clé unique pour ce paramètre (ex: 'conv_0_k', 'conv_0_b')
         param : référence au paramètre à mettre à jour (modifié sur place)
-        grad  : gradient correspondant
+        grad  : gradient (déjà augmenté du weight_decay si applicable)
 
         Workflow :
             1. crée les buffers si besoin
@@ -222,4 +255,7 @@ class Adam:
         self.t = 0
 
     def __repr__(self):
-        return f"Adam(lr={self.lr}, beta1={self.beta1}, beta2={self.beta2})"
+        s = f"Adam(lr={self.lr}, beta1={self.beta1}, beta2={self.beta2}"
+        if self.weight_decay:
+            s += f", weight_decay={self.weight_decay}"
+        return s + ")"

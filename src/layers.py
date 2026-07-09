@@ -426,7 +426,87 @@ class Flatten:
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  DENSE (FULLY CONNECTED) — [TODO]                                        ║
+# ║  DROPOUT                                                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+class Dropout:
+    """
+    Couche de Dropout — régularisation par désactivation aléatoire.
+
+    Pendant l'entraînement, désactive aléatoirement une fraction p des
+    neurones (les met à zéro) et scale le reste par 1/(1-p) pour
+    compenser.
+
+    Pendant l'évaluation, le dropout est transparent : tous les neurones
+    sont actifs (aucune perte d'information).
+
+    Pourquoi ça marche :
+        - Empêche la co-adaptation des neurones (ils ne peuvent pas
+          compter les uns sur les autres)
+        - Force le réseau à apprendre des représentations redondantes
+        - Agit comme un ensemble de sous-réseaux entraînés simultanément
+
+    p typique : 0.5 pour les couches Dense, 0.2-0.3 pour les couches
+    convolutionnelles.
+    """
+
+    def __init__(self, p=0.5):
+        """
+        p : probabilité de désactiver un neurone (défaut: 0.5)
+            p=0 → pas de dropout, p=0.5 → 50% de neurones désactivés
+        """
+        self.p = p
+        self.mask = None
+        self._training = True
+
+    def forward(self, x):
+        """
+        x : entrée (n'importe quelle forme)
+
+        En mode entraînement : masque binaire + scaling
+        En mode évaluation : passe-through
+        """
+        if not self._training or self.p == 0:
+            return x
+
+        # Masque : 1 avec proba (1-p), 0 avec proba p
+        # Scaling par 1/(1-p) pour conserver l'espérance
+        keep_prob = 1.0 - self.p
+        self.mask = np.random.binomial(1, keep_prob, size=x.shape).astype(x.dtype)
+        self.mask /= keep_prob
+
+        return x * self.mask
+
+    def backward(self, grad_output):
+        """
+        grad_output : gradient de la perte par rapport à la sortie
+
+        Seuls les neurones qui étaient actifs au forward reçoivent
+        le gradient (multiplié par le scaling).
+        """
+        if not self._training or self.p == 0:
+            return grad_output
+        return grad_output * self.mask
+
+    def update(self, lr):
+        """Dropout n'a pas de paramètres."""
+        pass
+
+    def train(self):
+        """Passe en mode entraînement (dropout actif)."""
+        self._training = True
+
+    def eval(self):
+        """Passe en mode évaluation (dropout désactivé)."""
+        self._training = False
+
+    def __repr__(self):
+        return f"Dropout(p={self.p})"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  DENSE (FULLY CONNECTED)                                                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 

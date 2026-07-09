@@ -18,17 +18,18 @@ Comprendre chaque brique du deep learning en la codant soi-même — im2col, ré
 | **MaxPool2D** (forward + backward avec indices) | ✅ |
 | **ReLU** (forward + backward) | ✅ |
 | **Flatten** (forward + backward) | ✅ |
+| **Dropout** (régularisation par désactivation aléatoire) | ✅ |
 | **Dense / Fully Connected** (forward + backward + update) | ✅ |
 | **Softmax** (forward + backward) | ✅ |
 | **CrossEntropyLoss** (forward + backward + accuracy) | ✅ |
-| **Training loop** (CNN.train avec historique) | ✅ |
+| **Training loop** (CNN.train + train/eval mode) | ✅ |
 | **Évaluation** (accuracy sur test set) | ✅ |
 | **Sauvegarde / Chargement des poids** | ✅ |
 | **Predict** (classifier une image chargée) | ✅ |
 | **Graphiques d'entraînement** (loss + accuracy) | ✅ |
-| **Optimiseur SGD** (vanilla) | ✅ |
-| **Optimiseur Momentum** (SGD + élan) | ✅ |
-| **Optimiseur Adam** (lr adaptatif + momentum) | ✅ |
+| **Optimiseur SGD** (vanilla + weight_decay) | ✅ |
+| **Optimiseur Momentum** (SGD + élan + weight_decay) | ✅ |
+| **Optimiseur Adam** (lr adaptatif + momentum + weight_decay) | ✅ |
 | **Framework d'expérimentations** (comparaison d'optimiseurs) | ✅ |
 
 ## 🧱 Architecture
@@ -47,6 +48,7 @@ Entrée : (N, 1, 28, 28)
     ├── Flatten                                  →  (N, 3136)
     ├── Dense   (3136 → 128)
     ├── ReLU
+    ├── Dropout(p=0.5)          (optionnel)
     ├── Dense   (128 → 10)
     └── Softmax                                  →  (N, 10)
 ```
@@ -69,18 +71,18 @@ CNN-Handmade/
 ├── src/
 │   ├── __init__.py
 │   ├── data.py        — MNISTLoader, preprocessing, DataLoader
-│   ├── layers.py      — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense
+│   ├── layers.py      — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dropout, Dense
 │   ├── losses.py      — Softmax, CrossEntropyLoss
-│   ├── optimizers.py  — SGD, Momentum, Adam              ← NOUVEAU
-│   ├── model.py       — CNN (optimiseur interchangeable) ← MODIFIÉ
+│   ├── optimizers.py  — SGD, Momentum, Adam
+│   ├── model.py       — CNN (optimiseur interchangeable, train/eval mode)
 │   ├── tune_cnn.py    — réglages interactifs (baseline)
 │   └── cnn.py         — script principal de démo
 │
-└── experiments/                    ← NOUVEAU : comparatifs d'optimiseurs
+└── experiments/                    ← comparatifs d'optimiseurs
     ├── baseline/
     │   ├── tune_cnn.py            — SGD vanilla
-    │   ├── tune_result.png        — graphiques
-    │   └── model_weights.npz      — poids entraînés
+    │   ├── tune_result.png
+    │   └── model_weights.npz
     │
     ├── momentum/
     │   ├── tune_cnn.py            — SGD + élan
@@ -92,7 +94,17 @@ CNN-Handmade/
     │   ├── tune_result.png
     │   └── model_weights.npz
     │
-    └── (prochains : dropout, lr_scheduler, data_augmentation…)
+    ├── dropout/
+    │   ├── tune_cnn.py            — SGD + Dropout(p=0.5)
+    │   ├── tune_result.png
+    │   └── model_weights.npz
+    │
+    ├── l2/
+    │   ├── tune_cnn.py            — SGD + L2 weight_decay(0.001)
+    │   ├── tune_result.png
+    │   └── model_weights.npz
+    │
+    └── (prochains : lr_scheduler, data_augmentation, grid_search…)
 ```
 
 ## 🚀 Utilisation
@@ -154,36 +166,22 @@ Paramètres réglables :
 
 Résultat sauvegardé dans `tune_result.png`.
 
-## 🔬 Expérimentations — Comparer les optimiseurs
+## 🔬 Expérimentations — Comparer les techniques
 
-Chaque dossier dans `experiments/` est un test indépendant avec un optimiseur différent. **Même architecture, mêmes données, seul l'optimiseur change.**
+Chaque dossier dans `experiments/` est un test indépendant. **Même architecture, mêmes données, seule la technique change.**
 
 ### Lancer un test
 
 ```bash
-# Baseline (SGD vanilla)
+# Optimiseurs
 python experiments/baseline/tune_cnn.py
-
-# Momentum (SGD + élan)
 python experiments/momentum/tune_cnn.py
-
-# Adam (Adaptive Moment Estimation)
 python experiments/adam/tune_cnn.py
+
+# Régularisation
+python experiments/dropout/tune_cnn.py     # Dropout(p=0.5)
+python experiments/l2/tune_cnn.py          # Weight decay L2(0.001)
 ```
-
-Chaque script produit :
-- Un graphique `tune_result.png` (loss + accuracy)
-- Un fichier `model_weights.npz` (poids du modèle)
-
-### Résultats attendus (indicatifs, 5 epochs, 2000 images)
-
-| Optimiseur | lr | Loss finale | Accuracy | Convergence |
-|---|---|---|---|---|
-| **SGD** | 0.01 | ~0.60 | ~80% | Lente mais stable |
-| **Momentum** | 0.01 | ~0.35 | ~88% | Plus rapide que SGD |
-| **Adam** | 0.001 | ~0.15 | ~95% | Rapide et robuste |
-
-> ℹ️ Résultats variables selon les initialisations aléatoires — l'ordre de grandeur est là.
 
 ### Prochaines expériences prévues
 
@@ -192,26 +190,23 @@ Chaque script produit :
 | Baseline (SGD) | ✅ |
 | Momentum | ✅ |
 | Adam | ✅ |
+| Dropout (régularisation) | ✅ |
+| Weight Decay (L2) | ✅ |
 | Learning Rate Scheduler | ⏳ |
-| Dropout (régularisation) | ⏳ |
-| Weight Decay (L2) | ⏳ |
 | Grid Search automatique | ⏳ |
 | Data Augmentation | ⏳ |
-
-### Modifier le code d'un test
-
-Ouvre le fichier `tune_cnn.py` dans le dossier de l'expérience. Les réglages sont en haut du fichier. Tu peux aussi changer l'architecture du réseau plus bas.
 
 ### Ajouter une nouvelle expérience
 
 1. Crée `experiments/mon_opti/tune_cnn.py`
 2. Importe ton optimiseur depuis `src/optimizers.py` (ou crée-le là)
-3. Passe-le au modèle : `model = CNN(optimizer=MonOpti(lr=...))`
-4. Lance et compare les graphiques !
+3. Si tu ajoutes des couches (Dropout, etc.), importe-les depuis `src/layers.py`
+4. Passe l'optimiseur au modèle : `model = CNN(optimizer=MonOpti(lr=...))`
+5. Lance et compare les graphiques !
 
 ## 🔧 Les optimiseurs — explications
 
-Les optimiseurs sont dans `src/optimizers.py`. Chacun implémente une classe avec une méthode `update(layers, lr=None)`.
+Les optimiseurs sont dans `src/optimizers.py`. Chacun implémente une méthode `update(layers, lr=None)`.
 
 ### SGD — La base
 ```python
@@ -226,13 +221,31 @@ v ← α · v - lr · ∇θ
 ```
 On accumule une "vitesse" qui lisse les oscillations et accélère la convergence. Le coefficient `α` (typiquement 0.9) contrôle l'inertie.
 
+### Dropout — Désactivation aléatoire
+```python
+# Entraînement : masque binaire × scaling
+masque ~ Bernoulli(1-p)
+sortie = entrée × masque / (1-p)
+
+# Évaluation : passe-through
+sortie = entrée
+```
+Empêche la co-adaptation des neurones. Force le réseau à apprendre des représentations redondantes. Agit comme un ensemble de sous-réseaux. `p=0.5` pour les Dense, `p=0.2-0.3` pour les Conv.
+
+### L2 Weight Decay — Pénalise les gros poids
+```python
+∇θ_effectif = ∇θ + λ · θ
+θ ← θ - lr · ∇θ_effectif
+```
+Ajoute une pénalité quadratique sur les poids. Les poids trop grands sont tirés vers zéro. Revient à chercher des solutions plus simples. `λ` typique : 0.0001 ~ 0.001.
+
 ### Adam — Le champion
 ```python
 m ← β1 · m + (1 - β1) · g         (moyenne des gradients)
 v ← β2 · v + (1 - β2) · g²        (variance des gradients)
 θ ← θ - lr · m̂ / (√v̂ + ε)
 ```
-Combine le momentum avec un learning rate adaptatif par paramètre. Le plus robuste — moins besoin de tuner le lr.
+Combine le momentum avec un learning rate adaptatif par paramètre. Le plus robuste — moins besoin de tuner le lr. Supporte aussi le weight_decay.
 
 ## 💡 Exemple rapide
 

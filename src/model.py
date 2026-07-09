@@ -23,7 +23,7 @@ Utilisation typique :
 
 import numpy as np
 from layers import (
-    Conv2D, MaxPool2D, ReLU, Flatten, Dense,
+    Conv2D, MaxPool2D, ReLU, Flatten, Dense, Dropout,
 )
 from losses import CrossEntropyLoss
 from optimizers import SGD
@@ -90,6 +90,28 @@ class CNN:
         """
         self.optimizer.update(self.layers, lr)
 
+    def train_mode(self):
+        """
+        Passe toutes les couches en mode entraînement.
+
+        Nécessaire pour les couches qui se comportent différemment
+        en entraînement et en évaluation (Dropout activé vs désactivé).
+        """
+        for layer in self.layers:
+            if hasattr(layer, 'train'):
+                layer.train()
+
+    def eval_mode(self):
+        """
+        Passe toutes les couches en mode évaluation.
+
+        Désactive le Dropout, la normalisation par lots, etc.
+        À appeler AVANT evaluate() ou predict().
+        """
+        for layer in self.layers:
+            if hasattr(layer, 'eval'):
+                layer.eval()
+
     def train(self, train_loader, epochs=10, lr=None, verbose=True):
         """
         Boucle d'entraînement complète.
@@ -118,6 +140,9 @@ class CNN:
 
             for batch_x, batch_y in train_loader:
                 N = batch_x.shape[0]
+
+                # ── Mode entraînement (dropout actif, etc.) ──
+                self.train_mode()
 
                 # ── Forward ──
                 logits = self.forward(batch_x)
@@ -151,12 +176,16 @@ class CNN:
         """
         Calcule l'accuracy sur un ensemble de test.
 
+        Passe le modèle en mode évaluation (dropout désactivé)
+        avant de calculer l'accuracy.
+
         Args :
             test_loader : DataLoader (ne mélange pas, shuffle=False)
 
         Retourne :
             float entre 0 et 1 (proportion de bonnes réponses)
         """
+        self.eval_mode()
         correct = 0
         total = 0
 
@@ -215,6 +244,9 @@ class CNN:
         """
         Prédiction rapide pour une image ou un batch.
 
+        Passe le modèle en mode évaluation (dropout désactivé)
+        avant de prédire.
+
         Args :
             x : image (1, 28, 28) ou batch (N, 1, 28, 28) en channels_first
 
@@ -222,6 +254,7 @@ class CNN:
             - si une seule image : le chiffre prédit (int)
             - si un batch : tableau des prédictions (int)
         """
+        self.eval_mode()
         single = x.ndim == 3
         if single:
             x = x[np.newaxis, :]

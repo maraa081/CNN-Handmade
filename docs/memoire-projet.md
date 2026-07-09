@@ -55,8 +55,8 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 | Expérience | Statut |
 |---|---|
 | Learning Rate Scheduler | ⏳ |
-| Dropout (régularisation) | ⏳ |
-| Weight Decay (L2) | ⏳ |
+| Dropout (régularisation) | ✅ |
+| Weight Decay (L2) | ✅ |
 | Grid Search automatique | ⏳ |
 | Data Augmentation | ⏳ |
 
