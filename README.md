@@ -80,29 +80,29 @@ CNN-Handmade/
 │
 └── experiments/                    ← comparatifs d'optimiseurs
     ├── baseline/
-    │   ├── tune_cnn.py            — SGD vanilla
-    │   ├── tune_result.png
-    │   └── model_weights.npz
+    │   ├── baseline_sgd.py        — SGD vanilla
+    │   ├── baseline_sgd.png
+    │   └── baseline_sgd_weights.npz
     │
     ├── momentum/
-    │   ├── tune_cnn.py            — SGD + élan
-    │   ├── tune_result.png
-    │   └── model_weights.npz
+    │   ├── momentum.py            — SGD + élan
+    │   ├── momentum.png
+    │   └── momentum_weights.npz
     │
     ├── adam/
-    │   ├── tune_cnn.py            — Adaptive Moment Estimation
-    │   ├── tune_result.png
-    │   └── model_weights.npz
+    │   ├── adam.py                — Adaptive Moment Estimation
+    │   ├── adam.png
+    │   └── adam_weights.npz
     │
     ├── dropout/
-    │   ├── tune_cnn.py            — SGD + Dropout(p=0.5)
-    │   ├── tune_result.png
-    │   └── model_weights.npz
+    │   ├── dropout_sgd.py         — SGD + Dropout(p=0.5)
+    │   ├── dropout_sgd.png
+    │   └── dropout_sgd_weights.npz
     │
     ├── l2/
-    │   ├── tune_cnn.py            — SGD + L2 weight_decay(0.001)
-    │   ├── tune_result.png
-    │   └── model_weights.npz
+    │   ├── l2_sgd.py              — SGD + L2 weight_decay(0.001)
+    │   ├── l2_sgd.png
+    │   └── l2_sgd_weights.npz
     │
     └── (prochains : lr_scheduler, data_augmentation, grid_search…)
 ```
@@ -174,13 +174,13 @@ Chaque dossier dans `experiments/` est un test indépendant. **Même architectur
 
 ```bash
 # Optimiseurs
-python experiments/baseline/tune_cnn.py
-python experiments/momentum/tune_cnn.py
-python experiments/adam/tune_cnn.py
+python experiments/baseline/baseline_sgd.py
+python experiments/momentum/momentum.py
+python experiments/adam/adam.py
 
 # Régularisation
-python experiments/dropout/tune_cnn.py     # Dropout(p=0.5)
-python experiments/l2/tune_cnn.py          # Weight decay L2(0.001)
+python experiments/dropout/dropout_sgd.py     # Dropout(p=0.5)
+python experiments/l2/l2_sgd.py              # Weight decay L2(0.001)
 ```
 
 ### Prochaines expériences prévues
@@ -198,7 +198,7 @@ python experiments/l2/tune_cnn.py          # Weight decay L2(0.001)
 
 ### Ajouter une nouvelle expérience
 
-1. Crée `experiments/mon_opti/tune_cnn.py`
+1. Crée `experiments/mon_opti/mon_opti.py`
 2. Importe ton optimiseur depuis `src/optimizers.py` (ou crée-le là)
 3. Si tu ajoutes des couches (Dropout, etc.), importe-les depuis `src/layers.py`
 4. Passe l'optimiseur au modèle : `model = CNN(optimizer=MonOpti(lr=...))`

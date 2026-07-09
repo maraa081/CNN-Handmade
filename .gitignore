@@ -22,6 +22,8 @@ predictions.png
 experiments/*/tune_result.png
 experiments/*/model_weights.npz
 experiments/*/training_result.png
+experiments/*/*.png
+experiments/*/*_weights.npz
 
 # Benchmark / résultats numériques
 experiments/*/benchmark*.txt

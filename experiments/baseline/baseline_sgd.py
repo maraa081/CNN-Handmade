@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
 """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔥 ADAM — Adaptive Moment Estimation
+  🏁 BASELINE — Optimiseur SGD (vanilla)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Optimiseur : Adam (Momentum + RMSprop)
-  Paramètres  : lr, beta1, beta2, eps
+  Optimiseur : SGD (descente de gradient standard)
+  Paramètres  : lr uniquement
 
-  Théorie :
-      m ← β1·m + (1-β1)·g          (moyenne des gradients)
-      v ← β2·v + (1-β2)·g²         (variance des gradients)
-      θ ← θ - lr · m̂ / (√v̂ + ε)    (mise à jour normalisée)
+  Lancement : python3 experiments/baseline/baseline_sgd.py
 
-  Pourquoi Adam est génial :
-    - Learning rate adaptatif par paramètre (via v)
-    - Momentum qui accélère dans les bonnes directions
-    - Fonctionne avec des lr plus petits (0.001 par défaut)
-    - Beaucoup plus robuste — moins besoin de tuner le lr
-
-  Lancement : python3 experiments/adam/tune_cnn.py
-  Résultat   : experiments/adam/tune_result.png
+  Résultat   : experiments/baseline/baseline_sgd.png
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -37,29 +27,23 @@ sys.path.insert(0, join(ROOT, "src"))
 from data import MNISTLoader, preprocess_pipeline
 from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense
 from model import CNN
-from optimizers import Adam
+from optimizers import SGD
 
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  ⛽ RÉGLAGES                                                            ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-LEARNING_RATE = 0.001      # ← Adam utilise typiquement un lr plus petit (0.001)
-BETA1        = 0.9          # ← Décroissance du 1er moment (gradient moyen)
-BETA2        = 0.999        # ← Décroissance du 2e moment (gradient carré)
-EPS          = 1e-8         # ← Stabilité numérique (évite division par zéro)
-
+LEARNING_RATE = 0.01
 BATCH_SIZE    = 64
 EPOCHS        = 5
 DATA_LIMIT    = 2000
 
 # ── Optimiseur ─────────────────────────────────────────────────────────────
-#   Adam. Tu peux jouer avec beta1 et beta2 pour voir l'effet :
-#     BETA1 = 0.9  → momentum standard
-#     BETA1 = 0.95 → moins d'influence du momentum
-#     BETA2 = 0.99 → variance plus "longue mémoire" (peut osciller)
-#     BETA2 = 0.999 → défaut, bonne stabilité
-OPT = Adam(lr=LEARNING_RATE, beta1=BETA1, beta2=BETA2, eps=EPS)
+#   Changer l'optimiseur ici pour comparer les résultats.
+#   Actuellement : SGD (vanilla)
+#   Voir aussi : Momentum, Adam (dans optimizers.py)
+OPT = SGD(lr=LEARNING_RATE)
 
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -125,10 +109,10 @@ ax2.grid(True, alpha=0.3)
 ax2.set_ylim(0, 1)
 
 plt.tight_layout()
-out = join(dirname(abspath(__file__)), "tune_result.png")
+out = join(dirname(abspath(__file__)), "baseline_sgd.png")
 plt.savefig(out, dpi=150, bbox_inches="tight")
 print(f"\n📁 Graphique : {out}")
 
 # ── Sauvegarde des poids ──
-weights_path = join(dirname(abspath(__file__)), "model_weights.npz")
+weights_path = join(dirname(abspath(__file__)), "baseline_sgd_weights.npz")
 model.save_weights(weights_path)

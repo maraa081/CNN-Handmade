@@ -17,8 +17,8 @@
 
   α (momentum) typique : 0.9  (0.0 = vanilla SGD, 0.99 = très agressif)
 
-  Lancement : python3 experiments/momentum/tune_cnn.py
-  Résultat   : experiments/momentum/tune_result.png
+  Lancement : python3 experiments/momentum/momentum.py
+  Résultat   : experiments/momentum/momentum.png
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -121,10 +121,10 @@ ax2.grid(True, alpha=0.3)
 ax2.set_ylim(0, 1)
 
 plt.tight_layout()
-out = join(dirname(abspath(__file__)), "tune_result.png")
+out = join(dirname(abspath(__file__)), "momentum.png")
 plt.savefig(out, dpi=150, bbox_inches="tight")
 print(f"\n📁 Graphique : {out}")
 
 # ── Sauvegarde des poids ──
-weights_path = join(dirname(abspath(__file__)), "model_weights.npz")
+weights_path = join(dirname(abspath(__file__)), "momentum_weights.npz")
 model.save_weights(weights_path)

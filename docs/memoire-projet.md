@@ -36,9 +36,9 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 ### Principe
 
 Chaque dossier `experiments/<nom>/` contient :
-- `tune_cnn.py` — script d'entraînement indépendant
-- `tune_result.png` — graphiques loss + accuracy
-- `model_weights.npz` — poids sauvegardés
+- `<technique>.py` — script d'entraînement (ex: `baseline_sgd.py`, `adam.py`)
+- `<technique>.png` — graphiques loss + accuracy (ex: `adam.png`)
+- `<technique>_weights.npz` — poids sauvegardés (ex: `adam_weights.npz`)
 
 Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimiseur change.
 
