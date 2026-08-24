@@ -183,14 +183,13 @@ python3 train_emnist.py
 python3 train_emnist.py --full
 ```
 
-**Données :** [EMNIST Letters](https://www.nist.gov/itl/products-and-services/emnist-dataset) — même format IDX que MNIST. À télécharger dans `data/emnist/` (gitignoré) :
+**Données :** [EMNIST Letters](https://www.nist.gov/itl/products-and-services/emnist-dataset) — même format IDX que MNIST. Un zip léger des lettres (~36 Mo) est inclus dans le repo ; le script les installe tout seul :
 
 ```bash
-cd data && mkdir -p emnist && cd emnist
-curl -sSL -o gzip.zip https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip
-unzip -o -j gzip.zip "gzip/emnist-letters-*" -d .
-gunzip emnist-letters-*-images-idx3-ubyte.gz emnist-letters-*-labels-idx1-ubyte.gz
+python3 download_emnist.py
 ```
+
+Si le zip local n'est pas là, il télécharge automatiquement depuis le site NIST (~561 Mo, plus lent).
 
 **Ce qui change vs MNIST :**
 - `EMNISTLoader` dans `src/data.py` (labels 1-26 → 0-25, images pivotées remises à l'endroit)

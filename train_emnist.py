@@ -27,6 +27,7 @@ sys.path.insert(0, join(ROOT_DIR, "src"))
 from data import EMNISTLoader, preprocess_pipeline
 from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense
 from model import CNN
+from download_emnist import ensure_data
 
 NUM_CLASSES = 26
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
@@ -67,6 +68,10 @@ def show_samples(x, y, n=16, title="Lettres EMNIST", out="emnist_samples.png"):
 
 if __name__ == "__main__":
     data_dir = join(ROOT_DIR, "data", "emnist")
+
+    # ── S'assurer que les données existent (télécharge si besoin) ──
+    if not ensure_data():
+        sys.exit(1)
 
     # ── Mode échantillons : juste vérifier l'orientation ──
     if "--samples" in sys.argv:
