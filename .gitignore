@@ -26,6 +26,9 @@ emnist_samples.png
 emnist_training_result.png
 emnist_letters_weights*.npz
 
+# Résultats adversarial (générés)
+adversarial/results/
+
 # Résultats d'expérimentations (générés, pas dans le repo)
 experiments/*/tune_result.png
 experiments/*/model_weights.npz
