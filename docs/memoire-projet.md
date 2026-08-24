@@ -106,6 +106,23 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 
 ## 📜 Historique
 
+### 2026-08-24 — EMNIST Letters (26 classes) 🎉
+
+- **Objectif** : passer de MNIST (10 chiffres) aux lettres manuscrites a-z.
+- **EMNISTLoader** ajouté dans `src/data.py` (hérite de MNISTLoader, même format IDX) :
+  - Labels 1-26 → 0-25 (mapping vérifié avec `emnist-letters-mapping.txt`)
+  - Orientation corrigée (transpose + flip = rotation 90° — les images EMNIST sont stockées pivotées)
+  - Orientation validée visuellement en ASCII art avant entraînement
+- **`preprocess_pipeline()`** : paramètre `num_classes` ajouté (one-hot 26 au lieu de 10)
+- **`train_emnist.py`** : script dédié (rapide 5000 images / `--full` 124800 images, `--samples` pour vérifier l'orientation)
+- **Résultat rapide** (5000 images, 3 epochs, ~3m40) : train 63.5% → test **43.2%**
+- ⚠️ **Piège découvert** : le test set EMNIST est TRIÉ PAR CLASSE. `x_test[:1000]` ne contenait que des 'a'/'b' → accuracy 5.8% trompeuse. Il faut échantillonner aléatoirement (rng.choice).
+- Données dans `data/emnist/` (gitignorées, zip 561 Mo à télécharger depuis biometrics.nist.gov)
+
+### 2026-07-10 — Fiches optimiseurs
+
+- `docs/optimizers/` : fiches détaillées SGD, Momentum, Adam + TEMPLATE pour les nouveaux.
+
 ### 2026-07-05 — Entraînement + évaluation + fichier tuning 🎉
 
 - **model.py** : CNN.forward, backward, update, train (avec historique), evaluate.

@@ -168,6 +168,39 @@ Paramètres réglables :
 
 Résultat sauvegardé dans `tune_result.png`.
 
+## 🔤 EMNIST — Les lettres (26 classes)
+
+Le même CNN from-scratch, mais pour reconnaître les **lettres manuscrites a-z** au lieu des chiffres.
+
+```bash
+# Vérifier l'orientation des images (échantillons → emnist_samples.png)
+python3 train_emnist.py --samples
+
+# Entraînement rapide (5000 images, 3 epochs, ~4 min)
+python3 train_emnist.py
+
+# Entraînement complet (124800 images, 10 epochs)
+python3 train_emnist.py --full
+```
+
+**Données :** [EMNIST Letters](https://www.nist.gov/itl/products-and-services/emnist-dataset) — même format IDX que MNIST. À télécharger dans `data/emnist/` (gitignoré) :
+
+```bash
+cd data && mkdir -p emnist && cd emnist
+curl -sSL -o gzip.zip https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip
+unzip -o -j gzip.zip "gzip/emnist-letters-*" -d .
+gunzip emnist-letters-*-images-idx3-ubyte.gz emnist-letters-*-labels-idx1-ubyte.gz
+```
+
+**Ce qui change vs MNIST :**
+- `EMNISTLoader` dans `src/data.py` (labels 1-26 → 0-25, images pivotées remises à l'endroit)
+- `Dense(128 → 26)` au lieu de `Dense(128 → 10)`
+- `preprocess_pipeline(..., num_classes=26)` pour le one-hot
+
+**Résultat rapide** (5000 images, 3 epochs) : **43.2% test** (hasard = 3.8%). L'entraînement complet vise ~90%.
+
+> ⚠️ **Piège** : le test set EMNIST est trié par classe — échantillonner aléatoirement pour évaluer, jamais `x_test[:N]`.
+
 ## 🔬 Expérimentations — Comparer les techniques
 
 Chaque dossier dans `experiments/` est un test indépendant. **Même architecture, mêmes données, seule la technique change.**

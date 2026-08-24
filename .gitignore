@@ -4,6 +4,9 @@ data/voir_mnist.py
 data/npz2idx.py
 data/mnist.npz
 
+# EMNIST (données brutes, ~570 Mo avec le zip — à télécharger soi-même)
+data/emnist/
+
 # Python caching
 __pycache__/
 *.pyc
@@ -17,6 +20,11 @@ preview_samples.png
 training_result.png
 training_result_full.png
 predictions.png
+
+# Résultats EMNIST (générés)
+emnist_samples.png
+emnist_training_result.png
+emnist_letters_weights*.npz
 
 # Résultats d'expérimentations (générés, pas dans le repo)
 experiments/*/tune_result.png

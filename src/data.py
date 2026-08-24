@@ -59,6 +59,61 @@ class MNISTLoader:
         return (x_train, y_train), (x_test, y_test)
 
 
+class EMNISTLoader(MNISTLoader):
+    """
+    Lit les fichiers IDX du dataset EMNIST (Extended MNIST).
+
+    Même format binaire que MNIST, donc on hérite de MNISTLoader.
+    Deux différences gérées ici :
+      1. Labels : EMNIST numérote 1-26 (letters) au lieu de 0-9 → on soustrait 1
+      2. Orientation : les images EMNIST sont stockées pivotées de 90°
+         (transpose + flip) → on les remet à l'endroit pour l'affichage
+
+    Splits disponibles : letters (26 classes a-z), byclass (62), bymerge (47),
+    balanced (47), digits (10).
+    """
+
+    # Splits dont les labels commencent à 1 (à décaler de -1)
+    LABEL_OFFSET_ONE = {"letters", "byclass", "bymerge", "balanced"}
+
+    def __init__(self, split="letters"):
+        self.split = split
+
+    def _correct_orientation(self, images):
+        """
+        Les images EMNIST sont stockées transposées (rotation 90°).
+        transpose + flip = rotation 90° antihoraire → lettres à l'endroit.
+        """
+        images = images.transpose(0, 2, 1)      # (N, H, W) → (N, W, H)
+        images = images[:, :, ::-1]             # flip horizontal
+        return images
+
+    def load(self, data_dir="."):
+        """
+        Charge les fichiers emnist-<split>-*.idx* depuis un dossier.
+
+        Retourne :
+            (x_train, y_train), (x_test, y_test)
+            avec y dans [0, num_classes-1] et images à l'endroit (N, 28, 28)
+        """
+        split = self.split
+        x_train = self.read_images(join(data_dir, f"emnist-{split}-train-images-idx3-ubyte"))
+        y_train = self.read_labels(join(data_dir, f"emnist-{split}-train-labels-idx1-ubyte"))
+        x_test = self.read_images(join(data_dir, f"emnist-{split}-test-images-idx3-ubyte"))
+        y_test = self.read_labels(join(data_dir, f"emnist-{split}-test-labels-idx1-ubyte"))
+
+        # Labels 1-26 → 0-25 (pour letters, byclass, etc.)
+        if split in self.LABEL_OFFSET_ONE:
+            y_train = y_train - 1
+            y_test = y_test - 1
+
+        # Remettre les images à l'endroit
+        x_train = self._correct_orientation(x_train)
+        x_test = self._correct_orientation(x_test)
+
+        return (x_train, y_train), (x_test, y_test)
+
+
 def normalize(images):
     """
     Normalise les pixels de [0, 255] → [0.0, 1.0].
@@ -119,7 +174,7 @@ class DataLoader:
         return (self.n_samples + self.batch_size - 1) // self.batch_size
 
 
-def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
+def preprocess_pipeline(images, labels, batch_size=32, shuffle=True, num_classes=10):
     """
     Enchaîne normalisation + reshape one-hot et retourne un DataLoader.
 
@@ -127,10 +182,11 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
     aux couches Conv2D du projet.
 
     Args :
-        images    → numpy array (N, 28, 28)  brut
-        labels    → numpy array (N,)         brut
+        images     → numpy array (N, 28, 28)  brut
+        labels     → numpy array (N,)         brut
         batch_size → taille des batches
-        shuffle   → mélanger ?
+        shuffle    → mélanger ?
+        num_classes→ nombre de classes pour le one-hot (10 MNIST, 26 EMNIST letters)
 
     Retourne :
         DataLoader prêt à itérer
@@ -138,5 +194,5 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True):
     images = normalize(images)
     images = add_channel_dim(images)         # (N, 28, 28, 1)
     images = images.transpose(0, 3, 1, 2)    # (N, 1, 28, 28) channels_first
-    labels = to_one_hot(labels)
+    labels = to_one_hot(labels, num_classes=num_classes)
     return DataLoader(images, labels, batch_size, shuffle)
