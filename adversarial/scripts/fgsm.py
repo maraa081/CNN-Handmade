@@ -31,6 +31,7 @@ from os.path import join, dirname, abspath
 ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # -> CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, join(ROOT_DIR, "src"))
+sys.path.insert(0, join(ROOT_DIR, "scripts"))
 
 from data import MNISTLoader, EMNISTLoader, normalize, add_channel_dim
 from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense

@@ -17,7 +17,7 @@ import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -28,7 +28,7 @@ import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -201,6 +201,6 @@ if __name__ == "__main__":
         print(f" {correct}/10 correctes")
 
     print("\n Pour classifier tes propres images :")
-    print("   from predict import load_model")
+    print("   from scripts.predict import load_model")
     print("   model = load_model()")
     print("   pred = model.predict(mon_image_normalisée)")

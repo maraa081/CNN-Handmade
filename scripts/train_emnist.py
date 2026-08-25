@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import EMNISTLoader, preprocess_pipeline

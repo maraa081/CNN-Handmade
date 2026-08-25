@@ -69,11 +69,11 @@ CNN-Handmade/
 |   |-- model.py       — CNN (optimiseur interchangeable, train/eval mode)
 |   |-- tune_cnn.py    — réglages interactifs (baseline)
 |   `-- cnn.py         — script principal de démo + entraînement
-|-- predict.py                    — charger le modèle et classifier
-|-- train_emnist.py               — entraîner sur EMNIST letters
-|-- download_emnist.py            — installer les données EMNIST
-|-- voir_emnist.py                — visualiser les lettres (Spyder/IPython)
-|-- cleanup_emojis.py             — outil anti-emojis (idempotent)
+|-- scripts/                      <- scripts utilisateur
+|   |-- predict.py        — charger le modèle et classifier
+|   |-- train_emnist.py   — entraîner sur EMNIST letters
+|   |-- download_emnist.py— installer les données EMNIST
+|   `-- voir_emnist.py    — visualiser les lettres (Spyder/IPython)
 |-- models/                      <- poids entraînés (.npz)
 |   |-- model_weights.npz          — rapide (2000 img, 3 epochs)
 |   |-- model_weights_full.npz     — complet (60000 img)
@@ -133,10 +133,10 @@ python src/cnn.py --train-only            # saute les tests, entraîne direct
 ### 4. Prédire sans réentraîner
 
 ```bash
-python predict.py                          # 10 prédictions -> results/predictions.png
-python predict.py --all                    # accuracy sur les 10000 images de test
-python predict.py --weights models/model_weights_full.npz   # choisir les poids
-python predict.py --interactive            # mode pas à pas avec affichage
+python scripts/predict.py                          # 10 prédictions -> results/predictions.png
+python scripts/predict.py --all                    # accuracy sur les 10000 images de test
+python scripts/predict.py --weights models/model_weights_full.npz   # choisir les poids
+python scripts/predict.py --interactive            # mode pas à pas avec affichage
 ```
 
 ##  Tuning interactif
@@ -160,19 +160,19 @@ Le même CNN from-scratch, mais pour reconnaître les **lettres manuscrites a-z*
 
 ```bash
 # Vérifier l'orientation des images (échantillons -> results/emnist_samples.png)
-python3 train_emnist.py --samples
+python3 scripts/train_emnist.py --samples
 
 # Entraînement rapide (5000 images, 3 epochs, ~4 min)
-python3 train_emnist.py
+python3 scripts/train_emnist.py
 
 # Entraînement complet (124800 images, 10 epochs)
-python3 train_emnist.py --full
+python3 scripts/train_emnist.py --full
 ```
 
 **Données :** [EMNIST Letters](https://www.nist.gov/itl/products-and-services/emnist-dataset) — même format IDX que MNIST. Un zip léger des lettres (~36 Mo) est inclus dans le repo ; le script les installe tout seul :
 
 ```bash
-python3 download_emnist.py
+python3 scripts/download_emnist.py
 ```
 
 Si le zip local n'est pas là, il télécharge automatiquement depuis le site NIST (~561 Mo, plus lent).
