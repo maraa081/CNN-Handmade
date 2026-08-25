@@ -19,7 +19,8 @@ adversarial/
 |   |-- pgd.py         <- attaque PGD (itérative, plus forte)       OK opérationnel
 |   |-- transfer.py    <- transfert d'attaque entre modèles         OK opérationnel
 |   |-- defend.py      <- adversarial training (défense)            OK opérationnel
-|   `-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
+|   |-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
+|   `-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
 `-- results/           <- images + chiffres générés par les scripts (gitignoré)
 ```
 
@@ -187,8 +188,99 @@ défense de l'effet de la quantité de données :
 > version attaquée) : c'est une forme d'augmentation de données. La comparaison
 > vs `model_weights_full` (60k images) pénalisait le défendu en clean : ce n'était
 > pas l'effet de la défense mais l'effet de la quantité de données.
-> Éval PGD du défendu (20 steps) en cours — résultats ajoutés dès la fin du run.
 > Reproduire : `python3 adversarial/scripts/eval_defended.py`
+
+### Éval PGD du défendu — la limite du FGSM training (2026-08-25)
+
+| ε | standard (full) | défendu (FGSM train) | gain |
+|---|---|---|---|
+| 0.05 | 90.0% | 64.8% | -25.2% |
+| 0.10 | 44.4% | 36.8% | -7.6% |
+| 0.20 | 0.0% | 3.6% | +3.6% |
+| 0.30 | 0.0% | 0.0% | +0.0% |
+
+> **Leçon importante : l'adversarial training FGSM ne suffit PAS contre PGD.**
+> À faible ε le défendu est même pire que le standard (il n'a été entraîné qu'à
+> ε=0.15 avec des exemples FGSM à 1 étape — pas assez fort). PGD trouve les
+> faiblesses résiduelles. **C'est pour ça qu'il faut la version durcie** :
+> adversarial training PGD (Madry et al. 2018) + feature squeezing.
+
+---
+
+##  La version durcie — se défendre contre TOUTES les attaques
+
+Les attaques précédentes (FGSM, PGD, ciblées, transfert) exploitent toutes la
+même faiblesse : le modèle est trop linéaire dans les petites directions du
+gradient. `harden.py` implémente **3 couches de défense** combinées :
+
+### Couche 1 — Adversarial training PGD (la défense de référence)
+
+Au lieu d'attaquer chaque batch avec FGSM (1 étape, faible), on l'attaque avec
+**PGD (7 itérations)** pendant l'entraînement. Le modèle apprend donc à résister
+à l'attaque itérative la plus forte — pas seulement à sa version simplifiée.
+C'est le résultat de Madry et al. 2018 : entraîner contre l'attaquant le plus
+fort possible donne la robustesse la plus élevée possible.
+
+```
+x_adv = PGD(modèle_courant, batch, eps=0.3, steps=7)   # attaque forte à la volée
+entraîne sur [batch ; x_adv]                            # propre + adverses
+```
+
+### Couche 2 — Feature squeezing (défense d'entrée, Xu et al. 2018)
+
+Avant l'inférence, on **réduit la profondeur de bits** des pixels (8 bits -> 3-4
+bits). Une perturbation adversarial est un écart minuscule sur chaque pixel :
+la quantification l'écrase. L'image utile reste lisible (le modèle n'a pas
+besoin de 256 niveaux de gris), mais le bruit adversarial disparaît.
+
+```
+x_entrée = round(x * 7) / 7   # 3 bits : 8 niveaux de gris
+```
+
+C'est une défense **sans ré-entraînement**, complémentaire : elle protège aussi
+les modèles déjà déployés.
+
+### Couche 3 — Évaluation multi-attaques (la preuve)
+
+Une défense qui ne tient que contre FGSM n'est pas une défense. `harden.py`
+évalue le modèle durci contre **toutes** les attaques du dossier :
+
+- FGSM non ciblée
+- PGD non ciblée (20 steps, random start)
+- FGSM ciblée (force la classe 3)
+- PGD ciblée (force la classe 3)
+- Transfert : attaque générée sur le modèle standard -> testée sur le durci
+
+### Lancer la version durcie
+
+```bash
+# Entraînement complet + évaluation (PGD adversarial training, ~30-60 min)
+python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
+
+# Adversarial training FGSM (plus rapide, moins robuste)
+python3 adversarial/scripts/harden.py --attack fgsm --n-train 5000 --epochs 3
+
+# Évaluer un modèle déjà durci sans ré-entraîner
+python3 adversarial/scripts/harden.py --load models/defend_pgd_mnist_weights.npz
+
+# Ajouter le feature squeezing à l'évaluation
+python3 adversarial/scripts/harden.py --load models/defend_pgd_mnist_weights.npz --squeeze 3
+```
+
+Poids du modèle durci : `models/defend_pgd_mnist_weights.npz`.
+
+### Résultats de la version durcie (2026-08-25, à compléter dès la fin du run)
+
+| ε | standard (full) | durci (PGD train) | gain |
+|---|---|---|---|
+| clean | 98.6% | en cours | - |
+| 0.05 | 95.4% / 90.0% | en cours | - |
+| 0.10 | 76.2% / 44.4% | en cours | - |
+| 0.20 | 21.6% / 0.0% | en cours | - |
+| 0.30 | 1.8% / 0.0% | en cours | - |
+
+> Valeurs standard : FGSM / PGD. Le run complet tourne en arrière-plan
+> (log : `/tmp/harden_full.log`) — les chiffres sont ajoutés dès la fin.
 
 ---
 

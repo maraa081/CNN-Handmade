@@ -121,6 +121,46 @@ grandes dimensions, Goodfellow).
   (architecture + entraînement). C'est ce qui rend les attaques boîte
   noire possibles en pratique (Papernot et al., 2016).
 
+### 2026-08-25 — Éval PGD du défendu : les limites du FGSM training
+
+- Modèles : défendu (`defend_mnist_weights.npz`, adversarial training FGSM
+  eps 0.15) vs standard complet (`model_weights_full.npz`)
+- Paramètres : 500 images, PGD 20 steps random start, eps ∈ {0.05, 0.1, 0.2, 0.3}
+- Résultat :
+
+| ε | standard | défendu | gain |
+|---|---|---|---|
+| 0.05 | 90.0% | 64.8% | -25.2% |
+| 0.10 | 44.4% | 36.8% | -7.6% |
+| 0.20 | 0.0% | 3.6% | +3.6% |
+| 0.30 | 0.0% | 0.0% | +0.0% |
+
+- Observation : **l'adversarial training FGSM ne suffit pas contre PGD.**
+  À faible ε (0.05-0.10) le défendu est pire que le standard : il a été
+  entraîné avec des exemples FGSM à 1 étape à ε=0.15, donc il n'est ni
+  optimisé pour les petits bruits ni robuste aux attaques itératives.
+  Seul un léger gain apparaît à ε=0.2 (+3.6 pts) où le standard s'effondre.
+- Leçon : FGSM training est une base, pas une fin. Pour résister à PGD
+  il faut s'entraîner CONTRE PGD (Madry et al. 2018) — c'est la couche 1
+  de la version durcie (`harden.py`).
+
+### 2026-08-25 — Version durcie : adversarial training PGD + feature squeezing
+
+- Objectif : implémenter les sécurités contre TOUTES les attaques du dossier
+  (FGSM, PGD, ciblées, transfert) et documenter la démarche.
+- Implémentation : `adversarial/scripts/harden.py`, 3 couches :
+  1. **Adversarial training PGD** (7 steps, eps 0.3) — entraîner contre
+     l'attaque itérative la plus forte (Madry et al. 2018)
+  2. **Feature squeezing** (Xu et al. 2018) — quantification 3-4 bits à
+     l'inférence pour écraser les perturbations minuscules, sans retrain
+  3. **Évaluation multi-attaques** — FGSM, PGD, FGSM ciblée, PGD ciblée,
+     transfert depuis le modèle standard (la preuve, pas juste FGSM)
+- Paramètres du run complet : 5000 images, 3 epochs, PGD 7 steps, eps 0.3,
+  lancé le 2026-08-25 en arrière-plan (log `/tmp/harden_full.log`)
+- Résultat : à compléter dès la fin du run (tableau README mis à jour)
+- Leçon : une défense se prouve contre l'attaquant le plus fort, pas
+  contre la version la plus simple de l'attaque.
+
 ---
 
 ##  Tableau des résultats cumulés
