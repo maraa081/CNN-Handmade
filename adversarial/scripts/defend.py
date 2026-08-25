@@ -152,6 +152,8 @@ def main():
     parser.add_argument("--eval-pgd", action="store_true", help="évalue aussi sous PGD (long)")
     parser.add_argument("--baseline", action="store_true",
                         help="entraîne aussi un modèle STANDARD sur les mêmes données (comparaison équitable)")
+    parser.add_argument("--load", default=None,
+                        help="ne pas entraîner : évaluer ce modèle déjà entraîné (robustesse FGSM + PGD)")
     parser.add_argument("--out", default="models/defend_mnist_weights.npz")
     args = parser.parse_args()
 
@@ -182,6 +184,53 @@ def main():
     model.add(Dense(3136, 128))
     model.add(ReLU())
     model.add(Dense(128, 10))
+
+    # ── Mode évaluation seule : charger un modèle déjà entraîné ──
+    if args.load:
+        load_path = join(ROOT_DIR, args.load)
+        print(f"[LOAD] Évaluation seule du modèle -> {load_path}")
+        model.load_weights(load_path)
+        x_te, y_te = load_data("mnist", 500)
+        eps_list = [0.05, 0.1, 0.2, 0.3]
+
+        print("\n[EVAL] Robustesse FGSM (500 images de test)")
+        adv_res = robustness(model, x_te, y_te, eps_list)
+        print(f"{'eps':>6} | {'défendu':>10}")
+        print("-" * 22)
+        for eps in ["clean"] + eps_list:
+            print(f"{str(eps):>6} | {adv_res[eps]:>10.1%}")
+
+        if args.eval_pgd:
+            print("\n[EVAL] Robustesse PGD (20 steps)")
+            adv_pgd = robustness(model, x_te, y_te, eps_list, use_pgd=True)
+            print(f"{'eps':>6} | {'défendu PGD':>14}")
+            print("-" * 26)
+            for eps in eps_list:
+                print(f"{str(eps):>6} | {adv_pgd[eps]:>14.1%}")
+
+        # Courbe comparée vs standard
+        std_model = build_model("mnist")
+        std_model.load_weights(join(ROOT_DIR, "models", "model_weights_full.npz"))
+        std_res = robustness(std_model, x_te, y_te, eps_list)
+        out_dir = join(ROOT_DIR, "adversarial", "results")
+        import os
+        os.makedirs(out_dir, exist_ok=True)
+        fig, ax = plt.subplots(figsize=(7.5, 4.5))
+        ax.plot(eps_list, [std_res[e] for e in eps_list], marker="o", linewidth=2,
+                label=f"standard (clean {std_res['clean']:.1%})")
+        ax.plot(eps_list, [adv_res[e] for e in eps_list], marker="s", linewidth=2, color="green",
+                label=f"défendu (clean {adv_res['clean']:.1%})")
+        ax.set_xlabel("eps (amplitude du bruit)")
+        ax.set_ylabel("Accuracy sous attaque")
+        ax.set_title("Modèle défendu vs standard -- MNIST")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        plt.tight_layout()
+        curve_path = join(out_dir, "defend_curve_fgsm.png")
+        plt.savefig(curve_path, dpi=130, bbox_inches="tight")
+        plt.close()
+        print(f"\n[PLOT] Courbe -> {curve_path}")
+        return
 
     # ── Entraînement adversarial ──
     print("\n[ADV-TRAIN] Entraînement avec exemples adverses...")
