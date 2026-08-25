@@ -244,6 +244,9 @@ def main():
     model.save_weights(out_path)
     print(f"[SAVE] Poids défendus -> {out_path}")
 
+    # -- Liste des eps pour l'évaluation de robustesse --
+    eps_list = [0.05, 0.1, 0.2, 0.3]
+
     # -- Baseline équitable : modèle standard entraîné sur les MÊMES données --
     if args.baseline:
         print("\n[BASELINE] Entraînement d'un modèle standard sur les mêmes images...")
@@ -291,7 +294,6 @@ def main():
             print(f"{str(eps):>6} | {s_acc:>10.1%} | {d_acc:>10.1%} | {d_acc - s_acc:>+8.1%}")
 
     # -- Comparaison robustesse : modèle standard (full) vs défendu --
-    eps_list = [0.05, 0.1, 0.2, 0.3]
     print("\n[EVAL] Robustesse FGSM (500 images de test)")
 
     std_model = build_model("mnist")

@@ -18,7 +18,8 @@ adversarial/
 |   |-- fgsm.py        <- attaque FGSM (1 étape de gradient)        OK opérationnel
 |   |-- pgd.py         <- attaque PGD (itérative, plus forte)       OK opérationnel
 |   |-- transfer.py    <- transfert d'attaque entre modèles         OK opérationnel
-|   `-- defend.py      <- adversarial training (défense)            OK opérationnel
+|   |-- defend.py      <- adversarial training (défense)            OK opérationnel
+|   `-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
 `-- results/           <- images + chiffres générés par les scripts (gitignoré)
 ```
 
@@ -165,8 +166,29 @@ source a trompées et que la cible prédisait correctement.
 > **Le compromis robustesse/accuracy** : le modèle défendu perd ~10 pts en
 > accuracy propre mais résiste 10× mieux à ε=0.3 (18% vs 1.8%). À faible ε il
 > est moins bon que le standard (entraîné à ε=0.15, il n'est pas optimisé
-> pour les petits bruits). Comparaison équitable (même 5000 images) : voir
-> `memoire.md` — le baseline standard sur les mêmes données tourne en parallèle.
+> pour les petits bruits).
+
+### Comparaison ÉQUITABLE — mêmes 5000 images d'entraînement (FGSM)
+
+Le baseline standard est cette fois entraîné sur **exactement les mêmes 5000
+images** que le défendu (`standard_same_data.npz`), pour isoler l'effet de la
+défense de l'effet de la quantité de données :
+
+| ε | standard (mêmes données) | défendu | gain |
+|---|---|---|---|
+| clean | 81.0% | 86.0% | +5.0% |
+| 0.05 | 59.6% | 72.8% | +13.2% |
+| 0.10 | 43.0% | 59.6% | +16.6% |
+| 0.20 | 16.2% | 34.6% | +18.4% |
+| 0.30 | 8.4% | 17.4% | +9.0% |
+
+> **À données égales, le défendu gagne partout — même en accuracy propre (+5 pts).**
+> L'adversarial training double la taille effective du jeu (chaque batch + sa
+> version attaquée) : c'est une forme d'augmentation de données. La comparaison
+> vs `model_weights_full` (60k images) pénalisait le défendu en clean : ce n'était
+> pas l'effet de la défense mais l'effet de la quantité de données.
+> Éval PGD du défendu (20 steps) en cours — résultats ajoutés dès la fin du run.
+> Reproduire : `python3 adversarial/scripts/eval_defended.py`
 
 ---
 

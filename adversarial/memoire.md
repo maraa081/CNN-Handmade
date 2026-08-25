@@ -64,6 +64,33 @@ grandes dimensions, Goodfellow).
 - [warn] À ε=0.3, PGD avec démarrage aléatoire donne 0.0% exactement — le modèle
   ne reconnaît plus AUCUNE image de l'échantillon.
 
+### 2026-08-25 — Adversarial training : comparaison ÉQUITABLE (mêmes 5000 images)
+
+- Modèles : `defend_mnist_weights.npz` (défendu, 3 epochs, batch 64, eps train 0.15)
+  vs `standard_same_data.npz` (baseline standard entraîné sur les MÊMES 5000 images)
+- Paramètres : 5000 images train, 500 test, FGSM, eps ∈ {0.05, 0.1, 0.2, 0.3}, seed 42
+- Résultat (comparaison équitable, FGSM) :
+
+| eps | standard | défendu | gain |
+|---|---|---|---|
+| clean | 81.0% | 86.0% | +5.0% |
+| 0.05 | 59.6% | 72.8% | +13.2% |
+| 0.10 | 43.0% | 59.6% | +16.6% |
+| 0.20 | 16.2% | 34.6% | +18.4% |
+| 0.30 | 8.4% | 17.4% | +9.0% |
+
+- Observation : à données égales, le défendu gagne PARTOUT — même en accuracy
+  propre (+5 pts). Explication : l'adversarial training double la taille effective
+  du jeu d'entraînement (chaque batch propre + sa version attaquée), c'est une
+  forme d'augmentation de données. Le baseline standard (81% propre) est sous-entraîné
+  face à un modèle entraîné sur 60k images (98.6%) : c'est pour ça que la
+  comparaison vs `model_weights_full` pénalisait le défendu en clean.
+- Leçon : **toute comparaison défense/attaque doit se faire à données égales**,
+  sinon on confond l'effet de la défense avec l'effet de la quantité de données.
+- [fix] bug `UnboundLocalError: eps_list` dans defend.py (bloc --baseline utilisait
+  eps_list avant son assignation) corrigé — le tableau équitable n'avait jamais pu
+  s'afficher malgré des entraînements réussis.
+
 ### 2026-08-25 — Transfert d'attaque entre modèles MNIST (FGSM)
 
 - Modèles : `full` (SGD, 98.6%), `classic` (SGD classique), `max_config`
@@ -124,4 +151,9 @@ grandes dimensions, Goodfellow).
 | 2026-08-25 | Transfert full->max_config | MNIST | 0.30 | — | cible 49.6% | 50.2% | |
 | 2026-08-25 | Transfert max_config->full | MNIST | 0.10 | — | cible 95.6% | 8.0% | |
 | 2026-08-25 | Transfert max_config->full | MNIST | 0.20 | — | cible 77.6% | 31.8% | |
-| 2026-08-25 | Transfert max_config->full | MNIST | 0.30 | — | cible 40.2% | 60.7% | |
+| 2026-08-25 | Transfert max_config->full | MNIST | 0.30 | — | cible 40.2% | 60.7% |
+| 2026-08-25 | Adv. training (équitable) | défendu vs same-data | clean | 81.0% | 86.0% | — | +5.0 pts même en propre |
+| 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.05 | 59.6% | 72.8% | — | +13.2 pts |
+| 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.10 | 43.0% | 59.6% | — | +16.6 pts |
+| 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.20 | 16.2% | 34.6% | — | +18.4 pts |
+| 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.30 | 8.4% | 17.4% | — | +9.0 pts | |
