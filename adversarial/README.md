@@ -1,28 +1,28 @@
-# 🥷 Adversarial Attacks — Attaquer (et défendre) mon CNN from scratch
+#  Adversarial Attacks — Attaquer (et défendre) mon CNN from scratch
 
 > **Objectif :** apprendre la sécurité des modèles en attaquant mon propre CNN.
-> Je contrôle le gradient de A à Z (aucun framework) → je peux implémenter les attaques moi-même.
+> Je contrôle le gradient de A à Z (aucun framework) -> je peux implémenter les attaques moi-même.
 >
 > **Documentation soignée** — chaque script est commenté, chaque résultat est expliqué,
-> les expériences sont tracées dans `memoire.md`. Pas de brouillon. 🧹
+> les expériences sont tracées dans `memoire.md`. Pas de brouillon. 
 
 ---
 
-## 📁 Organisation
+##  Organisation
 
 ```
 adversarial/
-├── README.md          ← ce fichier : vue d'ensemble, concepts, résultats clés
-├── memoire.md         ← carnet de bord : chaque expérience tracée (date, paramètres, résultat)
-├── scripts/
-│   ├── fgsm.py        ← attaque FGSM (1 étape de gradient)        ✅ opérationnel
-│   ├── pgd.py         ← attaque PGD (itérative, plus forte)       ✅ opérationnel
-│   ├── transfer.py    ← transfert d'attaque entre modèles         ✅ opérationnel
-│   └── defend.py      ← adversarial training (défense)            ✅ opérationnel
-└── results/           ← images + chiffres générés par les scripts (gitignoré)
+|-- README.md          <- ce fichier : vue d'ensemble, concepts, résultats clés
+|-- memoire.md         <- carnet de bord : chaque expérience tracée (date, paramètres, résultat)
+|-- scripts/
+|   |-- fgsm.py        <- attaque FGSM (1 étape de gradient)        OK opérationnel
+|   |-- pgd.py         <- attaque PGD (itérative, plus forte)       OK opérationnel
+|   |-- transfer.py    <- transfert d'attaque entre modèles         OK opérationnel
+|   `-- defend.py      <- adversarial training (défense)            OK opérationnel
+`-- results/           <- images + chiffres générés par les scripts (gitignoré)
 ```
 
-## 🧠 Les concepts (à maîtriser)
+##  Les concepts (à maîtriser)
 
 ### Évasion adversarial (adversarial examples)
 
@@ -31,9 +31,9 @@ Un **exemple adversarial** est une entrée modifiée de façon **imperceptible**
 
 ```
 image originale          bruit (×10 grossi)          image attaquée
-    ┌─────┐                   ┌─────┐                   ┌─────┐
-    │ 'a' │       +    ε·sign(∇)  │     │       =        │ 'h' │  (identique à l'œil)
-    └─────┘                   └─────┘                   └─────┘
+    +-----+                   +-----+                   +-----+
+    | 'a' |       +    ε·sign(∇)  |     |       =        | 'h' |  (identique à l'œil)
+    `-----+                   `-----+                   `-----+
 ```
 
 ### FGSM — Fast Gradient Sign Method (Goodfellow, 2014)
@@ -53,7 +53,7 @@ x_adv = x + ε · sign(∇_x L(f(x), y))
 dans la direction du gradient cumule des effets sur toutes les dimensions et fait
 basculer la sortie. C'est le "high-dimensional linearity" de Goodfellow.
 
-### PGD — Projected Gradient Descent (Madry, 2018) ✅ implémenté
+### PGD — Projected Gradient Descent (Madry, 2018) OK implémenté
 
 Version itérative de FGSM : plusieurs petites étapes avec projection dans la boule
 L∞ de rayon ε. Attaque plus forte (le "gold standard" des attaques).
@@ -63,20 +63,20 @@ x_0 = x + U(-ε, ε)                       # démarrage aléatoire
 x_{t+1} = clip(x_t + α·sign(∇L), x-ε, x+ε)  # pas de gradient projeté
 ```
 
-### Transfert d'attaque ✅ implémenté
+### Transfert d'attaque OK implémenté
 
 Un exemple adversarial généré contre MON modèle trompe aussi d'autres modèles.
 C'est ce qui rend les attaques dangereuses en pratique (attaques boîte noire).
 Mesuré sur 3 modèles MNIST entraînés différemment (full, classic, max_config).
 
-### La défense : adversarial training ✅ implémenté
+### La défense : adversarial training OK implémenté
 
-Réentraîner le modèle **avec** des exemples adverses → il devient robuste.
+Réentraîner le modèle **avec** des exemples adverses -> il devient robuste.
 C'est le pendant défensif — indispensable pour raconter les deux côtés.
 
 ---
 
-## 🚀 Lancer une attaque
+##  Lancer une attaque
 
 ```bash
 # Attaque FGSM sur le modèle MNIST complet
@@ -101,7 +101,7 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ---
 
-## 📊 Résultats clés (mis à jour à chaque expérience)
+##  Résultats clés (mis à jour à chaque expérience)
 
 ### FGSM — MNIST (models/model_weights_full.npz, 1000 images)
 
@@ -141,14 +141,14 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 Taux de transfert = images où la CIBLE change de prédiction, parmi celles que la
 source a trompées et que la cible prédisait correctement.
 
-| Source → Cible | ε=0.10 | ε=0.20 | ε=0.30 |
+| Source -> Cible | ε=0.10 | ε=0.20 | ε=0.30 |
 |---|---|---|---|
-| full → classic (même archi) | 25.7% | 50.0% | 72.3% |
-| full → max_config (Dropout+L2) | 8.2% | 15.1% | 50.2% |
-| max_config → full | 8.0% | 31.8% | 60.7% |
+| full -> classic (même archi) | 25.7% | 50.0% | 72.3% |
+| full -> max_config (Dropout+L2) | 8.2% | 15.1% | 50.2% |
+| max_config -> full | 8.0% | 31.8% | 60.7% |
 
 > **La transferabilité dépend de la similarité des modèles** : deux SGD
-> entraînés pareil → les exemples adverses traversent (72% à ε=0.3). C'est ce
+> entraînés pareil -> les exemples adverses traversent (72% à ε=0.3). C'est ce
 > qui rend les attaques **boîte noire** possibles. La régularisation
 > (Dropout + L2) casse une partie du transfert.
 
@@ -170,7 +170,7 @@ source a trompées et que la cible prédisait correctement.
 
 ---
 
-## 🔗 Références
+##  Références
 
 - Goodfellow et al., *Explaining and Harnessing Adversarial Examples* (2014)
 - Madry et al., *Towards Deep Learning Models Resistant to Adversarial Attacks* (2018)

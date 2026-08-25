@@ -33,14 +33,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath, basename
 
-ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # -> CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 
 from adversarial.scripts.fgsm import build_model, load_data, accuracy, save_grid
 from adversarial.scripts.pgd import pgd
 
 # Modèles MNIST entraînés différemment (même architecture, sauf max_config
-# qui ajoute un Dropout) → bons candidats pour le transfert
+# qui ajoute un Dropout) -> bons candidats pour le transfert
 KNOWN_MODELS = {
     "full":      "models/model_weights_full.npz",     # entraînement complet
     "classic":   "models/model_weights.npz",          # entraînement classique
@@ -79,9 +79,9 @@ def load_mnist_model(path):
     return m
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Attaque : FGSM ou PGD (toujours non ciblée ici)
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def attack(model, x, y, eps, attack_type, steps=20, rng=None):
     """Génère les exemples adverses contre `model`. Retourne x_adv, noise."""
@@ -101,9 +101,9 @@ def attack(model, x, y, eps, attack_type, steps=20, rng=None):
     return pgd(model, x, y_ref, eps, steps=steps, rng=rng)
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Main
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Transfert d'attaque entre modèles")
@@ -124,7 +124,7 @@ def main():
             print(f"   {name:<12} -> {path}")
         sys.exit(0)
 
-    # Résolution des noms courts → fichiers
+    # Résolution des noms courts -> fichiers
     def resolve(name):
         return join(ROOT_DIR, KNOWN_MODELS.get(name, name))
 
@@ -132,11 +132,11 @@ def main():
     print(f"[SRC] {basename(src_path)}")
     print(f"[DST] {basename(dst_path)}")
 
-    # ── Modèles ──
+    # -- Modèles --
     src_model = load_mnist_model(src_path)
     dst_model = load_mnist_model(dst_path)
 
-    # ── Données ──
+    # -- Données --
     x, y = load_data("mnist", args.n)
     acc_src = accuracy(src_model, x, y)
     acc_dst = accuracy(dst_model, x, y)
@@ -144,7 +144,7 @@ def main():
 
     rng = np.random.RandomState(args.seed)
 
-    # ── Boucle sur les epsilons ──
+    # -- Boucle sur les epsilons --
     print(f"\n[ATTACK] {args.attack.upper()} contre {basename(src_path)} -> test sur {basename(dst_path)}")
     print(f"{'eps':>6} | {'acc src adv':>12} | {'acc dst adv':>12} | {'transfert':>10}")
     print("-" * 55)
@@ -181,7 +181,7 @@ def main():
         save_grid(x, y, x_adv, noise, eps, "mnist",
                   join(out_dir, f"transfer_{args.attack}_eps{eps}_src{args.src}_dst{args.dst}.png"))
 
-    # ── Courbe : acc source vs acc cible ──
+    # -- Courbe : acc source vs acc cible --
     eps_list = [r[0] for r in results]
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
     ax.plot(eps_list, [r[1] for r in results], marker="o", linewidth=2,

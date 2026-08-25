@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ⚖️  L2 REGULARIZATION — Pénalise les gros poids (Weight Decay)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--------------------------------------------------------------------------
+    L2 REGULARIZATION — Pénalise les gros poids (Weight Decay)
+--------------------------------------------------------------------------
 
   Technique : L2 régularisation (weight decay)
   Optimiseur : SGD + weight_decay
@@ -21,7 +21,7 @@
 
   Lancement : python3 experiments/l2/l2_sgd.py
   Résultat   : experiments/l2/l2_sgd.png
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--------------------------------------------------------------------------
 """
 
 import sys, time
@@ -40,40 +40,40 @@ from model import CNN
 from optimizers import SGD
 
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  ⛽ RÉGLAGES                                                            ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+# +==========================================================================+
+# |   RÉGLAGES                                                            |
+# +==========================================================================+
 
 LEARNING_RATE = 0.01
-WEIGHT_DECAY  = 0.001       # ← Coefficient L2 (0.001 = défaut, 0.0 = désactivé)
+WEIGHT_DECAY  = 0.001       # <- Coefficient L2 (0.001 = défaut, 0.0 = désactivé)
 BATCH_SIZE    = 64
 EPOCHS        = 5
 DATA_LIMIT    = None 
 
-# ── Optimiseur avec weight_decay ───────────────────────────────────────────
+# -- Optimiseur avec weight_decay -------------------------------------------
 #   Le weight_decay est passé directement à l'optimiseur.
 #   Chaque mise à jour ajoute : λ * param au gradient.
 #
 #   Essaie différentes valeurs :
-#     WEIGHT_DECAY = 0.0     → équivalent SGD vanilla
-#     WEIGHT_DECAY = 0.0001  → très léger
-#     WEIGHT_DECAY = 0.001   → modéré (recommandé pour commencer)
-#     WEIGHT_DECAY = 0.01    → fort (peut causer underfitting)
+#     WEIGHT_DECAY = 0.0     -> équivalent SGD vanilla
+#     WEIGHT_DECAY = 0.0001  -> très léger
+#     WEIGHT_DECAY = 0.001   -> modéré (recommandé pour commencer)
+#     WEIGHT_DECAY = 0.01    -> fort (peut causer underfitting)
 OPT = SGD(lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
-# ── Données ──
-print("📥 Chargement MNIST…")
+# -- Données --
+print(" Chargement MNIST…")
 loader = MNISTLoader()
 (x_train, y_train), (x_test, y_test) = loader.load(join(ROOT, "data"))
 if DATA_LIMIT:
     x_train, y_train = x_train[:DATA_LIMIT], y_train[:DATA_LIMIT]
 train_loader = preprocess_pipeline(x_train, y_train, batch_size=BATCH_SIZE, shuffle=True)
 test_loader  = preprocess_pipeline(x_test, y_test, batch_size=BATCH_SIZE, shuffle=False)
-print(f"  ✔ {x_train.shape[0]} train / {x_test.shape[0]} test")
+print(f"  OK {x_train.shape[0]} train / {x_test.shape[0]} test")
 
-# ── Architecture standard (identique au baseline) ──
+# -- Architecture standard (identique au baseline) --
 model = CNN(optimizer=OPT)
 model.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))
 model.add(ReLU())
@@ -86,30 +86,30 @@ model.add(Dense(3136, 128))
 model.add(ReLU())
 model.add(Dense(128, 10))
 
-print(f"\n🧠 Réseau :\n{model}")
-print(f"⚙️  Optimiseur : {model.optimizer}")
-print(f"⚖️  Weight decay (λ) : {WEIGHT_DECAY}")
+print(f"\n Réseau :\n{model}")
+print(f"  Optimiseur : {model.optimizer}")
+print(f"  Weight decay (λ) : {WEIGHT_DECAY}")
 
-# ── Entraînement ──
-print(f"\n{'═' * 50}")
-print(f"🏋️  Entraînement — {EPOCHS} epochs")
-print(f"{'═' * 50}\n")
+# -- Entraînement --
+print(f"\n{'=' * 50}")
+print(f"  Entraînement — {EPOCHS} epochs")
+print(f"{'=' * 50}\n")
 
 t_start = time.time()
 history = model.train(train_loader, epochs=EPOCHS, verbose=True)
 elapsed = time.time() - t_start
 
 m, s = divmod(elapsed, 60)
-print(f"\n⏱️  {int(m)}m {int(s)}s")
+print(f"\n[time]  {int(m)}m {int(s)}s")
 
-# ── Évaluation ──
-print(f"\n{'═' * 50}")
-print(f"📊 Évaluation sur {x_test.shape[0]} images test…")
+# -- Évaluation --
+print(f"\n{'=' * 50}")
+print(f" Évaluation sur {x_test.shape[0]} images test…")
 test_acc = model.evaluate(test_loader)
-print(f"{'═' * 50}\n")
-print(f"🎯 Accuracy : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+print(f"{'=' * 50}\n")
+print(f" Accuracy : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
-# ── Graphique ──
+# -- Graphique --
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
 ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
@@ -128,7 +128,7 @@ ax2.set_ylim(0, 1)
 plt.tight_layout()
 out = join(dirname(abspath(__file__)), "l2_sgd.png")
 plt.savefig(out, dpi=150, bbox_inches="tight")
-print(f"\n📁 Graphique : {out}")
+print(f"\n Graphique : {out}")
 
 weights_path = join(dirname(abspath(__file__)), "l2_sgd_weights.npz")
 model.save_weights(weights_path)

@@ -6,9 +6,9 @@ Marche sur Windows / macOS / Linux. Utilise uniquement la bibliothèque
 standard Python (pas besoin de numpy).
 
 Priorité de récupération :
-  1. Si data/emnist/emnist-letters-*.idx* existent déjà  → rien à faire
-  2. Sinon, si data/emnist_letters.zip est présent        → extraction locale
-  3. Sinon → téléchargement depuis le site NIST (gzip.zip, ~561 Mo, plus lent)
+  1. Si data/emnist/emnist-letters-*.idx* existent déjà  -> rien à faire
+  2. Sinon, si data/emnist_letters.zip est présent        -> extraction locale
+  3. Sinon -> téléchargement depuis le site NIST (gzip.zip, ~561 Mo, plus lent)
 
 Usage :
     python3 download_emnist.py
@@ -22,7 +22,7 @@ import zipfile
 import urllib.request
 from os.path import join, dirname, abspath, exists
 
-ROOT = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
+ROOT = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 DATA_DIR = join(ROOT, "data", "emnist")
 LOCAL_ZIP = join(ROOT, "data", "emnist_letters.zip")
 NIST_ZIP_URL = "https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip"

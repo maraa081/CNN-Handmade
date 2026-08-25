@@ -2,7 +2,7 @@
 model.py — Assembleur du réseau CNN-Handmade
 
 Orchestre le cycle complet :
-    forward → backward → update → training loop → evaluation
+    forward -> backward -> update -> training loop -> evaluation
 
 Utilisation typique :
     model = CNN()
@@ -34,11 +34,11 @@ class CNN:
     Réseau CNN complet pour MNIST.
 
     Architecture recommandée :
-        Conv2D(1→32, 3, pad=1) → ReLU → MaxPool2D(2)
-        Conv2D(32→64, 3, pad=1) → ReLU → MaxPool2D(2)
+        Conv2D(1->32, 3, pad=1) -> ReLU -> MaxPool2D(2)
+        Conv2D(32->64, 3, pad=1) -> ReLU -> MaxPool2D(2)
         Flatten
-        Dense(3136→128) → ReLU
-        Dense(128→10)
+        Dense(3136->128) -> ReLU
+        Dense(128->10)
 
     Optimiseurs disponibles (via optimizers.py) :
         SGD       — descente de gradient classique (défaut)
@@ -117,7 +117,7 @@ class CNN:
         Boucle d'entraînement complète.
 
         Pour chaque epoch :
-            1. Forward : passer les batches dans le réseau → logits
+            1. Forward : passer les batches dans le réseau -> logits
             2. Loss : CrossEntropyLoss(logits, y_true)
             3. Backward : rétropropager le gradient
             4. Update : mettre à jour les poids via l'optimiseur
@@ -141,20 +141,20 @@ class CNN:
             for batch_x, batch_y in train_loader:
                 N = batch_x.shape[0]
 
-                # ── Mode entraînement (dropout actif, etc.) ──
+                # -- Mode entraînement (dropout actif, etc.) --
                 self.train_mode()
 
-                # ── Forward ──
+                # -- Forward --
                 logits = self.forward(batch_x)
 
-                # ── Loss ──
+                # -- Loss --
                 loss = self.loss_fn.forward(logits, batch_y)
 
-                # ── Backward ──
+                # -- Backward --
                 grad = self.loss_fn.backward()
                 self.backward(grad)
 
-                # ── Update ──
+                # -- Update --
                 self.update(lr)
 
                 # Stats
@@ -168,7 +168,7 @@ class CNN:
             history["accuracy"].append(acc)
 
             if verbose:
-                print(f"  Època {epoch + 1}/{epochs}  ─  loss: {avg_loss:.4f}  ─  accuracy: {acc:.4f}")
+                print(f"  Època {epoch + 1}/{epochs}  -  loss: {avg_loss:.4f}  -  accuracy: {acc:.4f}")
 
         return history
 
@@ -217,7 +217,7 @@ class CNN:
                 params[f'dense_{i}_b'] = layer.b
         np.savez(path, **params)
         size = os.path.getsize(path)
-        print(f"\n  💾 Poids sauvegardés → {path}  ({size / 1024:.1f} Ko)")
+        print(f"\n   Poids sauvegardés -> {path}  ({size / 1024:.1f} Ko)")
 
     def load_weights(self, path):
         """
@@ -238,7 +238,7 @@ class CNN:
             elif hasattr(layer, 'W'):
                 layer.W = data[f'dense_{i}_W']
                 layer.b = data[f'dense_{i}_b']
-        print(f"  🔄 Poids chargés depuis → {path}")
+        print(f"   Poids chargés depuis -> {path}")
 
     def predict(self, x):
         """

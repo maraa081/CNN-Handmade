@@ -37,16 +37,16 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # -> CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 
 # On réutilise le code commun de fgsm.py (modèle, données, visualisation)
 from adversarial.scripts.fgsm import build_model, load_data, accuracy, label_str, save_grid
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  L'attaque
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def pgd(model, x, y_onehot, eps, steps=20, alpha=None, random_start=True, rng=None):
     """
@@ -59,8 +59,8 @@ def pgd(model, x, y_onehot, eps, steps=20, alpha=None, random_start=True, rng=No
         eps          : rayon de la boule L_inf
         steps        : nombre d'itérations
         alpha        : taille du pas (défaut : eps / 4, comme Madry et al.)
-        random_start : True → démarrer depuis x + U(-eps, eps) (reco Madry)
-                       False → démarrer depuis x (déterministe)
+        random_start : True -> démarrer depuis x + U(-eps, eps) (reco Madry)
+                       False -> démarrer depuis x (déterministe)
         rng          : générateur aléatoire (reproductibilité)
 
     Retourne : x_adv (N, 1, 28, 28), bruit final (pour visualisation)
@@ -98,12 +98,12 @@ def pgd(model, x, y_onehot, eps, steps=20, alpha=None, random_start=True, rng=No
     return x_adv, x_adv - x
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Évaluation
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def run_attack(model, x, y, eps, steps, alpha, random_start, rng, targeted, target_class):
-    """Attaque le batch avec un epsilon donné → (acc_adv, flip, targeted_success, x_adv, noise)."""
+    """Attaque le batch avec un epsilon donné -> (acc_adv, flip, targeted_success, x_adv, noise)."""
     logits_probe = model.forward(x[:1])
     C = logits_probe.shape[1]
 
@@ -124,9 +124,9 @@ def run_attack(model, x, y, eps, steps, alpha, random_start, rng, targeted, targ
     return acc_adv, flip, targeted_success, x_adv, noise
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Main
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Attaque PGD sur CNN-Handmade")
@@ -145,7 +145,7 @@ def main():
                         help="lance aussi FGSM et trace la courbe FGSM vs PGD")
     args = parser.parse_args()
 
-    # ── Modèle ──
+    # -- Modèle --
     model = build_model(args.dataset)
     if args.weights is None:
         args.weights = "models/model_weights_full.npz" if args.dataset == "mnist" \
@@ -154,14 +154,14 @@ def main():
     model.load_weights(weights_path)
     print(f"[MODEL] {args.dataset.upper()} <- {args.weights}")
 
-    # ── Données ──
+    # -- Données --
     x, y = load_data(args.dataset, args.n)
     acc_clean = accuracy(model, x, y)
     print(f"[DATA] {len(x)} images de test -- accuracy propre : {acc_clean:.1%}")
 
     rng = np.random.RandomState(args.seed)
 
-    # ── Boucle sur les epsilons ──
+    # -- Boucle sur les epsilons --
     tag = "tgt" if args.targeted else "untgt"
     rs_tag = "rs" if not args.no_random_start else "det"
     print(f"\n[ATTACK] PGD {args.steps} steps, alpha=eps/4, "
@@ -184,7 +184,7 @@ def main():
         save_grid(x, y, x_adv, noise, eps, args.dataset,
                   join(out_dir, f"pgd_{tag}_{rs_tag}_eps{eps}_s{args.steps}.png"))
 
-    # ── Courbes ──
+    # -- Courbes --
     out_dir = join(ROOT_DIR, "adversarial", "results")
 
     # Courbe PGD seule
@@ -205,7 +205,7 @@ def main():
     plt.close()
     print(f"\n[PLOT] Courbe -> {curve_path}")
 
-    # ── Comparaison FGSM vs PGD ──
+    # -- Comparaison FGSM vs PGD --
     if args.compare:
         from adversarial.scripts.fgsm import run_attack as fgsm_run
         print("\n[COMPARE] Lancement FGSM sur les memes epsilons...")

@@ -75,7 +75,7 @@ class CrossEntropyLoss:
     Prend des **logits** (scores bruts) en entrée, pas des probabilités.
     Le softmax est appliqué en interne de façon stable.
 
-    Forward (logits → loss) :
+    Forward (logits -> loss) :
         p = softmax(logits)
         L = -1/N * sum_n sum_c y_true[n,c] * log(p[n,c] + eps)
 

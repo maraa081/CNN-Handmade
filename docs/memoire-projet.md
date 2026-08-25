@@ -1,10 +1,10 @@
-# 📓 Mémoire de projet — CNN-Handmade
+#  Mémoire de projet — CNN-Handmade
 
 _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 ---
 
-## 🧠 Points à revoir / consolider
+##  Points à revoir / consolider
 
 > Concepts vus une fois, mais qui méritent d'être retravaillés pour être bien ancrés.
 
@@ -17,8 +17,8 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 - Un même filtre (kernel) est réutilisé à **toutes les positions spatiales** de l'image.
 - En backprop, ça signifie que le gradient du filtre est la **somme** des gradients sur toutes les positions où il a été appliqué.
-- Même principe pour le biais : ajouté à chaque position → gradient = somme sur toutes les positions.
-- Pour col2im : un pixel apparaît dans plusieurs patchs → son gradient cumule les contributions de toutes les positions où il a été utilisé.
+- Même principe pour le biais : ajouté à chaque position -> gradient = somme sur toutes les positions.
+- Pour col2im : un pixel apparaît dans plusieurs patchs -> son gradient cumule les contributions de toutes les positions où il a été utilisé.
 
 ### Routage de gradient pour MaxPool
 
@@ -29,7 +29,7 @@ _Carnet de bord du projet, mis à jour à chaque étape significative._
 
 ---
 
-## 🏁 Expérimentations — Comparaison d'optimiseurs
+##  Expérimentations — Comparaison d'optimiseurs
 
 > Structure en dossiers séparés pour tester et comparer chaque optimisation.
 
@@ -46,19 +46,19 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 
 | Optimiseur | Fichier | Paramètres | Statut |
 |---|---|---|---|
-| **SGD** (vanilla) | `experiments/baseline/` | `lr` | ✅ |
-| **Momentum** (SGD + élan) | `experiments/momentum/` | `lr, momentum` | ✅ |
-| **Adam** (Adaptive Moment Estimation) | `experiments/adam/` | `lr, beta1, beta2, eps` | ✅ |
+| **SGD** (vanilla) | `experiments/baseline/` | `lr` | OK |
+| **Momentum** (SGD + élan) | `experiments/momentum/` | `lr, momentum` | OK |
+| **Adam** (Adaptive Moment Estimation) | `experiments/adam/` | `lr, beta1, beta2, eps` | OK |
 
 ### Prochaines expériences
 
 | Expérience | Statut |
 |---|---|
-| Learning Rate Scheduler | ⏳ |
-| Dropout (régularisation) | ✅ |
-| Weight Decay (L2) | ✅ |
-| Grid Search automatique | ⏳ |
-| Data Augmentation | ⏳ |
+| Learning Rate Scheduler | [wait] |
+| Dropout (régularisation) | OK |
+| Weight Decay (L2) | OK |
+| Grid Search automatique | [wait] |
+| Data Augmentation | [wait] |
 
 ### Architecture du framework
 
@@ -68,83 +68,83 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 
 ---
 
-## ⏭️ Prochaines étapes (code)
+## >> Prochaines étapes (code)
 
 > Partie plus mécanique, moins de théorie, avancer sur l'implémentation.
 
 | Étape | Statut |
 |---|---|
-| **Refactoring modules** | ✅ |
-| Dense (forward, backward, update) | ✅ |
-| Softmax | ✅ |
-| CrossEntropyLoss | ✅ |
-| Boucle d'entraînement (forward → loss → backward → update) | ✅ |
-| Évaluation / accuracy | ✅ |
-| **Framework d'expérimentations** (optimiseurs) | ✅ |
-| SGD (baseline) | ✅ |
-| Momentum | ✅ |
-| Adam | ✅ |
+| **Refactoring modules** | OK |
+| Dense (forward, backward, update) | OK |
+| Softmax | OK |
+| CrossEntropyLoss | OK |
+| Boucle d'entraînement (forward -> loss -> backward -> update) | OK |
+| Évaluation / accuracy | OK |
+| **Framework d'expérimentations** (optimiseurs) | OK |
+| SGD (baseline) | OK |
+| Momentum | OK |
+| Adam | OK |
 
 ---
 
-## 🔧 Refactoring — fait ✅
+##  Refactoring — fait OK
 
 `cnn.py` découpé en modules propres :
 
 | Module | Contenu |
 |---|---|
 | **`data.py`** | MNISTLoader, preprocessing, DataLoader |
-| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dropout, Dense ✅ |
-| **`optimizers.py`** | SGD, Momentum, Adam (tous avec L2 weight_decay) ✅ |
-| **`losses.py`** | Softmax ✅, CrossEntropyLoss ✅ |
-| **`model.py`** | CNN (forward, backward, update, train, evaluate) ✅ |
-| **`tune_cnn.py`** | fichier de tuning interactif (paramètres en haut) ✅ |
+| **`layers.py`** | im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dropout, Dense OK |
+| **`optimizers.py`** | SGD, Momentum, Adam (tous avec L2 weight_decay) OK |
+| **`losses.py`** | Softmax OK, CrossEntropyLoss OK |
+| **`model.py`** | CNN (forward, backward, update, train, evaluate) OK |
+| **`tune_cnn.py`** | fichier de tuning interactif (paramètres en haut) OK |
 
 `cnn.py` est devenu un simple script de démonstration qui importe les modules.
 
 ---
 
-## 📜 Historique
+##  Historique
 
-### 2026-08-24 — EMNIST Letters (26 classes) 🎉
+### 2026-08-24 — EMNIST Letters (26 classes) 
 
 - **Objectif** : passer de MNIST (10 chiffres) aux lettres manuscrites a-z.
 - **EMNISTLoader** ajouté dans `src/data.py` (hérite de MNISTLoader, même format IDX) :
-  - Labels 1-26 → 0-25 (mapping vérifié avec `emnist-letters-mapping.txt`)
+  - Labels 1-26 -> 0-25 (mapping vérifié avec `emnist-letters-mapping.txt`)
   - Orientation corrigée (transpose + flip = rotation 90° — les images EMNIST sont stockées pivotées)
   - Orientation validée visuellement en ASCII art avant entraînement
 - **`preprocess_pipeline()`** : paramètre `num_classes` ajouté (one-hot 26 au lieu de 10)
 - **`scripts/train_emnist.py`** : script dédié (rapide 5000 images / `--full` 124800 images, `--samples` pour vérifier l'orientation)
-- **Résultat rapide** (5000 images, 3 epochs, ~3m40) : train 63.5% → test **43.2%**
-- ⚠️ **Piège découvert** : le test set EMNIST est TRIÉ PAR CLASSE. `x_test[:1000]` ne contenait que des 'a'/'b' → accuracy 5.8% trompeuse. Il faut échantillonner aléatoirement (rng.choice).
+- **Résultat rapide** (5000 images, 3 epochs, ~3m40) : train 63.5% -> test **43.2%**
+- [warn] **Piège découvert** : le test set EMNIST est TRIÉ PAR CLASSE. `x_test[:1000]` ne contenait que des 'a'/'b' -> accuracy 5.8% trompeuse. Il faut échantillonner aléatoirement (rng.choice).
 - Données dans `data/emnist/` (gitignorées, zip 561 Mo à télécharger depuis biometrics.nist.gov)
 
 ### 2026-07-10 — Fiches optimiseurs
 
 - `docs/optimizers/` : fiches détaillées SGD, Momentum, Adam + TEMPLATE pour les nouveaux.
 
-### 2026-07-05 — Entraînement + évaluation + fichier tuning 🎉
+### 2026-07-05 — Entraînement + évaluation + fichier tuning 
 
 - **model.py** : CNN.forward, backward, update, train (avec historique), evaluate.
 - **tune_cnn.py** : fichier de tuning ultra-simple avec tous les paramètres en haut.
 - **Optimisation :** im2col/col2im vectorisés avec `numpy.lib.stride_tricks.as_strided` (fini les boucles Python).
 - **Données :** format channels_first dans le DataLoader (transparent pour l'utilisateur).
-- Tests : loss décroissante, accuracy croissante ✅ sur un mini-entraînement.
+- Tests : loss décroissante, accuracy croissante OK sur un mini-entraînement.
 
-### 2026-07-05 — Softmax + CrossEntropyLoss implémentés ✅
+### 2026-07-05 — Softmax + CrossEntropyLoss implémentés OK
 
 - **Softmax :** forward stable (shift max), backward avec Jacobienne complète.
 - **CrossEntropyLoss :** prend des **logits** (pas des probas), softmax intégré en interne.
 - **Gradient combiné magique :** `(softmax(logits) - y_true) / N` — pas besoin de multiplier les Jacobiennes.
-- Tests : loss manuelle, logits uniformes → log(C), logits parfaits → 0, gradient check ✅
+- Tests : loss manuelle, logits uniformes -> log(C), logits parfaits -> 0, gradient check OK
 - Ajouté `accuracy()` directement dans CrossEntropyLoss.
 
-### 2026-07-05 — Dense implémenté ✅
+### 2026-07-05 — Dense implémenté OK
 
 - Implémentation de `Dense` (forward, backward, update).
 - Forward : `y = x @ W.T + b`
 - Backward : `dW = d_out.T @ x`, `db = d_out.sum(axis=0)`, `dx = d_out @ W`
-- Gradient check par différences finies ✅ (erreur relative < 1e-4).
+- Gradient check par différences finies OK (erreur relative < 1e-4).
 - Tests unitaires dans cnn.py.
 
 ### 2026-07-04 — Refactoring en modules
@@ -161,8 +161,8 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 - Implémentation de `col2im()` : inverse d'`im2col`, accumulation des gradients aux positions qui se chevauchent.
 - `Conv2D.backward()` : calcule `d_kernels`, `d_bias`, `d_input`.
 - `Conv2D.update(lr)` : mise à jour des poids par descente de gradient.
-- Gradient check par différences finies ✅ (erreur relative < 1e-4).
-- README mis à jour (ReLU, Flatten, Conv2D backward marqués ✅).
+- Gradient check par différences finies OK (erreur relative < 1e-4).
+- README mis à jour (ReLU, Flatten, Conv2D backward marqués OK).
 - Création de ce fichier mémoire.
 
 ### 2026-07-03 — ReLU + Flatten

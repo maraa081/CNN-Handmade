@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import EMNISTLoader, preprocess_pipeline
@@ -63,17 +63,17 @@ def show_samples(x, y, n=16, title="Lettres EMNIST", out="emnist_samples.png"):
     plt.tight_layout()
     path = join(ROOT_DIR, out)
     plt.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"📸 Échantillons → {path}")
+    print(f" Échantillons -> {path}")
 
 
 if __name__ == "__main__":
     data_dir = join(ROOT_DIR, "data", "emnist")
 
-    # ── S'assurer que les données existent (télécharge si besoin) ──
+    # -- S'assurer que les données existent (télécharge si besoin) --
     if not ensure_data():
         sys.exit(1)
 
-    # ── Mode échantillons : juste vérifier l'orientation ──
+    # -- Mode échantillons : juste vérifier l'orientation --
     if "--samples" in sys.argv:
         loader = EMNISTLoader("letters")
         (x_train, y_train), _ = loader.load(data_dir)
@@ -81,8 +81,8 @@ if __name__ == "__main__":
         show_samples(x_train, y_train, title="EMNIST Letters — orientation vérifiée")
         sys.exit(0)
 
-    # ── Chargement ──
-    print("📦 Chargement EMNIST letters…")
+    # -- Chargement --
+    print(" Chargement EMNIST letters…")
     loader = EMNISTLoader("letters")
     (x_train, y_train), (x_test, y_test) = loader.load(data_dir)
 
@@ -98,21 +98,21 @@ if __name__ == "__main__":
 
     show_samples(x_train, y_train, title="EMNIST Letters (train)")
 
-    # ── Flags ──
+    # -- Flags --
     full = "--full" in sys.argv
     epochs_override = None
     for i, arg in enumerate(sys.argv):
         if arg == "--epochs" and i + 1 < len(sys.argv):
             epochs_override = int(sys.argv[i + 1])
 
-    # ── Modèle ──
+    # -- Modèle --
     model = build_model()
-    print(f"\n🧠 {model}")
+    print(f"\n {model}")
 
     if full:
-        print(f"\n{'═' * 50}")
-        print(f"🚀  ENTRAÎNEMENT COMPLET  ({len(x_train)} images, 26 classes)")
-        print(f"{'═' * 50}")
+        print(f"\n{'=' * 50}")
+        print(f"  ENTRAÎNEMENT COMPLET  ({len(x_train)} images, 26 classes)")
+        print(f"{'=' * 50}")
 
         batch_size = 128
         n_epochs = epochs_override or 10
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         test_loader = preprocess_pipeline(x_test, y_test, batch_size=batch_size,
                                           shuffle=False, num_classes=NUM_CLASSES)
 
-        print(f"\n📦 {len(x_train)} train / {len(x_test)} test")
+        print(f"\n {len(x_train)} train / {len(x_test)} test")
         print(f"   batch={batch_size}, epochs={n_epochs}, lr=0.01")
         print(f"   ~{len(train_loader)} batches/epoch")
 
@@ -131,25 +131,25 @@ if __name__ == "__main__":
         t_elapsed = time.time() - t_start
 
         h, m, s = int(t_elapsed // 3600), int((t_elapsed % 3600) // 60), int(t_elapsed % 60)
-        print(f"\n⏱️  {h}h {m}m {s}s" if h else f"⏱️  {m}m {s}s")
+        print(f"\n[time]  {h}h {m}m {s}s" if h else f"[time]  {m}m {s}s")
 
-        print(f"\n📊 Évaluation sur {len(x_test)} images de test…")
+        print(f"\n Évaluation sur {len(x_test)} images de test…")
         test_acc = model.evaluate(test_loader)
-        print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+        print(f"\n Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         save_path = join(ROOT_DIR, "models", "emnist_letters_weights_full.npz")
         model.save_weights(save_path)
 
     else:
-        print(f"\n{'═' * 50}")
-        print(f"🏋️  Entraînement rapide (sous-ensemble 5000 images)")
-        print(f"{'═' * 50}")
+        print(f"\n{'=' * 50}")
+        print(f"  Entraînement rapide (sous-ensemble 5000 images)")
+        print(f"{'=' * 50}")
 
         x_sub, y_sub = x_train[:5000], y_train[:5000]
         n_epochs = epochs_override or 3
         batch_size = 64
 
-        # ⚠️ EMNIST est trié par classe : il faut échantillonner le test
+        # [warn] EMNIST est trié par classe : il faut échantillonner le test
         # aléatoirement, sinon on évalue sur 1-2 classes seulement.
         rng = np.random.RandomState(42)
         test_idx = rng.choice(len(x_test), size=1000, replace=False)
@@ -159,22 +159,22 @@ if __name__ == "__main__":
         test_sub = preprocess_pipeline(x_test[test_idx], y_test[test_idx], batch_size=batch_size,
                                        shuffle=False, num_classes=NUM_CLASSES)
 
-        print(f"\n📦 {x_sub.shape[0]} train, batch={batch_size}, epochs={n_epochs}, lr=0.01")
+        print(f"\n {x_sub.shape[0]} train, batch={batch_size}, epochs={n_epochs}, lr=0.01")
 
         t_start = time.time()
         history = model.train(train_sub, epochs=n_epochs, lr=0.01, verbose=True)
         t_elapsed = time.time() - t_start
 
         m, s = divmod(t_elapsed, 60)
-        print(f"⏱️  {int(m)}m {int(s)}s")
+        print(f"[time]  {int(m)}m {int(s)}s")
 
         test_acc = model.evaluate(test_sub)
-        print(f"\n🎯 Accuracy test (1000 images) : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+        print(f"\n Accuracy test (1000 images) : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         save_path = join(ROOT_DIR, "models", "emnist_letters_weights.npz")
         model.save_weights(save_path)
 
-    # ── Graphique ──
+    # -- Graphique --
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
     ax1.plot(history["loss"], marker="o", linewidth=2, markersize=6)
     ax1.set_title(f"Loss ({'full' if full else 'rapide'}, {len(history['loss'])} epochs)", fontsize=12)
@@ -190,10 +190,10 @@ if __name__ == "__main__":
     plt.tight_layout()
     graph_path = join(ROOT_DIR, "emnist_training_result.png")
     plt.savefig(graph_path, dpi=150, bbox_inches="tight")
-    print(f"📊 Graphique → {graph_path}")
+    print(f" Graphique -> {graph_path}")
 
-    # ── Prédictions d'exemple ──
-    print(f"\n🔮 Prédictions d'exemple :")
+    # -- Prédictions d'exemple --
+    print(f"\n Prédictions d'exemple :")
     from data import normalize, add_channel_dim
     np.random.seed(0)
     idxs = np.random.choice(len(x_test), size=10, replace=False)
@@ -206,5 +206,5 @@ if __name__ == "__main__":
         pred = model.predict(x_proc)
         ok = pred == y_test[idx]
         correct += ok
-        print(f"  Vrai: '{LETTERS[y_test[idx]]}'  →  Prédit: '{LETTERS[pred]}'  {'✅' if ok else '❌'}")
-    print(f"\n🎯 {correct}/10 correctes")
+        print(f"  Vrai: '{LETTERS[y_test[idx]]}'  ->  Prédit: '{LETTERS[pred]}'  {'OK' if ok else 'FAIL'}")
+    print(f"\n {correct}/10 correctes")

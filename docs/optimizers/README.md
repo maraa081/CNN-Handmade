@@ -1,4 +1,4 @@
-# 📚 Fiches Optimiseurs — CNN-Handmade
+#  Fiches Optimiseurs — CNN-Handmade
 
 > Fiches de référence pour chaque optimiseur implémenté.
 > Quand tu ajoutes un nouvel optimiseur, copie `TEMPLATE.md` et remplis-le.
@@ -7,9 +7,9 @@
 
 | Optimiseur | Fiche | Statut |
 |---|---|---|
-| **SGD** — Stochastic Gradient Descent | [`sgd.md`](sgd.md) | ✅ |
-| **Momentum** — SGD avec élan | [`momentum.md`](momentum.md) | ✅ |
-| **Adam** — Adaptive Moment Estimation | [`adam.md`](adam.md) | ✅ |
+| **SGD** — Stochastic Gradient Descent | [`sgd.md`](sgd.md) | OK |
+| **Momentum** — SGD avec élan | [`momentum.md`](momentum.md) | OK |
+| **Adam** — Adaptive Moment Estimation | [`adam.md`](adam.md) | OK |
 
 ---
 
@@ -19,10 +19,10 @@
 |---|---|---|---|
 | Learning rate typique | 0.01 | 0.01 | 0.001 |
 | Hyperparams supplémentaires | — | `momentum=0.9` | `β₁=0.9, β₂=0.999, ε=1e-8` |
-| Adaptatif (lr par paramètre) | ❌ | ❌ | ✅ |
-| Lisse les oscillations | ❌ | ✅ (élan) | ✅ (mom + RMS) |
+| Adaptatif (lr par paramètre) | FAIL | FAIL | OK |
+| Lisse les oscillations | FAIL | OK (élan) | OK (mom + RMS) |
 | Convergence | Lente | Plus rapide | Rapide |
-| Robuste au tuning | ❌ (sensible) | Moyen | ✅ |
+| Robuste au tuning | FAIL (sensible) | Moyen | OK |
 | Coût mémoire | 1× (les poids) | 2× (poids + vitesse) | 3× (poids + 2 moments) |
 
 ---

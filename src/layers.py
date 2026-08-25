@@ -2,7 +2,7 @@
 layers.py — Couches du réseau CNN-Handmade
 
 Fonctions utilitaires :
-    im2col, col2im     — transformation image ↔ colonnes pour convolution
+    im2col, col2im     — transformation image <-> colonnes pour convolution
 
 Couches :
     Conv2D    — convolution 2D (forward, backward, update)
@@ -15,9 +15,9 @@ Couches :
 import numpy as np
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  UTILITAIRES CONVOLUTION                                                  ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  UTILITAIRES CONVOLUTION                                                  |
+# +===========================================================================+
 
 
 def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
@@ -55,7 +55,7 @@ def im2col(images, kernel_h, kernel_w, stride=1, pad=0):
 
     windows = as_strided(images, shape=view_shape, strides=view_strides)
 
-    # Fusion : (N, H_out, W_out, C, kH, kW) → (N*H_out*W_out, C*kH*kW)
+    # Fusion : (N, H_out, W_out, C, kH, kW) -> (N*H_out*W_out, C*kH*kW)
     cols = windows.transpose(0, 2, 3, 1, 4, 5).reshape(N * H_out * W_out, -1)
 
     return cols, H_out, W_out
@@ -114,9 +114,9 @@ def col2im(cols, input_shape, kernel_h, kernel_w, stride=1, pad=0):
     return grad_padded
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  CONV2D                                                                  ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  CONV2D                                                                  |
+# +===========================================================================+
 
 
 class Conv2D:
@@ -199,21 +199,21 @@ class Conv2D:
         assert C_out == self.out_channels, \
             f"Canaux du gradient : {C_out}, attendu {self.out_channels}"
 
-        # ── 1. Remettre grad_output en forme matricielle ──
+        # -- 1. Remettre grad_output en forme matricielle --
         dout = grad_output.transpose(0, 2, 3, 1)  # (N, H_out, W_out, C_out)
         dout_flat = dout.reshape(-1, C_out)        # (N*H_out*W_out, C_out)
 
-        # ── 2. Gradient des kernels ──
+        # -- 2. Gradient des kernels --
         self.d_kernels_flat = dout_flat.T @ self.cols  # (C_out, C_in*k*k)
         self.d_kernels = self.d_kernels_flat.reshape(
             self.out_channels, self.in_channels,
             self.kernel_size, self.kernel_size
         )
 
-        # ── 3. Gradient du biais ──
+        # -- 3. Gradient du biais --
         self.d_bias = dout_flat.sum(axis=0, keepdims=True).T  # (C_out, 1)
 
-        # ── 4. Gradient de l'entrée (col2im) ──
+        # -- 4. Gradient de l'entrée (col2im) --
         kernels_flat = self.kernels.reshape(self.out_channels, -1)
         d_cols = dout_flat @ kernels_flat  # (N*H_out*W_out, C_in*k*k)
 
@@ -227,7 +227,7 @@ class Conv2D:
     def update(self, lr):
         """
         Met à jour les poids avec la descente de gradient :
-            W ← W - lr * dW
+            W <- W - lr * dW
         """
         if self.d_kernels is None:
             raise RuntimeError("update() appelé avant backward()")
@@ -236,14 +236,14 @@ class Conv2D:
         self.bias -= lr * self.d_bias
 
     def __repr__(self):
-        return (f"Conv2D({self.in_channels}→{self.out_channels}, "
+        return (f"Conv2D({self.in_channels}->{self.out_channels}, "
                 f"kernel={self.kernel_size}x{self.kernel_size}, "
                 f"stride={self.stride}, pad={self.pad})")
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  MAX POOLING 2D                                                          ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  MAX POOLING 2D                                                          |
+# +===========================================================================+
 
 
 class MaxPool2D:
@@ -342,9 +342,9 @@ class MaxPool2D:
                 f"stride={self.stride[0]}×{self.stride[1]})")
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  RELU                                                                     ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  RELU                                                                     |
+# +===========================================================================+
 
 
 class ReLU:
@@ -383,17 +383,17 @@ class ReLU:
         return "ReLU()"
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  FLATTEN                                                                 ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  FLATTEN                                                                 |
+# +===========================================================================+
 
 
 class Flatten:
     """
     Aplatit les dimensions spatiales en un seul vecteur par échantillon.
 
-    Forward : (N, C, H, W) → (N, C × H × W)
-    Backward : (N, C × H × W) → (N, C, H, W)  [reshape inverse]
+    Forward : (N, C, H, W) -> (N, C × H × W)
+    Backward : (N, C × H × W) -> (N, C, H, W)  [reshape inverse]
 
     Pas de paramètres à apprendre.
     """
@@ -425,9 +425,9 @@ class Flatten:
         return "Flatten()"
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  DROPOUT                                                                  ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  DROPOUT                                                                  |
+# +===========================================================================+
 
 
 class Dropout:
@@ -454,7 +454,7 @@ class Dropout:
     def __init__(self, p=0.5):
         """
         p : probabilité de désactiver un neurone (défaut: 0.5)
-            p=0 → pas de dropout, p=0.5 → 50% de neurones désactivés
+            p=0 -> pas de dropout, p=0.5 -> 50% de neurones désactivés
         """
         self.p = p
         self.mask = None
@@ -505,9 +505,9 @@ class Dropout:
         return f"Dropout(p={self.p})"
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  DENSE (FULLY CONNECTED)                                                ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  DENSE (FULLY CONNECTED)                                                |
+# +===========================================================================+
 
 
 class Dense:
@@ -553,20 +553,20 @@ class Dense:
         retourne : (N, in_features)
 
         Calculs :
-            dW = grad_output.T @ input   → (out_features, in_features)
-            db = sum(grad_output, axis=0) → (out_features, 1)
-            dx = grad_output @ W         → (N, in_features)
+            dW = grad_output.T @ input   -> (out_features, in_features)
+            db = sum(grad_output, axis=0) -> (out_features, 1)
+            dx = grad_output @ W         -> (N, in_features)
         """
         self.dW = grad_output.T @ self.input  # (out_features, in_features)
         self.db = grad_output.sum(axis=0, keepdims=True).T  # (out_features, 1)
         return grad_output @ self.W  # (N, in_features)
 
     def update(self, lr):
-        """W ← W - lr * dW, b ← b - lr * db"""
+        """W <- W - lr * dW, b <- b - lr * db"""
         if self.dW is None:
             raise RuntimeError("update() appelé avant backward()")
         self.W -= lr * self.dW
         self.b -= lr * self.db
 
     def __repr__(self):
-        return f"Dense({self.in_features}→{self.out_features})"
+        return f"Dense({self.in_features}->{self.out_features})"

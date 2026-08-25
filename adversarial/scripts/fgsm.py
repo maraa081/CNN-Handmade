@@ -28,7 +28,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # -> CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, join(ROOT_DIR, "src"))
 sys.path.insert(0, join(ROOT_DIR, "scripts"))
@@ -41,9 +41,9 @@ from download_emnist import ensure_data
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Modèle & données
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def build_model(dataset):
     """Même architecture que l'entraînement, sortie 10 (MNIST) ou 26 (EMNIST)."""
@@ -88,9 +88,9 @@ def label_str(dataset, idx):
     return str(idx) if dataset == "mnist" else LETTERS[idx]
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  L'attaque
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def fgsm(model, x, y_onehot, eps, targeted=False):
     """
@@ -101,8 +101,8 @@ def fgsm(model, x, y_onehot, eps, targeted=False):
         x        : batch d'images (N, 1, 28, 28), normalisées
         y_onehot : one-hot de la classe de référence (vraie ou cible)
         eps      : amplitude du bruit
-        targeted : True → minimiser la loss (forcer la classe cible)
-                   False → maximiser la loss (éloigner de la vraie classe)
+        targeted : True -> minimiser la loss (forcer la classe cible)
+                   False -> maximiser la loss (éloigner de la vraie classe)
 
     Retourne : x_adv (N, 1, 28, 28), bruit utilisé (pour visualisation)
     """
@@ -124,9 +124,9 @@ def fgsm(model, x, y_onehot, eps, targeted=False):
     return x_adv, noise
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Évaluation
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def accuracy(model, x, y):
     preds = model.predict(x)
@@ -134,7 +134,7 @@ def accuracy(model, x, y):
 
 
 def run_attack(model, x, y, eps, targeted, target_class):
-    """Attaque le batch avec un epsilon donné → (accuracy, flip_rate, conf_moy)."""
+    """Attaque le batch avec un epsilon donné -> (accuracy, flip_rate, conf_moy)."""
     # Nombre de classes = largeur des logits (après un forward)
     logits_probe = model.forward(x[:1])
     C = logits_probe.shape[1]
@@ -158,9 +158,9 @@ def run_attack(model, x, y, eps, targeted, target_class):
     return acc_adv, flip, targeted_success, x_adv, noise
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Visualisations
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def save_grid(x, y, x_adv, noise, eps, dataset, out_path, n_show=8):
     """Comparatif : original / bruit (×10) / attaqué, avec prédictions."""
@@ -181,12 +181,12 @@ def save_grid(x, y, x_adv, noise, eps, dataset, out_path, n_show=8):
     plt.tight_layout()
     plt.savefig(out_path, dpi=130, bbox_inches="tight")
     plt.close()
-    print(f"   🖼️  {out_path}")
+    print(f"     {out_path}")
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Main
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Attaque FGSM sur CNN-Handmade")
@@ -198,22 +198,22 @@ def main():
     parser.add_argument("--target", type=int, default=3, help="classe cible (ciblée)")
     args = parser.parse_args()
 
-    # ── Modèle ──
+    # -- Modèle --
     model = build_model(args.dataset)
     if args.weights is None:
         args.weights = "models/model_weights_full.npz" if args.dataset == "mnist" \
                        else "models/emnist_letters_weights.npz"
     weights_path = join(ROOT_DIR, args.weights)
     model.load_weights(weights_path)
-    print(f"🧠 Modèle chargé : {args.dataset.upper()} ← {args.weights}")
+    print(f" Modèle chargé : {args.dataset.upper()} <- {args.weights}")
 
-    # ── Données ──
+    # -- Données --
     x, y = load_data(args.dataset, args.n)
     acc_clean = accuracy(model, x, y)
-    print(f"📦 {len(x)} images de test — accuracy propre : {acc_clean:.1%}")
+    print(f" {len(x)} images de test — accuracy propre : {acc_clean:.1%}")
 
-    # ── Boucle sur les epsilons ──
-    print(f"\n⚔️  Attaque FGSM {'ciblée (→ ' + label_str(args.dataset, args.target) + ')' if args.targeted else 'non ciblée'}")
+    # -- Boucle sur les epsilons --
+    print(f"\n  Attaque FGSM {'ciblée (-> ' + label_str(args.dataset, args.target) + ')' if args.targeted else 'non ciblée'}")
     print(f"{'ε':>6} | {'acc attaqué':>12} | {'flip':>6} | {'ciblé':>8} | {'perte acc':>10}")
     print("-" * 55)
 
@@ -233,7 +233,7 @@ def main():
         save_grid(x, y, x_adv, noise, eps, args.dataset,
                   join(out_dir, f"fgsm_{tag}_eps{eps}.png"))
 
-    # ── Graphique accuracy vs eps ──
+    # -- Graphique accuracy vs eps --
     eps_list = [r[0] for r in results]
     acc_list = [r[1] for r in results]
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -248,7 +248,7 @@ def main():
     curve_path = join(ROOT_DIR, "adversarial", "results", f"fgsm_curve_{tag}.png")
     plt.savefig(curve_path, dpi=130, bbox_inches="tight")
     plt.close()
-    print(f"\n📈 Courbe → {curve_path}")
+    print(f"\n Courbe -> {curve_path}")
 
 
 if __name__ == "__main__":

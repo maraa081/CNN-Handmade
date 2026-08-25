@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📊 COMPARE ALL — Comparaison de tous les optimiseurs / techniques
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--------------------------------------------------------------------------
+   COMPARE ALL — Comparaison de tous les optimiseurs / techniques
+--------------------------------------------------------------------------
 
   Lance TOUS les optimiseurs et techniques à la suite, puis génère
   un graphique comparatif unique. Parfait pour voir d'un coup d'œil
@@ -13,7 +13,7 @@
   Résultats :
     results/comparison.png        — graphique combiné (loss + accuracy)
     results/comparison_results.csv — tableau des résultats (optionnel, version push)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--------------------------------------------------------------------------
 """
 
 import sys, time, os
@@ -32,15 +32,15 @@ from model import CNN
 from optimizers import SGD, Momentum, Adam
 
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  ⛽ RÉGLAGES COMMUNS                                                    ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+# +==========================================================================+
+# |   RÉGLAGES COMMUNS                                                    |
+# +==========================================================================+
 
 BATCH_SIZE = 64
 EPOCHS     = 5
 DATA_LIMIT = 2000
 
-# ── Configuration des expériences ──
+# -- Configuration des expériences --
 #   Chaque entrée = une expérience. Ajoute ou modifie ici.
 #   Format : (nom, optimiseur, ajouter_dropout)
 EXPERIMENTS = [
@@ -51,7 +51,7 @@ EXPERIMENTS = [
     ("L2 Weight Decay", SGD(lr=0.01, weight_decay=0.001),     False),
 ]
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 OUT_DIR = dirname(abspath(__file__))
 COLORS  = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
@@ -87,11 +87,11 @@ def get_data():
     return train_loader, test_loader, x_train.shape[0], x_test.shape[0]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 def main():
     train_loader, test_loader, n_train, n_test = get_data()
-    print(f"📥 {n_train} train / {n_test} test — Batch {BATCH_SIZE} — {EPOCHS} epochs\n")
+    print(f" {n_train} train / {n_test} test — Batch {BATCH_SIZE} — {EPOCHS} epochs\n")
 
     results = []  # [(name, history, test_acc, elapsed, opt_str)]
 
@@ -99,10 +99,10 @@ def main():
         opt_str = str(optimizer)
         dropout_str = " + Dropout" if use_dropout else ""
         label = f"{name}{dropout_str}"
-        print(f"{'─' * 55}")
-        print(f"  🔬 {idx + 1}/{len(EXPERIMENTS)}  {label}")
+        print(f"{'-' * 55}")
+        print(f"   {idx + 1}/{len(EXPERIMENTS)}  {label}")
         print(f"     {opt_str}")
-        print(f"{'─' * 55}")
+        print(f"{'-' * 55}")
 
         model = build_model(optimizer, use_dropout)
 
@@ -112,21 +112,21 @@ def main():
 
         acc = model.evaluate(test_loader)
         m, s = divmod(elapsed, 60)
-        print(f"     ⏱️  {int(m)}m {int(s)}s  ─  🎯 Test accuracy: {acc:.4f} ({acc*100:.1f}%)\n")
+        print(f"     [time]  {int(m)}m {int(s)}s  -   Test accuracy: {acc:.4f} ({acc*100:.1f}%)\n")
 
         results.append((name, optimizer, opt_str, use_dropout, history, acc, elapsed))
 
-    # ── Graphique comparatif ──
+    # -- Graphique comparatif --
     save_comparison_plot(results)
 
-    # ── Tableau récapitulatif ──
+    # -- Tableau récapitulatif --
     save_summary(results)
 
-    # ── Synthèse ──
+    # -- Synthèse --
     print_summary(results)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 def save_comparison_plot(results):
     """Génère le graphique avec toutes les courbes superposées."""
@@ -165,7 +165,7 @@ def save_comparison_plot(results):
 
     path = join(ROOT, "results", "comparison.png")
     plt.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"\n📊 Graphique comparatif → {path}")
+    print(f"\n Graphique comparatif -> {path}")
 
 
 def save_summary(results):
@@ -188,16 +188,16 @@ def save_summary(results):
     csv_path = join(ROOT, "results", "comparison_results.csv")
     with open(csv_path, "w") as f:
         f.write("\n".join(lines) + "\n")
-    print(f"📁 Résultats CSV → {csv_path}")
+    print(f" Résultats CSV -> {csv_path}")
 
 
 def print_summary(results):
     """Affiche un tableau récapitulatif dans le terminal."""
-    print(f"\n{'═' * 70}")
-    print(f"  📋 RÉCAPITULATIF")
-    print(f"{'═' * 70}")
+    print(f"\n{'=' * 70}")
+    print(f"   RÉCAPITULATIF")
+    print(f"{'=' * 70}")
     print(f"  {'Technique':<22} {'Optimiseur':<30} {'Test Acc':>8} {'Temps':>8}")
-    print(f"  {'─' * 22} {'─' * 30} {'─' * 8} {'─' * 8}")
+    print(f"  {'-' * 22} {'-' * 30} {'-' * 8} {'-' * 8}")
 
     # Trier par accuracy décroissante
     sorted_results = sorted(results, key=lambda r: r[5], reverse=True)
@@ -208,10 +208,10 @@ def print_summary(results):
         time_str = f"{int(m)}m{int(s)}s" if m > 0 else f"{int(s)}s"
         print(f"  {label:<22} {opt_str:<30} {test_acc*100:>7.1f}% {time_str:>8}")
 
-    print(f"{'═' * 70}")
+    print(f"{'=' * 70}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 if __name__ == "__main__":
     main()

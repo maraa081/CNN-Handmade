@@ -14,20 +14,20 @@ Optimiseurs disponibles :
 import numpy as np
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  SGD — Vanilla Stochastic Gradient Descent                               ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  SGD — Vanilla Stochastic Gradient Descent                               |
+# +===========================================================================+
 
 class SGD:
     """
     Descente de gradient stochastique standard.
 
-    θ ← θ - lr * ∇θ
+    θ <- θ - lr * ∇θ
 
     C'est l'optimiseur de base, celui utilisé par défaut jusqu'ici.
 
     Supporte le weight_decay (L2 régularisation) :
-        θ ← θ - lr * (∇θ + weight_decay * θ)
+        θ <- θ - lr * (∇θ + weight_decay * θ)
     """
 
     def __init__(self, lr=0.01, weight_decay=0.0):
@@ -65,16 +65,16 @@ class SGD:
         return s + ")"
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  Momentum — SGD avec élan                                                ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  Momentum — SGD avec élan                                                |
+# +===========================================================================+
 
 class Momentum:
     """
     SGD avec momentum.
 
-    v ← α * v - lr * ∇θ
-    θ ← θ + v
+    v <- α * v - lr * ∇θ
+    θ <- θ + v
 
     Au lieu de suivre uniquement le gradient local, on accumule
     une "vitesse" qui lisse les oscillations et accélère dans
@@ -109,14 +109,14 @@ class Momentum:
 
         for i, layer in enumerate(layers):
             if hasattr(layer, 'kernels'):       # Conv2D
-                # ── kernels ──
+                # -- kernels --
                 wk = f'conv_{i}_kernels'
                 grad_k = layer.d_kernels + wd * layer.kernels
                 self._ensure_shape(wk, layer.kernels)
                 self.v[wk] = mom * self.v[wk] - lr * grad_k
                 layer.kernels += self.v[wk]
 
-                # ── bias ──
+                # -- bias --
                 wb = f'conv_{i}_bias'
                 grad_b = layer.d_bias + wd * layer.bias
                 self._ensure_shape(wb, layer.bias)
@@ -124,14 +124,14 @@ class Momentum:
                 layer.bias += self.v[wb]
 
             elif hasattr(layer, 'W'):           # Dense
-                # ── W ──
+                # -- W --
                 wk = f'dense_{i}_W'
                 grad_W = layer.dW + wd * layer.W
                 self._ensure_shape(wk, layer.W)
                 self.v[wk] = mom * self.v[wk] - lr * grad_W
                 layer.W += self.v[wk]
 
-                # ── b ──
+                # -- b --
                 wb = f'dense_{i}_b'
                 grad_b = layer.db + wd * layer.b
                 self._ensure_shape(wb, layer.b)
@@ -149,21 +149,21 @@ class Momentum:
         return s + ")"
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  Adam — Adaptive Moment Estimation                                      ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  Adam — Adaptive Moment Estimation                                      |
+# +===========================================================================+
 
 class Adam:
     """
     Optimiseur Adam : combine Momentum + RMSprop.
 
-    m ← β1 * m + (1 - β1) * g          ← estimation du 1er moment (moyenne)
-    v ← β2 * v + (1 - β2) * g²         ← estimation du 2e moment (variance)
+    m <- β1 * m + (1 - β1) * g          <- estimation du 1er moment (moyenne)
+    v <- β2 * v + (1 - β2) * g²         <- estimation du 2e moment (variance)
 
-    m̂ ← m / (1 - β1^t)                  ← correction de biais
-    v̂ ← v / (1 - β2^t)
+    m <- m / (1 - β1^t)                  <- correction de biais
+    v <- v / (1 - β2^t)
 
-    θ ← θ - lr * m̂ / (√v̂ + ε)
+    θ <- θ - lr * m / (√v + ε)
 
     Pourquoi Adam est génial :
         - Learning rate adaptatif par paramètre (via v)

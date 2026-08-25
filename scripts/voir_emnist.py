@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import EMNISTLoader
@@ -51,7 +51,7 @@ def grille_aleatoire(x, y, n=20):
 def grille_par_lettre(x, y, lettre, n=24):
     """n variantes d'écriture d'une même lettre (pour voir la diversité)."""
     if lettre not in LETTERS:
-        print(f"❌ Lettre invalide : '{lettre}'. Choisis dans : {LETTERS}")
+        print(f"FAIL Lettre invalide : '{lettre}'. Choisis dans : {LETTERS}")
         sys.exit(1)
 
     idx_lettre = LETTERS.index(lettre)
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     ensure_data()
     loader = EMNISTLoader("letters")
     (x_train, y_train), _ = loader.load(join(ROOT_DIR, "data", "emnist"))
-    print(f"📦 {len(x_train)} lettres chargées")
+    print(f" {len(x_train)} lettres chargées")
 
     if args.letter:
         grille_par_lettre(x_train, y_train, args.letter.lower(), args.n)

@@ -35,7 +35,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # -> CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
@@ -47,9 +47,9 @@ from adversarial.scripts.fgsm import build_model, load_data, accuracy
 from adversarial.scripts.pgd import pgd
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  FGSM sur un batch (réutilisée à chaque étape d'entraînement)
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def fgsm_batch(model, x, y, eps):
     """Exemples adverses FGSM pour un batch (non ciblé)."""
@@ -61,9 +61,9 @@ def fgsm_batch(model, x, y, eps):
     return np.clip(x + eps * np.sign(dx), 0.0, 1.0)
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Entraînement adversarial
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def train_adversarial(model, x_train, y_train, epochs, batch_size, eps, lr=0.01, verbose=True):
     """
@@ -116,9 +116,9 @@ def train_adversarial(model, x_train, y_train, epochs, batch_size, eps, lr=0.01,
     return history
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Évaluation robustesse
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def robustness(model, x, y, eps_list, use_pgd=False, steps=20):
     """Accuracy propre + accuracy sous attaque pour chaque eps."""
@@ -136,9 +136,9 @@ def robustness(model, x, y, eps_list, use_pgd=False, steps=20):
     return results
 
 
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 #  Main
-# ──────────────────────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Adversarial training sur CNN-Handmade")
@@ -160,7 +160,7 @@ def main():
     if args.quick:
         args.n_train, args.epochs = 800, 1
 
-    # ── Données ──
+    # -- Données --
     loader = MNISTLoader()
     (x_train, y_train), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
     rng = np.random.RandomState(42)
@@ -172,7 +172,7 @@ def main():
     x_te, y_te = load_data("mnist", 500)
     print(f"[DATA] {len(x_te)} images de test")
 
-    # ── Modèle défendu (même architecture) ──
+    # -- Modèle défendu (même architecture) --
     model = CNN()
     model.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))
     model.add(ReLU())
@@ -185,7 +185,7 @@ def main():
     model.add(ReLU())
     model.add(Dense(128, 10))
 
-    # ── Mode évaluation seule : charger un modèle déjà entraîné ──
+    # -- Mode évaluation seule : charger un modèle déjà entraîné --
     if args.load:
         load_path = join(ROOT_DIR, args.load)
         print(f"[LOAD] Évaluation seule du modèle -> {load_path}")
@@ -232,19 +232,19 @@ def main():
         print(f"\n[PLOT] Courbe -> {curve_path}")
         return
 
-    # ── Entraînement adversarial ──
+    # -- Entraînement adversarial --
     print("\n[ADV-TRAIN] Entraînement avec exemples adverses...")
     t0 = time.time()
     history = train_adversarial(model, x_tr, y_tr, args.epochs, args.batch, args.eps, args.lr)
     m, s = divmod(time.time() - t0, 60)
     print(f"[ADV-TRAIN] Terminé en {int(m)}m{int(s)}s")
 
-    # ── Sauvegarde ──
+    # -- Sauvegarde --
     out_path = join(ROOT_DIR, args.out)
     model.save_weights(out_path)
     print(f"[SAVE] Poids défendus -> {out_path}")
 
-    # ── Baseline équitable : modèle standard entraîné sur les MÊMES données ──
+    # -- Baseline équitable : modèle standard entraîné sur les MÊMES données --
     if args.baseline:
         print("\n[BASELINE] Entraînement d'un modèle standard sur les mêmes images...")
         std_same = CNN()
@@ -290,7 +290,7 @@ def main():
             s_acc, d_acc = std_res[eps], adv_res[eps]
             print(f"{str(eps):>6} | {s_acc:>10.1%} | {d_acc:>10.1%} | {d_acc - s_acc:>+8.1%}")
 
-    # ── Comparaison robustesse : modèle standard (full) vs défendu ──
+    # -- Comparaison robustesse : modèle standard (full) vs défendu --
     eps_list = [0.05, 0.1, 0.2, 0.3]
     print("\n[EVAL] Robustesse FGSM (500 images de test)")
 
@@ -306,7 +306,7 @@ def main():
         s_acc, d_acc = std_res[eps], adv_res[eps]
         print(f"{str(eps):>6} | {s_acc:>10.1%} | {d_acc:>10.1%} | {d_acc - s_acc:>+8.1%}")
 
-    # ── Évaluation PGD (optionnelle, plus longue) ──
+    # -- Évaluation PGD (optionnelle, plus longue) --
     if args.eval_pgd:
         print("\n[EVAL] Robustesse PGD (20 steps)")
         std_pgd = robustness(std_model, x_te, y_te, eps_list, use_pgd=True)
@@ -316,7 +316,7 @@ def main():
         for eps in eps_list:
             print(f"{str(eps):>6} | {std_pgd[eps]:>10.1%} | {adv_pgd[eps]:>10.1%} | {adv_pgd[eps] - std_pgd[eps]:>+8.1%}")
 
-    # ── Courbe comparée ──
+    # -- Courbe comparée --
     out_dir = join(ROOT_DIR, "adversarial", "results")
     import os
     os.makedirs(out_dir, exist_ok=True)

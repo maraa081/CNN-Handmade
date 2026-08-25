@@ -1,4 +1,4 @@
-# 🔬 Data Flow — Cheminement d'une image dans CNN-Handmade
+#  Data Flow — Cheminement d'une image dans CNN-Handmade
 
 ## Introduction
 
@@ -16,7 +16,7 @@ Chaque étape montre :
 
 ---
 
-## 🖼️ Image récapitulative du pipeline
+##  Image récapitulative du pipeline
 
 ![Pipeline recap](../traces/out/00_pipeline_recap.png)
 
@@ -83,7 +83,7 @@ Le fond est noir (0), le chiffre commence à apparaître au pixel (6,6) avec val
 
 ## Étape 2 : Prétraitement
 
-### Normalisation [0, 255] → [0.0, 1.0]
+### Normalisation [0, 255] -> [0.0, 1.0]
 
 ```python
 def normalize(images):
@@ -104,7 +104,7 @@ def add_channel_dim(images):
     return images[..., np.newaxis]
 ```
 
-MNIST est en niveaux de gris → 1 seul canal.
+MNIST est en niveaux de gris -> 1 seul canal.
 
 ```
 Avant : (28, 28)
@@ -140,7 +140,7 @@ Après  : (1, 1, 28, 28)   — (N, C, H, W)
 
 ---
 
-## Étape 3 : Conv2D #1 — 1 → 4 canaux
+## Étape 3 : Conv2D #1 — 1 -> 4 canaux
 
 ### La couche
 
@@ -241,8 +241,8 @@ class ReLU:
 ```
 
 **ReLU = Rectified Linear Unit.** C'est l'activation la plus utilisée :
-- Si x > 0 → on laisse passer
-- Si x ≤ 0 → on tue (→ 0)
+- Si x > 0 -> on laisse passer
+- Si x ≤ 0 -> on tue (-> 0)
 
 **Pourquoi c'est important ?** Sans non-linéarité, empiler des couches linéaires reviendrait à une seule couche. ReLU apporte la non-linéarité.
 
@@ -256,11 +256,11 @@ Négatifs tués : 202 valeurs (sur 4×28×28 = 3136 total)
 
 ![ReLU avant/après](../traces/out/03_relu1.png)
 
-> Les zones bleues dans "Avant" sont les valeurs négatives → mises à 0 (noir dans "Après").
+> Les zones bleues dans "Avant" sont les valeurs négatives -> mises à 0 (noir dans "Après").
 
 ---
 
-## Étape 5 : MaxPool #1 — 28×28 → 14×14
+## Étape 5 : MaxPool #1 — 28×28 -> 14×14
 
 ### La couche
 
@@ -279,11 +279,11 @@ On découpe chaque feature map en fenêtres de 2×2. Dans chaque fenêtre, on ne
 
 ```
 Fenêtre 2×2 :
-┌────┬────┐     ┌────┐
-│ 0  │ 0  │     │    │
-├────┼────┤  →  │  0 │   ← max(0, 0, 0, 0)
-│ 0  │ 0  │     │    │
-└────┴────┘     └────┘
++----+----+     +----+
+| 0  | 0  |     |    |
+|----+----+  ->  |  0 |   <- max(0, 0, 0, 0)
+| 0  | 0  |     |    |
+`----+----+     `----+
 ```
 
 **Pourquoi MaxPool ?**
@@ -294,8 +294,8 @@ Fenêtre 2×2 :
 ### Statistiques
 
 ```
-Entrée : (1, 4, 28, 28)  →  28×28
-Sortie : (1, 4, 14, 14)  →  14×14
+Entrée : (1, 4, 28, 28)  ->  28×28
+Sortie : (1, 4, 14, 14)  ->  14×14
 ```
 
 La dimension spatiale est divisée par 2. Le nombre de canaux reste identique.
@@ -308,12 +308,12 @@ La dimension spatiale est divisée par 2. Le nombre de canaux reste identique.
 Fenêtre top-left de FM#0 :
 [[0. 0.]
  [0. 0.]]
-Max retenu : 0.0  ✅
+Max retenu : 0.0  OK
 ```
 
 ---
 
-## Étape 6 : Conv2D #2 — 4 → 8 canaux
+## Étape 6 : Conv2D #2 — 4 -> 8 canaux
 
 ### La couche
 
@@ -357,18 +357,18 @@ Activation totale : 93.02
 
 ---
 
-## Étape 8 : MaxPool #2 — 14×14 → 7×7
+## Étape 8 : MaxPool #2 — 14×14 -> 7×7
 
 ### Statistiques
 
 ```
-Entrée : (1, 8, 14, 14)  →  14×14
-Sortie : (1, 8, 7, 7)    →   7×7
+Entrée : (1, 8, 14, 14)  ->  14×14
+Sortie : (1, 8, 7, 7)    ->   7×7
 ```
 
 Après deux blocs Conv+Pool :
-- **Spatialement** : 28×28 → 7×7 (réduction 16×)
-- **Profondeur** : 1 canal → 8 canaux
+- **Spatialement** : 28×28 -> 7×7 (réduction 16×)
+- **Profondeur** : 1 canal -> 8 canaux
 - L'image initiale a été transformée en **8 cartes de caractéristiques** de 7×7 pixels
 
 ![Feature maps finales](../traces/out/06_pool2_final_features.png)
@@ -379,7 +379,7 @@ Chacune des 8 images 7×7 ci-dessus représente ce qu'un filtre spécifique a d�
 
 ---
 
-## Étape 9 : Flatten — (1, 8, 7, 7) → (1, 392)
+## Étape 9 : Flatten — (1, 8, 7, 7) -> (1, 392)
 
 ### La couche
 
@@ -396,7 +396,7 @@ class Flatten:
 ```
 Avant  : (1, 8, 7, 7)
 Après  : (1, 392)
-Vérif  : 8 × 7 × 7 = 392 ✅
+Vérif  : 8 × 7 × 7 = 392 OK
 ```
 
 ### À quoi ressemble le vecteur ?
@@ -419,10 +419,10 @@ C'est ce vecteur de **392 features** qui servira d'entrée aux couches Dense pou
 | 1 | Chargement | — | `(28, 28)` | Image brute en niveaux de gris |
 | 2 | Normalisation | `(28, 28)` | `(28, 28)` | Pixels dans [0, 1] |
 | 2 | + Canal + Batch | `(28, 28)` | `(1, 1, 28, 28)` | Format réseau |
-| 3 | **Conv2D** (1→4) | `(1, 1, 28, 28)` | `(1, 4, 28, 28)` | 4 feature maps |
+| 3 | **Conv2D** (1->4) | `(1, 1, 28, 28)` | `(1, 4, 28, 28)` | 4 feature maps |
 | 4 | **ReLU** | `(1, 4, 28, 28)` | `(1, 4, 28, 28)` | Non-linéarité |
 | 5 | **MaxPool** (2×2) | `(1, 4, 28, 28)` | `(1, 4, 14, 14)` | Sous-échantillonnage |
-| 6 | **Conv2D** (4→8) | `(1, 4, 14, 14)` | `(1, 8, 14, 14)` | 8 feature maps |
+| 6 | **Conv2D** (4->8) | `(1, 4, 14, 14)` | `(1, 8, 14, 14)` | 8 feature maps |
 | 7 | **ReLU** | `(1, 8, 14, 14)` | `(1, 8, 14, 14)` | Non-linéarité |
 | 8 | **MaxPool** (2×2) | `(1, 8, 14, 14)` | `(1, 8, 7, 7)` | Sous-échantillonnage |
 | 9 | **Flatten** | `(1, 8, 7, 7)` | `(1, 392)` | Vecteur prêt pour Dense |
@@ -431,11 +431,11 @@ C'est ce vecteur de **392 features** qui servira d'entrée aux couches Dense pou
 
 ```
   28×28 pixels                 392 features
-  ┌─────────┐                ┌──────────────┐
-  │         │  ── 2 blocs ──▶│  [0.0 0.124  │
-  │   3     │   Conv+Pool+   │   0.133 ...  │
-  │         │   ReLU+Flatten │    ...  ]    │
-  └─────────┘                └──────────────┘
+  +---------+                +--------------+
+  |         |  -- 2 blocs -->|  [0.0 0.124  |
+  |   3     |   Conv+Pool+   |   0.133 ...  |
+  |         |   ReLU+Flatten |    ...  ]    |
+  `---------+                `--------------+
 ```
 
 ### ... vers une classification
@@ -444,21 +444,21 @@ C'est ce vecteur de **392 features** qui servira d'entrée aux couches Dense pou
 
 | À venir | Rôle |
 |---|---|
-| **Dense** (3136→128) | Première couche fully-connected |
+| **Dense** (3136->128) | Première couche fully-connected |
 | **ReLU** | Activation |
-| **Dense** (128→10) | Projection vers 10 classes |
+| **Dense** (128->10) | Projection vers 10 classes |
 | **Softmax** | Conversion en probabilités |
 | **Cross-Entropy** | Calcul de la perte |
 
 L'architecture finale prévue :
 
 ```
-Conv2D(1→32, k=3, p=1) → ReLU → MaxPool(2×2)
-  → Conv2D(32→64, k=3, p=1) → ReLU → MaxPool(2×2)
-    → Flatten (3136)
-      → Dense(3136→128) → ReLU
-        → Dense(128→10)
-          → Softmax → Cross-Entropy Loss
+Conv2D(1->32, k=3, p=1) -> ReLU -> MaxPool(2×2)
+  -> Conv2D(32->64, k=3, p=1) -> ReLU -> MaxPool(2×2)
+    -> Flatten (3136)
+      -> Dense(3136->128) -> ReLU
+        -> Dense(128->10)
+          -> Softmax -> Cross-Entropy Loss
 ```
 
 ---

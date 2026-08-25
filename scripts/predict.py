@@ -9,15 +9,15 @@ Usage :
     python3 predict.py --interactive                      # Affiche image par image
 
 Poids disponibles :
-    model_weights.npz       → entraînement rapide (2000 images, 3 epochs)
-    model_weights_full.npz  → entraînement complet  (60000 images)
+    model_weights.npz       -> entraînement rapide (2000 images, 3 epochs)
+    model_weights_full.npz  -> entraînement complet  (60000 images)
 """
 
 import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -28,7 +28,7 @@ import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -36,7 +36,7 @@ from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense
 from model import CNN
 
 
-# ── Architecture (DOIT correspondre à celle utilisée pour l'entraînement) ──
+# -- Architecture (DOIT correspondre à celle utilisée pour l'entraînement) --
 
 def build_model():
     model = CNN()
@@ -53,7 +53,7 @@ def build_model():
     return model
 
 
-# ── Chargement des données ──
+# -- Chargement des données --
 
 def load_data():
     loader = MNISTLoader()
@@ -61,7 +61,7 @@ def load_data():
     return x_test, y_test
 
 
-# ── Chargement du modèle ──
+# -- Chargement du modèle --
 
 def load_model(weights_path=None):
     if weights_path is None:
@@ -73,13 +73,13 @@ def load_model(weights_path=None):
         elif exists(full):
             weights_path = full
         else:
-            print(f"❌ Aucun fichier de poids trouvé !")
+            print(f"FAIL Aucun fichier de poids trouvé !")
             print(f"   Lance d'abord : python3 src/cnn.py  (rapide)")
             print(f"   Ou bien :       python3 src/cnn.py --full  (complet)")
             sys.exit(1)
 
     if not exists(weights_path):
-        print(f"❌ Fichier introuvable : {weights_path}")
+        print(f"FAIL Fichier introuvable : {weights_path}")
         sys.exit(1)
 
     model = build_model()
@@ -89,7 +89,7 @@ def load_model(weights_path=None):
     return model
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+# ===========================================================================
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     x_test, y_test = load_data()
 
     if mode == "--all":
-        # ── Accuracy complète ──
+        # -- Accuracy complète --
         from data import normalize, add_channel_dim, to_one_hot
 
         x_proc = normalize(x_test)
@@ -130,10 +130,10 @@ if __name__ == "__main__":
             correct += (preds == y_test[start:end]).sum()
 
         acc = correct / total
-        print(f"\n🎯 Accuracy sur {total} images de test : {acc:.4f}  ({acc * 100:.1f}%)")
+        print(f"\n Accuracy sur {total} images de test : {acc:.4f}  ({acc * 100:.1f}%)")
 
     elif mode == "--interactive":
-        # ── Mode interactif : affiche et demande à chaque fois ──
+        # -- Mode interactif : affiche et demande à chaque fois --
         import matplotlib.pyplot as plt
 
         indices = np.random.choice(len(x_test), size=20, replace=False)
@@ -150,18 +150,18 @@ if __name__ == "__main__":
             pred = model.predict(x_proc)
 
             plt.imshow(img, cmap="gray")
-            plt.title(f"Vrai: {true_label}  →  Prédit: {pred}" +
-                      (" ✅" if pred == true_label else " ❌"), fontsize=14)
+            plt.title(f"Vrai: {true_label}  ->  Prédit: {pred}" +
+                      (" OK" if pred == true_label else " FAIL"), fontsize=14)
             plt.axis("off")
             plt.tight_layout()
             plt.show()
 
-            rep = input("  → Entrée pour continuer, 'q' pour quitter : ")
+            rep = input("  -> Entrée pour continuer, 'q' pour quitter : ")
             if rep.lower() == "q":
                 break
 
     else:
-        # ── Mode par défaut : 10 images aléatoires, résumé ──
+        # -- Mode par défaut : 10 images aléatoires, résumé --
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -197,10 +197,10 @@ if __name__ == "__main__":
         plt.suptitle(f"{correct}/10 correctes", fontsize=14)
         plt.tight_layout()
         plt.savefig(graph_path, dpi=150, bbox_inches="tight")
-        print(f"📊 Prédictions → {graph_path}")
-        print(f"🎯 {correct}/10 correctes")
+        print(f" Prédictions -> {graph_path}")
+        print(f" {correct}/10 correctes")
 
-    print("\n💡 Pour classifier tes propres images :")
+    print("\n Pour classifier tes propres images :")
     print("   from scripts.predict import load_model")
     print("   model = load_model()")
     print("   pred = model.predict(mon_image_normalisée)")

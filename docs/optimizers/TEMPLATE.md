@@ -1,38 +1,38 @@
-# 📋 Template — Nouvel optimiseur
+#  Template — Nouvel optimiseur
 
 > Copie ce fichier, renomme-le, et remplis chaque section.
 > Conserve les emojis et la structure pour avoir des fiches homogènes.
 
 ```markdown
-# 🔧 NOM_OPTIMISEUR — Description courte
+#  NOM_OPTIMISEUR — Description courte
 
 > Petite phrase d'accroche — pourquoi cet optimiseur existe, quel problème il résout.
 
-## 📐 Formule de mise à jour
+##  Formule de mise à jour
 
 ```
-θ ← …   (formule complète)
+θ <- …   (formule complète)
 ```
 
 ### Version avec weight_decay (L2)
 
 ```
-θ ← …   (idem avec le terme de régularisation)
+θ <- …   (idem avec le terme de régularisation)
 ```
 
-## 🧠 Intuition
+##  Intuition
 
 > 2-3 phrases qui expliquent COMMENT ça marche, sans maths.
 > L'image mentale que tu veux garder en tête.
 
-## ⚙️ Hyperparamètres
+##  Hyperparamètres
 
 | Paramètre | Défaut | Rôle |
 |---|---|---|
 | `lr` | — | … |
 | … | … | … |
 
-## 🔄 Code flow
+##  Code flow
 
 ```
 1. Pour chaque couche paramétrée (Conv2D, Dense) :
@@ -48,24 +48,24 @@
 - **Initialisation :** quand et comment sont créés les buffers ?
 - **Reset :** que faut-il réinitialiser entre deux entraînements ?
 
-## 💡 Quand l'utiliser
+##  Quand l'utiliser
 
 - …
 - …
 
-## ✅ Avantages
+## OK Avantages
 
 - …
 
-## ❌ Inconvénients
+## FAIL Inconvénients
 
 - …
 
-## 📊 Résultats CNN-Handmade
+##  Résultats CNN-Handmade
 
 (À remplir après expérience — lien vers le graphique, accuracy, etc.)
 
-## 📁 Fichier source
+##  Fichier source
 
 - `src/optimizers.py` — classe `NomOptimiseur`
 ```

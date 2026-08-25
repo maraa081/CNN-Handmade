@@ -3,9 +3,9 @@ data.py — Chargement et préparation des données MNIST
 
 Modules :
     MNISTLoader      — lit les fichiers IDX bruts
-    normalize        — normalisation [0, 255] → [0.0, 1.0]
-    add_channel_dim  — (N, H, W) → (N, H, W, 1)
-    to_one_hot       — labels entiers → vecteurs one-hot
+    normalize        — normalisation [0, 255] -> [0.0, 1.0]
+    add_channel_dim  — (N, H, W) -> (N, H, W, 1)
+    to_one_hot       — labels entiers -> vecteurs one-hot
     DataLoader       — découpe en mini-batches avec shuffle
     preprocess_pipeline — enchaîne tout et retourne un DataLoader
 """
@@ -23,7 +23,7 @@ class MNISTLoader:
     """
 
     def read_images(self, filepath):
-        """Lit un fichier IDX d'images → retourne un numpy array (N, 28, 28)"""
+        """Lit un fichier IDX d'images -> retourne un numpy array (N, 28, 28)"""
         with open(filepath, 'rb') as f:
             magic, size, rows, cols = struct.unpack(">IIII", f.read(16))
             if magic != 2051:
@@ -35,7 +35,7 @@ class MNISTLoader:
         return images
 
     def read_labels(self, filepath):
-        """Lit un fichier IDX de labels → retourne un numpy array (N,)"""
+        """Lit un fichier IDX de labels -> retourne un numpy array (N,)"""
         with open(filepath, 'rb') as f:
             magic, size = struct.unpack(">II", f.read(8))
             if magic != 2049:
@@ -65,9 +65,9 @@ class EMNISTLoader(MNISTLoader):
 
     Même format binaire que MNIST, donc on hérite de MNISTLoader.
     Deux différences gérées ici :
-      1. Labels : EMNIST numérote 1-26 (letters) au lieu de 0-9 → on soustrait 1
+      1. Labels : EMNIST numérote 1-26 (letters) au lieu de 0-9 -> on soustrait 1
       2. Orientation : les images EMNIST sont stockées pivotées de 90°
-         (transpose + flip) → on les remet à l'endroit pour l'affichage
+         (transpose + flip) -> on les remet à l'endroit pour l'affichage
 
     Splits disponibles : letters (26 classes a-z), byclass (62), bymerge (47),
     balanced (47), digits (10).
@@ -82,9 +82,9 @@ class EMNISTLoader(MNISTLoader):
     def _correct_orientation(self, images):
         """
         Les images EMNIST sont stockées transposées (rotation 90°).
-        transpose + flip = rotation 90° antihoraire → lettres à l'endroit.
+        transpose + flip = rotation 90° antihoraire -> lettres à l'endroit.
         """
-        images = images.transpose(0, 2, 1)      # (N, H, W) → (N, W, H)
+        images = images.transpose(0, 2, 1)      # (N, H, W) -> (N, W, H)
         images = images[:, :, ::-1]             # flip horizontal
         return images
 
@@ -102,7 +102,7 @@ class EMNISTLoader(MNISTLoader):
         x_test = self.read_images(join(data_dir, f"emnist-{split}-test-images-idx3-ubyte"))
         y_test = self.read_labels(join(data_dir, f"emnist-{split}-test-labels-idx1-ubyte"))
 
-        # Labels 1-26 → 0-25 (pour letters, byclass, etc.)
+        # Labels 1-26 -> 0-25 (pour letters, byclass, etc.)
         if split in self.LABEL_OFFSET_ONE:
             y_train = y_train - 1
             y_test = y_test - 1
@@ -116,14 +116,14 @@ class EMNISTLoader(MNISTLoader):
 
 def normalize(images):
     """
-    Normalise les pixels de [0, 255] → [0.0, 1.0].
+    Normalise les pixels de [0, 255] -> [0.0, 1.0].
     """
     return images / 255.0
 
 
 def add_channel_dim(images):
     """
-    Ajoute la dimension du canal : (N, 28, 28) → (N, 28, 28, 1)
+    Ajoute la dimension du canal : (N, 28, 28) -> (N, 28, 28, 1)
 
     Format "channels_last" (comme TensorFlow).
     """
@@ -147,7 +147,7 @@ class DataLoader:
         loader = DataLoader(x_train, y_train, batch_size=32, shuffle=True)
         for batch_x, batch_y in loader:
             # batch_x.shape = (32, 28, 28, 1)
-            # batch_y.shape = (32, 10)  → one-hot
+            # batch_y.shape = (32, 10)  -> one-hot
             ...
     """
 
@@ -182,11 +182,11 @@ def preprocess_pipeline(images, labels, batch_size=32, shuffle=True, num_classes
     aux couches Conv2D du projet.
 
     Args :
-        images     → numpy array (N, 28, 28)  brut
-        labels     → numpy array (N,)         brut
-        batch_size → taille des batches
-        shuffle    → mélanger ?
-        num_classes→ nombre de classes pour le one-hot (10 MNIST, 26 EMNIST letters)
+        images     -> numpy array (N, 28, 28)  brut
+        labels     -> numpy array (N,)         brut
+        batch_size -> taille des batches
+        shuffle    -> mélanger ?
+        num_classes-> nombre de classes pour le one-hot (10 MNIST, 26 EMNIST letters)
 
     Retourne :
         DataLoader prêt à itérer

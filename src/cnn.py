@@ -41,12 +41,12 @@ from losses import (
 )
 
 
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║  TESTS                                                                   ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
+# +===========================================================================+
+# |  TESTS                                                                   |
+# +===========================================================================+
 
 if __name__ == "__main__":
-    # ── Chargement ──
+    # -- Chargement --
     loader = MNISTLoader()
     (x_train, y_train), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     print(f"  x_test  : {x_test.shape}   ({x_test.dtype})")
     print(f"  y_test  : {y_test.shape}   ({y_test.dtype})")
 
-    # ── Preprocessing ──
+    # -- Preprocessing --
     train_loader = preprocess_pipeline(x_train, y_train, batch_size=32, shuffle=True)
     test_loader  = preprocess_pipeline(x_test, y_test, batch_size=32, shuffle=False)
 
@@ -64,13 +64,13 @@ if __name__ == "__main__":
     print(f"\n[OK] Premier batch :")
     print(f"  batch_x : {batch_x.shape}  (min={batch_x.min():.2f}, max={batch_x.max():.2f})")
     print(f"  batch_y : {batch_y.shape}  (exemple one-hot: {batch_y[0]})")
-    print(f"  Format : channels_first  ✅")
+    print(f"  Format : channels_first  OK")
     print(f"  Nombre de batches par epoch : {len(train_loader)}")
 
     batch_x_t, batch_y_t = next(iter(test_loader))
     print(f"\n[OK] Batch test : {batch_x_t.shape}, {batch_y_t.shape}")
 
-    # ── Affichage ──
+    # -- Affichage --
     n_cols = 5
     n_rows = 2
     plt.figure(figsize=(10, 4))
@@ -84,18 +84,18 @@ if __name__ == "__main__":
     plt.tight_layout()
     preview_path = join(ROOT_DIR, "preview_samples.png")
     plt.savefig(preview_path, dpi=150, bbox_inches="tight")
-    print(f"📸 Échantillons sauvegardés → {preview_path}")
+    print(f" Échantillons sauvegardés -> {preview_path}")
 
-    # ── Image de test pour les couches ──
+    # -- Image de test pour les couches --
     test_img = x_train[:4]
     test_img = normalize(test_img)
     test_img = add_channel_dim(test_img)             # (4, 28, 28, 1)
     test_img = test_img.transpose(0, 3, 1, 2)       # (4, 1, 28, 28)
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test Conv2D forward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test Conv2D forward")
+    print("=" * 50)
 
     conv = Conv2D(in_channels=1, out_channels=4, kernel_size=3, stride=1, pad=1)
     print(f"Couche créée : {conv}")
@@ -104,18 +104,18 @@ if __name__ == "__main__":
 
     conv2 = Conv2D(in_channels=1, out_channels=8, kernel_size=5, stride=2, pad=0)
     out2 = conv2.forward(test_img)
-    print(f"Conv2D(1→8, k=5, s=2) : {test_img.shape} → {out2.shape}  (devrait 4×8×12×12)")
+    print(f"Conv2D(1->8, k=5, s=2) : {test_img.shape} -> {out2.shape}  (devrait 4×8×12×12)")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test MaxPool2D forward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test MaxPool2D forward")
+    print("=" * 50)
 
     pool = MaxPool2D(pool_size=2, stride=2)
     print(f"Couche créée : {pool}")
     pool_in = out  # (4, 4, 28, 28)
     pool_out = pool.forward(pool_in)
-    print(f"  Entrée : {pool_in.shape}  →  Sortie : {pool_out.shape}")
+    print(f"  Entrée : {pool_in.shape}  ->  Sortie : {pool_out.shape}")
     print(f"  (devrait être 4 × 4 × 14 × 14)")
 
     for n in range(min(2, 4)):
@@ -123,20 +123,20 @@ if __name__ == "__main__":
             slice_in = pool_in[n, c, :2, :2]
             max_in = slice_in.max()
             max_out = pool_out[n, c, 0, 0]
-            ok = "✅" if abs(max_in - max_out) < 1e-5 else "❌"
-            print(f"    [{n},{c}] fenêtre top-left : max={max_in:.4f} → pool={max_out:.4f} {ok}")
+            ok = "OK" if abs(max_in - max_out) < 1e-5 else "FAIL"
+            print(f"    [{n},{c}] fenêtre top-left : max={max_in:.4f} -> pool={max_out:.4f} {ok}")
 
-    print(f"\n  🧪 Test MaxPool2D backward :")
+    print(f"\n   Test MaxPool2D backward :")
     grad_fake = np.ones_like(pool_out) * 0.5
     grad_back = pool.backward(grad_fake)
-    print(f"    grad_output : {grad_fake.shape} → grad_input : {grad_back.shape}")
+    print(f"    grad_output : {grad_fake.shape} -> grad_input : {grad_back.shape}")
     ratio = grad_back.sum() / grad_fake.sum()
     print(f"    Ratio gradient transmis : {ratio:.2f} (doit être 1.00)")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test ReLU forward + backward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test ReLU forward + backward")
+    print("=" * 50)
 
     relu = ReLU()
     print(f"Couche créée : {relu}")
@@ -144,41 +144,41 @@ if __name__ == "__main__":
     out = relu.forward(x_test_relu)
     print(f"  Entrée  : {x_test_relu[0].tolist()}")
     print(f"  Sortie  : {out[0].tolist()}")
-    print(f"  Négatifs → 0 : {'✅' if out[0,0]==0 and out[0,1]==0 else '❌'}")
+    print(f"  Négatifs -> 0 : {'OK' if out[0,0]==0 and out[0,1]==0 else 'FAIL'}")
 
     dout = np.ones_like(out) * 2.0
     dx = relu.backward(dout)
-    print(f"  Backward: {'✅' if dx[0,0]==0 and dx[0,3]==2.0 else '❌'}")
+    print(f"  Backward: {'OK' if dx[0,0]==0 and dx[0,3]==2.0 else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test Flatten forward + backward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test Flatten forward + backward")
+    print("=" * 50)
 
     flat = Flatten()
     flat_in = pool_out  # (4, 4, 14, 14)
     flat_out = flat.forward(flat_in)
     expected = (4, 4 * 14 * 14)
-    print(f"  Entrée : {flat_in.shape}  →  Sortie : {flat_out.shape}")
-    print(f"  (devrait être {expected}) {'✅' if flat_out.shape == expected else '❌'}")
-    print(f"  ✅ valeurs identiques à reshape numpy" if np.allclose(flat_out, flat_in.reshape(4, -1)) else "")
+    print(f"  Entrée : {flat_in.shape}  ->  Sortie : {flat_out.shape}")
+    print(f"  (devrait être {expected}) {'OK' if flat_out.shape == expected else 'FAIL'}")
+    print(f"  OK valeurs identiques à reshape numpy" if np.allclose(flat_out, flat_in.reshape(4, -1)) else "")
 
     dout = np.ones_like(flat_out) * 3.0
     dx = flat.backward(dout)
-    print(f"  Backward: {dx.shape}  {'✅' if dx.shape == flat_in.shape else '❌'}")
+    print(f"  Backward: {dx.shape}  {'OK' if dx.shape == flat_in.shape else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test Conv2D backward (différences finies)")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test Conv2D backward (différences finies)")
+    print("=" * 50)
 
     tiny_batch = test_img[:2, :1, :5, :5].copy()
     conv_bw = Conv2D(in_channels=1, out_channels=2, kernel_size=3, stride=1, pad=0)
     fwd = conv_bw.forward(tiny_batch)
     dout = np.ones_like(fwd)
     dx = conv_bw.backward(dout)
-    print(f"  Forward  : {tiny_batch.shape} → {fwd.shape}")
-    print(f"  Backward : d_input → {dx.shape}  {'✅' if dx.shape == tiny_batch.shape else '❌'}")
+    print(f"  Forward  : {tiny_batch.shape} -> {fwd.shape}")
+    print(f"  Backward : d_input -> {dx.shape}  {'OK' if dx.shape == tiny_batch.shape else 'FAIL'}")
 
     eps = 1e-6
     k_idx = 0
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     ana_grad = conv_bw.d_kernels[k_idx, 0, 0, 0]
     rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
     print(f"  Gradient check kernel[{k_idx},0,0,0] : err={rel_error:.8f}")
-    print(f"  {'✅' if rel_error < 1e-4 else '❌'} gradient check passé")
+    print(f"  {'OK' if rel_error < 1e-4 else 'FAIL'} gradient check passé")
 
     old_k = conv_bw.kernels[0, 0, :3, :3].copy()
     old_b = conv_bw.bias[0, 0]
@@ -206,13 +206,13 @@ if __name__ == "__main__":
     conv_bw.update(lr)
     k_ok = np.allclose(conv_bw.kernels[0, 0, :3, :3], old_k - lr * conv_bw.d_kernels[0, 0, :3, :3])
     b_ok = np.allclose(conv_bw.bias[0, 0], old_b - lr * conv_bw.d_bias[0, 0])
-    print(f"  Update kernels : {'✅' if k_ok else '❌'}")
-    print(f"  Update bias    : {'✅' if b_ok else '❌'}")
+    print(f"  Update kernels : {'OK' if k_ok else 'FAIL'}")
+    print(f"  Update bias    : {'OK' if b_ok else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test Dense forward + backward + update")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test Dense forward + backward + update")
+    print("=" * 50)
 
     N, in_feat, out_feat = 8, 16, 5
     dense = Dense(in_feat, out_feat)
@@ -220,24 +220,24 @@ if __name__ == "__main__":
 
     x_in = np.random.randn(N, in_feat) * 0.1
     out = dense.forward(x_in)
-    print(f"  Forward : ({N}, {in_feat}) → ({N}, {out_feat})  {'✅' if out.shape == (N, out_feat) else '❌'}")
+    print(f"  Forward : ({N}, {in_feat}) -> ({N}, {out_feat})  {'OK' if out.shape == (N, out_feat) else 'FAIL'}")
 
     # Vérification produit matriciel + biais
     expected = x_in @ dense.W.T + dense.b.T
-    print(f"  Valeurs correctes : {'✅' if np.allclose(out, expected) else '❌'}")
+    print(f"  Valeurs correctes : {'OK' if np.allclose(out, expected) else 'FAIL'}")
 
     # Backward
     dout = np.random.randn(N, out_feat) * 0.1
     dx = dense.backward(dout)
-    print(f"  Backward : ({N}, {out_feat}) → ({N}, {in_feat})  {'✅' if dx.shape == (N, in_feat) else '❌'}")
+    print(f"  Backward : ({N}, {out_feat}) -> ({N}, {in_feat})  {'OK' if dx.shape == (N, in_feat) else 'FAIL'}")
 
     # Vérifications manuelles
     expected_dW = dout.T @ x_in
     expected_db = dout.sum(axis=0, keepdims=True).T
     expected_dx = dout @ dense.W
-    print(f"  dW correct  : {'✅' if np.allclose(dense.dW, expected_dW) else '❌'}")
-    print(f"  db correct  : {'✅' if np.allclose(dense.db, expected_db) else '❌'}")
-    print(f"  dx correct  : {'✅' if np.allclose(dx, expected_dx) else '❌'}")
+    print(f"  dW correct  : {'OK' if np.allclose(dense.dW, expected_dW) else 'FAIL'}")
+    print(f"  db correct  : {'OK' if np.allclose(dense.db, expected_db) else 'FAIL'}")
+    print(f"  dx correct  : {'OK' if np.allclose(dx, expected_dx) else 'FAIL'}")
 
     # Update
     lr = 0.01
@@ -246,8 +246,8 @@ if __name__ == "__main__":
     dense.update(lr)
     W_ok = np.allclose(dense.W, old_W - lr * dense.dW)
     b_ok = np.allclose(dense.b, old_b - lr * dense.db)
-    print(f"  Update W : {'✅' if W_ok else '❌'}")
-    print(f"  Update b : {'✅' if b_ok else '❌'}")
+    print(f"  Update W : {'OK' if W_ok else 'FAIL'}")
+    print(f"  Update b : {'OK' if b_ok else 'FAIL'}")
 
     # Gradient check par différences finies
     # Pour une loss = sum(out), le gradient est dout = 1
@@ -268,29 +268,29 @@ if __name__ == "__main__":
     ana_grad = dense.dW[w_idx]
     rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
     print(f"  Gradient check W[{w_idx[0]},{w_idx[1]}] : err={rel_error:.8f}")
-    print(f"  {'✅' if rel_error < 1e-4 else '❌'} gradient check passé")
+    print(f"  {'OK' if rel_error < 1e-4 else 'FAIL'} gradient check passé")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test Softmax forward + backward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test Softmax forward + backward")
+    print("=" * 50)
 
     softmax = Softmax()
     x_sm = np.array([[1.0, 2.0, 3.0],
                      [0.0, 0.0, 0.0],
                      [-2.0, -1.0, -0.5]], dtype=np.float64)
     p = softmax.forward(x_sm)
-    print(f"  Chaque ligne somme à 1 : {'✅' if np.allclose(p.sum(axis=1), 1.0) else '❌'}")
+    print(f"  Chaque ligne somme à 1 : {'OK' if np.allclose(p.sum(axis=1), 1.0) else 'FAIL'}")
 
     # Test vérification manuelle
     p_expected = np.exp(x_sm - x_sm.max(axis=1, keepdims=True))
     p_expected /= p_expected.sum(axis=1, keepdims=True)
-    print(f"  Valeurs softmax correctes : {'✅' if np.allclose(p, p_expected) else '❌'}")
+    print(f"  Valeurs softmax correctes : {'OK' if np.allclose(p, p_expected) else 'FAIL'}")
 
     # Backward
     dout = np.random.randn(*p.shape) * 0.1
     dx = softmax.backward(dout)
-    print(f"  Backward shape : {dx.shape}  {'✅' if dx.shape == x_sm.shape else '❌'}")
+    print(f"  Backward shape : {dx.shape}  {'OK' if dx.shape == x_sm.shape else 'FAIL'}")
 
     # Gradient check du softmax par différences finies
     eps = 1e-6
@@ -307,12 +307,12 @@ if __name__ == "__main__":
     ana_grad = softmax.backward(dout)[0, 1]
     rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
     print(f"  Gradient check x[0,1] : err={rel_error:.8f}")
-    print(f"  {'✅' if rel_error < 1e-4 else '❌'}")
+    print(f"  {'OK' if rel_error < 1e-4 else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test CrossEntropyLoss forward + backward")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test CrossEntropyLoss forward + backward")
+    print("=" * 50)
 
     loss_fn = CrossEntropyLoss()
     N, C = 5, 10
@@ -321,32 +321,32 @@ if __name__ == "__main__":
     y_true = np.eye(C)[labels]
 
     loss = loss_fn.forward(logits, y_true)
-    print(f"  Loss : {loss:.6f}  {'✅' if loss > 0 else '❌'}")
+    print(f"  Loss : {loss:.6f}  {'OK' if loss > 0 else 'FAIL'}")
 
     # Vérification manuelle
     soft = Softmax()
     p_check = soft.forward(logits)
     loss_manual = -np.sum(y_true * np.log(p_check + 1e-15)) / N
-    print(f"  Loss manuelle : {loss_manual:.6f}  {'✅' if np.allclose(loss, loss_manual) else '❌'}")
+    print(f"  Loss manuelle : {loss_manual:.6f}  {'OK' if np.allclose(loss, loss_manual) else 'FAIL'}")
 
-    # Logits uniformes → loss = log(10) ≈ 2.3026
+    # Logits uniformes -> loss = log(10) ≈ 2.3026
     uniform_logits = np.zeros((N, C))
     uniform_loss = loss_fn.forward(uniform_logits, y_true)
-    print(f"  Loss logits uniformes : {uniform_loss:.6f}  {'✅' if np.allclose(uniform_loss, np.log(C)) else '❌'}")
+    print(f"  Loss logits uniformes : {uniform_loss:.6f}  {'OK' if np.allclose(uniform_loss, np.log(C)) else 'FAIL'}")
 
-    # Logits parfaits → loss ≈ 0
+    # Logits parfaits -> loss ≈ 0
     perfect_logits = np.zeros((N, C))
     perfect_logits[np.arange(N), labels] = 100.0
     perfect_loss = loss_fn.forward(perfect_logits, y_true)
-    print(f"  Loss logits parfaits : {perfect_loss:.6f}  {'✅' if perfect_loss < 1e-5 else '❌'}")
+    print(f"  Loss logits parfaits : {perfect_loss:.6f}  {'OK' if perfect_loss < 1e-5 else 'FAIL'}")
 
     # Backward
     dlogits = loss_fn.backward()
-    print(f"  Backward shape : {dlogits.shape}  {'✅' if dlogits.shape == logits.shape else '❌'}")
+    print(f"  Backward shape : {dlogits.shape}  {'OK' if dlogits.shape == logits.shape else 'FAIL'}")
 
     # Vérification : gradient doit sommer à 0 par échantillon (car sum(p) = 1)
     grad_sum = loss_fn.backward().sum(axis=1)
-    print(f"  Gradient somme à 0 / échantillon : {'✅' if np.allclose(grad_sum, 0) else '❌'}")
+    print(f"  Gradient somme à 0 / échantillon : {'OK' if np.allclose(grad_sum, 0) else 'FAIL'}")
 
     # Gradient check combined
     eps = 1e-6
@@ -361,41 +361,41 @@ if __name__ == "__main__":
     ana_grad = loss_fn.backward()[0, 0]
     rel_error = abs(num_grad - ana_grad) / max(abs(num_grad), abs(ana_grad), 1e-8)
     print(f"  Gradient check logits[0,0] : err={rel_error:.8f}")
-    print(f"  {'✅' if rel_error < 1e-4 else '❌'}")
+    print(f"  {'OK' if rel_error < 1e-4 else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🧪 Test accuracy")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Test accuracy")
+    print("=" * 50)
 
     acc = loss_fn.accuracy(logits, y_true)
     print(f"  Accuracy (logits aléatoires) : {acc:.2f}")
-    print(f"  Accuracy > 0 : {'✅' if acc >= 0 else '❌'}")
+    print(f"  Accuracy > 0 : {'OK' if acc >= 0 else 'FAIL'}")
 
     perfect_logits_acc = np.zeros((N, C))
     perfect_logits_acc[np.arange(N), labels] = 100.0
     acc_perfect = loss_fn.accuracy(perfect_logits_acc, y_true)
-    print(f"  Accuracy parfaite : {acc_perfect:.2f}  {'✅' if acc_perfect == 1.0 else '❌'}")
+    print(f"  Accuracy parfaite : {acc_perfect:.2f}  {'OK' if acc_perfect == 1.0 else 'FAIL'}")
 
-    # ═══════════════════════════════════════════════════
-    print("\n" + "═" * 50)
-    print("🎉 Tous les tests sont passés !")
-    print("═" * 50)
+    # ===================================================
+    print("\n" + "=" * 50)
+    print(" Tous les tests sont passés !")
+    print("=" * 50)
     print()
     print("Modules disponibles :")
-    print("  data.py       → MNISTLoader, DataLoader, preprocessing")
-    print("  layers.py     → im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense ✅")
-    print("  losses.py     → Softmax ✅, CrossEntropyLoss ✅")
-    print("  model.py      → CNN (forward, backward, update, train, evaluate) ✅")
-    print("  model.py      → save_weights, load_weights, predict ✅")
-    print("  tune_cnn.py   → fichier de réglages interactif 🎮")
-    print("  predict.py    → charger le modèle entraîné et classifier 🖼️")
+    print("  data.py       -> MNISTLoader, DataLoader, preprocessing")
+    print("  layers.py     -> im2col, col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dense OK")
+    print("  losses.py     -> Softmax OK, CrossEntropyLoss OK")
+    print("  model.py      -> CNN (forward, backward, update, train, evaluate) OK")
+    print("  model.py      -> save_weights, load_weights, predict OK")
+    print("  tune_cnn.py   -> fichier de réglages interactif ")
+    print("  predict.py    -> charger le modèle entraîné et classifier ")
 
-    # ╔══════════════════════════════════════════════════════════════════╗
-    # ║  ENTRAÎNEMENT + SAUVEGARDE + GRAPHIQUES                          ║
-    # ╚══════════════════════════════════════════════════════════════════╝
+    # +==================================================================+
+    # |  ENTRAÎNEMENT + SAUVEGARDE + GRAPHIQUES                          |
+    # +==================================================================+
 
-    # ── Flags ──
+    # -- Flags --
     full = "--full" in sys.argv or "--train-only" in sys.argv
     train_only = "--train-only" in sys.argv
     epochs_override = None
@@ -404,9 +404,9 @@ if __name__ == "__main__":
             epochs_override = int(sys.argv[i + 1])
 
     if not train_only:
-        print("\n" + "═" * 50)
-        print("🏋️  Entraînement rapide (sous-ensemble 2000 images)")
-        print("═" * 50)
+        print("\n" + "=" * 50)
+        print("  Entraînement rapide (sous-ensemble 2000 images)")
+        print("=" * 50)
 
     from model import CNN
 
@@ -424,10 +424,10 @@ if __name__ == "__main__":
     model.add(Dense(128, 10))
 
     if full:
-        print(f"\n{'═' * 50}")
-        print(f"🚀  ENTRAÎNEMENT COMPLET  ({len(x_train)} images)")
-        print(f"{'═' * 50}")
-        print(f"🧠 {model}")
+        print(f"\n{'=' * 50}")
+        print(f"  ENTRAÎNEMENT COMPLET  ({len(x_train)} images)")
+        print(f"{'=' * 50}")
+        print(f" {model}")
 
         batch_size = 128
         n_epochs = epochs_override or 10
@@ -435,7 +435,7 @@ if __name__ == "__main__":
         train_loader_full = preprocess_pipeline(x_train, y_train, batch_size=batch_size, shuffle=True)
         test_loader_full  = preprocess_pipeline(x_test, y_test, batch_size=batch_size, shuffle=False)
 
-        print(f"\n📦 {len(x_train)} train / {len(x_test)} test")
+        print(f"\n {len(x_train)} train / {len(x_test)} test")
         print(f"   batch={batch_size}, epochs={n_epochs}")
         print(f"   ~{len(train_loader_full)} batches/epoch")
 
@@ -444,14 +444,14 @@ if __name__ == "__main__":
         t_elapsed = time.time() - t_start
 
         h, m, s = int(t_elapsed // 3600), int((t_elapsed % 3600) // 60), int(t_elapsed % 60)
-        print(f"\n⏱️  {h}h {m}m {s}s" if h else f"⏱️  {m}m {s}s")
+        print(f"\n[time]  {h}h {m}m {s}s" if h else f"[time]  {m}m {s}s")
 
         # Évaluation
-        print(f"\n{'═' * 50}")
-        print(f"📊 Évaluation sur {len(x_test)} images de test…")
+        print(f"\n{'=' * 50}")
+        print(f" Évaluation sur {len(x_test)} images de test…")
         test_acc = model.evaluate(test_loader_full)
-        print(f"{'═' * 50}")
-        print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+        print(f"{'=' * 50}")
+        print(f"\n Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         # Sauvegarde
         save_path = join(ROOT_DIR, "models", "model_weights_full.npz")
@@ -473,10 +473,10 @@ if __name__ == "__main__":
         plt.tight_layout()
         graph_path = join(ROOT_DIR, "training_result_full.png")
         plt.savefig(graph_path, dpi=150, bbox_inches="tight")
-        print(f"📊 Graphique → {graph_path}")
+        print(f" Graphique -> {graph_path}")
 
     else:
-        print(f"🧠 {model}")
+        print(f" {model}")
 
         # Sous-ensemble rapide
         x_sub = x_train[:2000]
@@ -485,18 +485,18 @@ if __name__ == "__main__":
         train_sub = preprocess_pipeline(x_sub, y_sub, batch_size=64, shuffle=True)
         test_sub  = preprocess_pipeline(x_test[:500], y_test[:500], batch_size=64, shuffle=False)
 
-        print(f"\n📦 {x_sub.shape[0]} train, batch=64, epochs={n_epochs}")
+        print(f"\n {x_sub.shape[0]} train, batch=64, epochs={n_epochs}")
 
         t_start = time.time()
         history = model.train(train_sub, epochs=n_epochs, lr=0.01, verbose=True)
         t_elapsed = time.time() - t_start
 
         m, s = divmod(t_elapsed, 60)
-        print(f"⏱️  {int(m)}m {int(s)}s")
+        print(f"[time]  {int(m)}m {int(s)}s")
 
         # Évaluation
         test_acc = model.evaluate(test_sub)
-        print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
+        print(f"\n Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         # Sauvegarde
         save_path = join(ROOT_DIR, "models", "model_weights.npz")
@@ -518,4 +518,4 @@ if __name__ == "__main__":
         plt.tight_layout()
         graph_path = join(ROOT_DIR, "training_result.png")
         plt.savefig(graph_path, dpi=150, bbox_inches="tight")
-        print(f"📊 Graphique → {graph_path}")
+        print(f" Graphique -> {graph_path}")
