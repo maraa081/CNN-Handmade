@@ -45,7 +45,18 @@ grandes dimensions, Goodfellow).
   change de lettre à ε=0.30.
 - [warn] Note : l'entraînement full EMNIST (124 800 images, ~2h30) lancé le
   2026-08-24 a échoué silencieusement (log vide, fichier `_full` absent).
-  Relancé en fond le 2026-08-25 -> les expériences de transfert attendront ce modèle.
+
+### 2026-08-25 — EMNIST full : entraînement complet terminé (machine Maraa)
+
+- Modèle / poids : `models/emnist_letters_weights_full.npz`
+- Paramètres : 124 800 images, 10 epochs, batch 128, lr 0.01, ~37 min
+  (machine Windows de Maraa, ~5x plus rapide que le WSL)
+- Résultat : **92.0% sur 20800 images de test** (hasard = 3.8%)
+- Observation : le CNN from scratch reconnaît les 26 lettres avec un niveau
+  quasi MNIST (92% vs 98.6% sur 10 classes — la tâche à 26 classes est
+  intrinsèquement plus dure). Le modèle full est maintenant disponible pour
+  les attaques adversarial sur les lettres (FGSM/PGD EMNIST, transfert
+  cross-dataset MNIST <-> EMNIST).
 
 ### 2026-08-25 — PGD non ciblée sur MNIST (modèle full) + comparaison FGSM
 

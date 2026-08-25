@@ -168,7 +168,7 @@ class CNN:
             history["accuracy"].append(acc)
 
             if verbose:
-                print(f"  Època {epoch + 1}/{epochs}  -  loss: {avg_loss:.4f}  -  accuracy: {acc:.4f}")
+                print(f"  Epoch {epoch + 1}/{epochs}  -  loss: {avg_loss:.4f}  -  accuracy: {acc:.4f}")
 
         return history
 

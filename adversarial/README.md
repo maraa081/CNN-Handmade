@@ -118,6 +118,11 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ### FGSM — EMNIST letters (models/emnist_letters_weights.npz, 500 images)
 
+> **Modèle rapide** (5000 images, 44.8% propre). Le modèle **full** (124 800
+> images, **92.0% propre**) est prêt : `models/emnist_letters_weights_full.npz`
+> (entraîné sur la machine de Maraa le 2026-08-25, ~37 min).
+> Prochaine étape : FGSM/PGD sur les 26 lettres avec le modèle full.
+
 | ε | Acc attaqué | Flip | Observation |
 |---|---|---|---|
 | 0.05 | 28.6% | 19.2% | |
