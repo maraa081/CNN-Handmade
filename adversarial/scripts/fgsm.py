@@ -31,6 +31,7 @@ from os.path import join, dirname, abspath
 ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))  # → CNN-Handmade/
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, join(ROOT_DIR, "src"))
+sys.path.insert(0, join(ROOT_DIR, "scripts"))
 
 from data import MNISTLoader, EMNISTLoader, normalize, add_channel_dim
 from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense
@@ -200,8 +201,8 @@ def main():
     # ── Modèle ──
     model = build_model(args.dataset)
     if args.weights is None:
-        args.weights = "model_weights_full.npz" if args.dataset == "mnist" \
-                       else "emnist_letters_weights_full.npz"
+        args.weights = "models/model_weights_full.npz" if args.dataset == "mnist" \
+                       else "models/emnist_letters_weights.npz"
     weights_path = join(ROOT_DIR, args.weights)
     model.load_weights(weights_path)
     print(f"🧠 Modèle chargé : {args.dataset.upper()} ← {args.weights}")

@@ -15,8 +15,8 @@ adversarial/
 ├── README.md          ← ce fichier : vue d'ensemble, concepts, résultats clés
 ├── memoire.md         ← carnet de bord : chaque expérience tracée (date, paramètres, résultat)
 ├── scripts/
-│   ├── fgsm.py        ← attaque FGSM (1 étape de gradient)
-│   ├── pgd.py         ← attaque PGD (itérative, plus forte)   [à faire]
+│   ├── fgsm.py        ← attaque FGSM (1 étape de gradient)        ✅ opérationnel
+│   ├── pgd.py         ← attaque PGD (itérative, plus forte)       ✅ opérationnel
 │   ├── transfer.py    ← transfert d'attaque entre modèles     [à faire]
 │   └── defend.py      ← adversarial training (défense)        [à faire]
 └── results/           ← images + chiffres générés par les scripts (gitignoré)
@@ -53,10 +53,15 @@ x_adv = x + ε · sign(∇_x L(f(x), y))
 dans la direction du gradient cumule des effets sur toutes les dimensions et fait
 basculer la sortie. C'est le "high-dimensional linearity" de Goodfellow.
 
-### PGD — Projected Gradient Descent (Madry, 2018) *[à faire]*
+### PGD — Projected Gradient Descent (Madry, 2018) ✅ implémenté
 
 Version itérative de FGSM : plusieurs petites étapes avec projection dans la boule
-de rayon ε. Attaque plus forte (le "gold standard" des attaques).
+L∞ de rayon ε. Attaque plus forte (le "gold standard" des attaques).
+
+```
+x_0 = x + U(-ε, ε)                       # démarrage aléatoire
+x_{t+1} = clip(x_t + α·sign(∇L), x-ε, x+ε)  # pas de gradient projeté
+```
 
 ### Transfert d'attaque *[à faire]*
 
@@ -74,13 +79,21 @@ C'est le pendant défensif — indispensable pour raconter les deux côtés.
 
 ```bash
 # Attaque FGSM sur le modèle MNIST complet
-python3 adversarial/scripts/fgsm.py --dataset mnist --weights model_weights_full.npz
+python3 adversarial/scripts/fgsm.py --dataset mnist --weights models/model_weights_full.npz
+
+# Attaque PGD sur MNIST (20 itérations, démarrage aléatoire)
+python3 adversarial/scripts/pgd.py --dataset mnist --weights models/model_weights_full.npz
+
+# Comparaison directe FGSM vs PGD sur les mêmes images
+python3 adversarial/scripts/pgd.py --compare
 
 # Sur le modèle EMNIST letters
-python3 adversarial/scripts/fgsm.py --dataset emnist --weights emnist_letters_weights_full.npz
+python3 adversarial/scripts/fgsm.py --dataset emnist --weights models/emnist_letters_weights.npz
+python3 adversarial/scripts/pgd.py --dataset emnist --weights models/emnist_letters_weights.npz
 
 # Attaque ciblée (forcer la prédiction vers une classe précise)
 python3 adversarial/scripts/fgsm.py --targeted --target 3
+python3 adversarial/scripts/pgd.py --targeted --target 3 --steps 40
 ```
 
 Résultats dans `adversarial/results/` : images comparatives + résumé chiffré.
@@ -89,9 +102,34 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ## 📊 Résultats clés (mis à jour à chaque expérience)
 
-| Attaque | Dataset | ε | Accuracy attaqué | Notes |
+### FGSM — MNIST (models/model_weights_full.npz, 1000 images)
+
+| ε | Acc attaqué | Flip | Observation |
+|---|---|---|---|
+| 0.05 | 94.0% | 4.6% | bruit invisible, déjà -4.5 pts |
+| 0.10 | 76.1% | 22.6% | 1 image sur 4 change de prédiction |
+| 0.20 | 21.9% | 76.9% | effondrement |
+| 0.30 | 2.1% | 96.7% | le modèle ne reconnaît presque plus rien |
+
+> **Propre : 98.5%** — une seule étape de gradient suffit à détruire le modèle.
+
+### FGSM — EMNIST letters (models/emnist_letters_weights.npz, 500 images)
+
+| ε | Acc attaqué | Flip | Observation |
+|---|---|---|---|
+| 0.05 | 28.6% | 19.2% | |
+| 0.10 | 16.2% | 34.8% | |
+| 0.20 | 6.2% | 49.8% | |
+| 0.30 | 2.8% | 55.8% | |
+
+> **Propre : 44.8%** (modèle rapide 5000 images — le full n'a pas abouti, relancé).
+
+### PGD vs FGSM — MNIST (à compléter après le run)
+
+| Attaque | ε=0.05 | ε=0.10 | ε=0.20 | ε=0.30 |
 |---|---|---|---|---|
-| *— à remplir —* | | | | |
+| FGSM | 94.0% | 76.1% | 21.9% | 2.1% |
+| PGD (20 steps) | — | — | — | — |
 
 ---
 

@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import EMNISTLoader, preprocess_pipeline
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         test_acc = model.evaluate(test_loader)
         print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
-        save_path = join(ROOT_DIR, "emnist_letters_weights_full.npz")
+        save_path = join(ROOT_DIR, "models", "emnist_letters_weights_full.npz")
         model.save_weights(save_path)
 
     else:
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         test_acc = model.evaluate(test_sub)
         print(f"\n🎯 Accuracy test (1000 images) : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
-        save_path = join(ROOT_DIR, "emnist_letters_weights.npz")
+        save_path = join(ROOT_DIR, "models", "emnist_letters_weights.npz")
         model.save_weights(save_path)
 
     # ── Graphique ──

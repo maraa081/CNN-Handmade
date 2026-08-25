@@ -17,7 +17,7 @@ import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -28,7 +28,7 @@ import sys
 import numpy as np
 from os.path import join, dirname, abspath, exists
 
-ROOT_DIR = dirname(abspath(__file__))
+ROOT_DIR = dirname(dirname(abspath(__file__)))  # → CNN-Handmade/
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, preprocess_pipeline
@@ -66,8 +66,8 @@ def load_data():
 def load_model(weights_path=None):
     if weights_path is None:
         # D'abord essayer le rapide, sinon le full
-        quick = join(ROOT_DIR, "model_weights.npz")
-        full  = join(ROOT_DIR, "model_weights_full.npz")
+        quick = join(ROOT_DIR, "models", "model_weights.npz")
+        full  = join(ROOT_DIR, "models", "model_weights_full.npz")
         if exists(quick):
             weights_path = quick
         elif exists(full):
@@ -193,7 +193,7 @@ if __name__ == "__main__":
             ax.set_title(f"V:{true_label} P:{pred}", fontsize=10, color=color)
             ax.axis("off")
 
-        graph_path = join(ROOT_DIR, "predictions.png")
+        graph_path = join(ROOT_DIR, "results", "predictions.png")
         plt.suptitle(f"{correct}/10 correctes", fontsize=14)
         plt.tight_layout()
         plt.savefig(graph_path, dpi=150, bbox_inches="tight")
@@ -201,6 +201,6 @@ if __name__ == "__main__":
         print(f"🎯 {correct}/10 correctes")
 
     print("\n💡 Pour classifier tes propres images :")
-    print("   from predict import load_model")
+    print("   from scripts.predict import load_model")
     print("   model = load_model()")
     print("   pred = model.predict(mon_image_normalisée)")

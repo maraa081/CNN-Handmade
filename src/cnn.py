@@ -454,7 +454,7 @@ if __name__ == "__main__":
         print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         # Sauvegarde
-        save_path = join(ROOT_DIR, "model_weights_full.npz")
+        save_path = join(ROOT_DIR, "models", "model_weights_full.npz")
         model.save_weights(save_path)
 
         # Graphique
@@ -499,7 +499,7 @@ if __name__ == "__main__":
         print(f"\n🎯 Accuracy test : {test_acc:.4f}  ({test_acc * 100:.1f}%)")
 
         # Sauvegarde
-        save_path = join(ROOT_DIR, "model_weights.npz")
+        save_path = join(ROOT_DIR, "models", "model_weights.npz")
         model.save_weights(save_path)
 
         # Graphique

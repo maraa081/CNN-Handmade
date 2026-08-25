@@ -1,6 +1,0 @@
-technique,optimizer,epochs,batch_size,data_limit,test_accuracy,training_time_s,final_train_loss,final_train_accuracy
-baseline_sgd,"SGD(lr=0.01)",5,64,2000,0.884200,20.0,0.336826,0.917500
-momentum,"Momentum(lr=0.01, momentum=0.9)",5,64,2000,0.942000,20.9,0.099689,0.971000
-adam,"Adam(lr=0.001, beta1=0.9, beta2=0.999)",5,64,2000,0.955400,23.6,0.055004,0.984000
-dropout_(sgd)_dropout,"SGD(lr=0.01)",5,64,2000,0.833300,22.7,0.687970,0.789500
-l2_weight_decay,"SGD(lr=0.01, weight_decay=0.001)",5,64,2000,0.863900,19.9,0.382283,0.904500

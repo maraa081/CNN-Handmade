@@ -59,54 +59,40 @@ Entrée : (N, 1, 28, 28)
 CNN-Handmade/
 ├── README.md
 ├── requirements.txt
-├── predict.py                     ← charge le modèle et classifie
 ├── push.sh                        ← git push rapide
-├── docs/
-│   ├── data-flow.md
-│   └── memoire-projet.md          ← carnet de bord du projet
-├── data/
-│   └── (fichiers MNIST .ubyte)
-├── traces/
-│   └── forward_trace.py
-├── src/
+├── src/                           ← cœur du code (CNN from scratch)
 │   ├── __init__.py
-│   ├── data.py        — MNISTLoader, preprocessing, DataLoader
+│   ├── data.py        — MNISTLoader, EMNISTLoader, preprocessing, DataLoader
 │   ├── layers.py      — im2col/col2im, Conv2D, MaxPool2D, ReLU, Flatten, Dropout, Dense
 │   ├── losses.py      — Softmax, CrossEntropyLoss
 │   ├── optimizers.py  — SGD, Momentum, Adam
 │   ├── model.py       — CNN (optimiseur interchangeable, train/eval mode)
 │   ├── tune_cnn.py    — réglages interactifs (baseline)
-│   └── cnn.py         — script principal de démo
-│
+│   └── cnn.py         — script principal de démo + entraînement
+├── scripts/                      ← scripts utilisateur
+│   ├── predict.py        — charger le modèle et classifier
+│   ├── train_emnist.py   — entraîner sur EMNIST letters
+│   ├── download_emnist.py— installer les données EMNIST
+│   └── voir_emnist.py    — visualiser les lettres (Spyder/IPython)
+├── models/                      ← poids entraînés (.npz)
+│   ├── model_weights.npz          — rapide (2000 img, 3 epochs)
+│   ├── model_weights_full.npz     — complet (60000 img)
+│   └── max_config_weights.npz     — Adam + Dropout + L2
+├── results/                     ← graphiques générés (PNG/CSV)
+├── adversarial/                 ← sécurité IA : attaques & défense
+│   ├── README.md / memoire.md
+│   └── scripts/ (fgsm.py, pgd.py, transfer.py, defend.py)
+├── docs/
+│   ├── data-flow.md
+│   └── memoire-projet.md          ← carnet de bord du projet
+├── data/
+│   └── (fichiers MNIST/EMNIST .ubyte)
+├── traces/
+│   └── forward_trace.py
 └── experiments/                    ← comparatifs d'optimiseurs
-    ├── baseline/
-    │   ├── baseline_sgd.py        — SGD vanilla
-    │   ├── baseline_sgd.png
-    │   └── baseline_sgd_weights.npz
-    │
-    ├── momentum/
-    │   ├── momentum.py            — SGD + élan
-    │   ├── momentum.png
-    │   └── momentum_weights.npz
-    │
-    ├── adam/
-    │   ├── adam.py                — Adaptive Moment Estimation
-    │   ├── adam.png
-    │   └── adam_weights.npz
-    │
-    ├── dropout/
-    │   ├── dropout_sgd.py         — SGD + Dropout(p=0.5)
-    │   ├── dropout_sgd.png
-    │   └── dropout_sgd_weights.npz
-    │
-    ├── l2/
-    │   ├── l2_sgd.py              — SGD + L2 weight_decay(0.001)
-    │   ├── l2_sgd.png
-    │   └── l2_sgd_weights.npz
-    │
+    ├── baseline/  momentum/  adam/  dropout/  l2/
     ├── max_config.py          — 🔥 Adam + Dropout + L2 combinés
-    │
-    └── (prochains : lr_scheduler, data_augmentation, grid_search…)
+    └── compare_all.py         — lancer tous les optimiseurs d'un coup
 ```
 
 ## 🚀 Utilisation
@@ -125,7 +111,7 @@ python src/cnn.py
 
 - Teste toutes les couches une par une (forward, backward, gradient check)
 - Entraîne sur **2000 images** (3 epochs)
-- Sauvegarde les poids dans `model_weights.npz`
+- Sauvegarde les poids dans `models/model_weights.npz`
 - Génère le graphique `training_result.png`
 
 ### 3. Entraînement complet (recommandé)
@@ -135,7 +121,7 @@ python src/cnn.py --full
 ```
 
 - Entraîne sur **les 60000 images** MNIST (10 epochs, ~15-20 min)
-- Sauvegarde les poids dans `model_weights_full.npz`
+- Sauvegarde les poids dans `models/model_weights_full.npz`
 - Génère `training_result_full.png`
 
 Options supplémentaires :
@@ -147,10 +133,10 @@ python src/cnn.py --train-only            # saute les tests, entraîne direct
 ### 4. Prédire sans réentraîner
 
 ```bash
-python predict.py                          # 10 prédictions → predictions.png
-python predict.py --all                    # accuracy sur les 10000 images de test
-python predict.py --weights model_weights_full.npz   # choisir les poids
-python predict.py --interactive            # mode pas à pas avec affichage
+python scripts/predict.py                          # 10 prédictions → results/predictions.png
+python scripts/predict.py --all                    # accuracy sur les 10000 images de test
+python scripts/predict.py --weights models/model_weights_full.npz   # choisir les poids
+python scripts/predict.py --interactive            # mode pas à pas avec affichage
 ```
 
 ## ⚙️ Tuning interactif
@@ -173,20 +159,20 @@ Résultat sauvegardé dans `tune_result.png`.
 Le même CNN from-scratch, mais pour reconnaître les **lettres manuscrites a-z** au lieu des chiffres.
 
 ```bash
-# Vérifier l'orientation des images (échantillons → emnist_samples.png)
-python3 train_emnist.py --samples
+# Vérifier l'orientation des images (échantillons → results/emnist_samples.png)
+python3 scripts/train_emnist.py --samples
 
 # Entraînement rapide (5000 images, 3 epochs, ~4 min)
-python3 train_emnist.py
+python3 scripts/train_emnist.py
 
 # Entraînement complet (124800 images, 10 epochs)
-python3 train_emnist.py --full
+python3 scripts/train_emnist.py --full
 ```
 
 **Données :** [EMNIST Letters](https://www.nist.gov/itl/products-and-services/emnist-dataset) — même format IDX que MNIST. Un zip léger des lettres (~36 Mo) est inclus dans le repo ; le script les installe tout seul :
 
 ```bash
-python3 download_emnist.py
+python3 scripts/download_emnist.py
 ```
 
 Si le zip local n'est pas là, il télécharge automatiquement depuis le site NIST (~561 Mo, plus lent).
@@ -285,9 +271,9 @@ Combine le momentum avec un learning rate adaptatif par paramètre. Le plus robu
 ## 💡 Exemple rapide
 
 ```python
-from predict import load_model
+from scripts.predict import load_model
 
-model = load_model("model_weights_full.npz")
+model = load_model("models/model_weights_full.npz")
 pred = model.predict(mon_image)   # mon_image: (1, 28, 28) normalisée
 print(f"Prédiction : {pred}")
 ```

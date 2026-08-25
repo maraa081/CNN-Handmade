@@ -24,10 +24,14 @@ predictions.png
 # Résultats EMNIST (générés)
 emnist_samples.png
 emnist_training_result.png
-emnist_letters_weights*.npz
+models/emnist_letters_weights*.npz
 
 # Résultats adversarial (générés)
 adversarial/results/
+
+# Images générées à la racine du projet (results/)
+results/*.png
+results/*.csv
 
 # Résultats d'expérimentations (générés, pas dans le repo)
 experiments/*/tune_result.png

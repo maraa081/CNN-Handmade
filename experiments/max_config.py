@@ -131,12 +131,12 @@ ax2.set_ylim(0, 1)
 plt.suptitle("Max Config — Adam + Dropout + L2", fontsize=14, fontweight="bold", y=1.02)
 plt.tight_layout()
 
-graph_path = join(ROOT, "max_config.png")
+graph_path = join(ROOT, "results", "max_config.png")
 plt.savefig(graph_path, dpi=150, bbox_inches="tight")
 print(f"📊 Graphique → {graph_path}")
 
 # ── Sauvegarde des poids ──
-weights_path = join(ROOT, "max_config_weights.npz")
+weights_path = join(ROOT, "models", "max_config_weights.npz")
 model.save_weights(weights_path)
 
 # ── Récap ──

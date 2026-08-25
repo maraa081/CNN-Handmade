@@ -11,8 +11,8 @@
   Lancement : python3 experiments/compare_all.py
 
   Résultats :
-    comparison.png                  — graphique combiné (loss + accuracy)
-    comparison_results.csv          — tableau des résultats (optionnel, version push)
+    results/comparison.png        — graphique combiné (loss + accuracy)
+    results/comparison_results.csv — tableau des résultats (optionnel, version push)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -163,7 +163,7 @@ def save_comparison_plot(results):
                  fontsize=14, fontweight="bold", y=1.02)
     plt.tight_layout()
 
-    path = join(ROOT, "comparison.png")
+    path = join(ROOT, "results", "comparison.png")
     plt.savefig(path, dpi=150, bbox_inches="tight")
     print(f"\n📊 Graphique comparatif → {path}")
 
@@ -185,7 +185,7 @@ def save_summary(results):
             f"{test_acc:.6f},{elapsed:.1f},{final_loss:.6f},{final_acc:.6f}"
         )
 
-    csv_path = join(ROOT, "comparison_results.csv")
+    csv_path = join(ROOT, "results", "comparison_results.csv")
     with open(csv_path, "w") as f:
         f.write("\n".join(lines) + "\n")
     print(f"📁 Résultats CSV → {csv_path}")
