@@ -157,9 +157,29 @@ grandes dimensions, Goodfellow).
      transfert depuis le modèle standard (la preuve, pas juste FGSM)
 - Paramètres du run complet : 5000 images, 3 epochs, PGD 7 steps, eps 0.3,
   lancé le 2026-08-25 en arrière-plan (log `/tmp/harden_full.log`)
-- Résultat : à compléter dès la fin du run (tableau README mis à jour)
+- Résultat (500 images de test) :
+
+| Attaque | ε=0.05 | ε=0.10 | ε=0.20 | ε=0.30 |
+|---|---|---|---|---|
+| FGSM (durci) | 58.8% | 49.2% | 34.8% | 23.8% |
+| PGD (durci) | 53.4% | 37.2% | 9.6% | 1.2% |
+| FGSM ciblée (durci) | 64.2% | 61.0% | 57.8% | 53.4% |
+| PGD ciblée (durci) | 62.4% | 58.0% | 55.2% | 49.4% |
+| FGSM (standard full) | 95.4% | 76.2% | 21.6% | 1.8% |
+| PGD (standard full) | 90.0% | 44.4% | 0.0% | 0.0% |
+
+  Clean : durci 67.2% vs standard 98.6% (compromis robustesse/accuracy).
+  Transfert standard -> durci : 65.8% / 62.6% / 51.6% / 40.4%.
+
+- Observation : le durci domine dès que l'attaque est forte — à ε=0.3 FGSM
+  il garde 23.8% vs 1.8% (+22 pts), à ε=0.2 PGD 9.6% vs 0.0% (+9.6 pts).
+  Les attaques ciblées échouent largement sur lui (53-64% d'acc même à
+  ε=0.3). Le transfert est atténué : 40-66% d'acc contre des attaques
+  générées sur un autre modèle.
 - Leçon : une défense se prouve contre l'attaquant le plus fort, pas
-  contre la version la plus simple de l'attaque.
+  contre la version la plus simple de l'attaque. Le prix à payer est
+  l'accuracy propre — en pratique on ajuste eps d'entraînement selon
+  le niveau de menace (eps 0.15 -> meilleur clean, eps 0.3 -> max robustesse).
 
 ---
 

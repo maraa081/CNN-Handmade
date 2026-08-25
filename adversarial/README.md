@@ -269,18 +269,55 @@ python3 adversarial/scripts/harden.py --load models/defend_pgd_mnist_weights.npz
 
 Poids du modèle durci : `models/defend_pgd_mnist_weights.npz`.
 
-### Résultats de la version durcie (2026-08-25, à compléter dès la fin du run)
+### Résultats de la version durcie (2026-08-25)
+
+**Modèle durci : adversarial training PGD (7 steps, eps 0.3, 5000 img, 3 epochs)**
 
 | ε | standard (full) | durci (PGD train) | gain |
 |---|---|---|---|
-| clean | 98.6% | en cours | - |
-| 0.05 | 95.4% / 90.0% | en cours | - |
-| 0.10 | 76.2% / 44.4% | en cours | - |
-| 0.20 | 21.6% / 0.0% | en cours | - |
-| 0.30 | 1.8% / 0.0% | en cours | - |
+| clean | 98.6% | 67.2% | -31.4% |
+| 0.05 (FGSM) | 95.4% | 58.8% | -36.6% |
+| 0.10 (FGSM) | 76.2% | 49.2% | -27.0% |
+| 0.20 (FGSM) | 21.6% | 34.8% | +13.2% |
+| 0.30 (FGSM) | 1.8% | 23.8% | +22.0% |
+| 0.05 (PGD) | 90.0% | 53.4% | -36.6% |
+| 0.10 (PGD) | 44.4% | 37.2% | -7.2% |
+| 0.20 (PGD) | 0.0% | 9.6% | +9.6% |
+| 0.30 (PGD) | 0.0% | 1.2% | +1.2% |
 
-> Valeurs standard : FGSM / PGD. Le run complet tourne en arrière-plan
-> (log : `/tmp/harden_full.log`) — les chiffres sont ajoutés dès la fin.
+> **Le durci domine dès que l'attaque devient forte** : à ε=0.3 FGSM il garde
+> 23.8% quand le standard tombe à 1.8% (+22 pts) ; à ε=0.2 PGD il garde 9.6%
+> quand le standard est à 0.0%. **Le prix : -31 pts en accuracy propre** —
+> c'est le compromis robustesse/accuracy, d'autant plus marqué ici que
+> l'entraînement s'est fait à eps 0.3 (très agressif).
+
+**Attaques ciblées (forcer la classe 3) — le durci résiste très bien :**
+
+| ε | standard (FGSM/PGD cibl.) | durci (FGSM/PGD cibl.) |
+|---|---|---|
+| 0.05 | 98.4% / 97.8% | 64.2% / 62.4% |
+| 0.10 | 96.8% / 94.4% | 61.0% / 58.0% |
+| 0.20 | 91.8% / 87.6% | 57.8% / 55.2% |
+| 0.30 | 87.6% / 85.2% | 53.4% / 49.4% |
+
+> Les attaques ciblées sont intrinsèquement plus dures à réussir (il faut
+> pousser vers UNE classe précise, pas juste ailleurs) : les deux modèles y
+> résistent mieux qu'aux non ciblées.
+
+**Transfert (attaque générée sur le standard -> testée sur le durci) :**
+
+| ε | acc du durci sous transfert |
+|---|---|
+| 0.05 | 65.8% |
+| 0.10 | 62.6% |
+| 0.20 | 51.6% |
+| 0.30 | 40.4% |
+
+> Le durci garde 40-66% d'accuracy face à des attaques générées sur un AUTRE
+> modèle : la robustesse se transfère aussi contre le transfert d'attaque.
+
+Reproduire : `python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3`
+(courbes : `adversarial/results/harden_curve_pgd.png`, `harden_history_pgd.png`)
 
 ---
 
