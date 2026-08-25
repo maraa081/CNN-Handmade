@@ -150,6 +150,8 @@ def main():
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--quick", action="store_true", help="test rapide (800 img, 1 epoch)")
     parser.add_argument("--eval-pgd", action="store_true", help="évalue aussi sous PGD (long)")
+    parser.add_argument("--baseline", action="store_true",
+                        help="entraîne aussi un modèle STANDARD sur les mêmes données (comparaison équitable)")
     parser.add_argument("--out", default="models/defend_mnist_weights.npz")
     args = parser.parse_args()
 
@@ -193,7 +195,53 @@ def main():
     model.save_weights(out_path)
     print(f"[SAVE] Poids défendus -> {out_path}")
 
-    # ── Comparaison robustesse : modèle standard vs défendu ──
+    # ── Baseline équitable : modèle standard entraîné sur les MÊMES données ──
+    if args.baseline:
+        print("\n[BASELINE] Entraînement d'un modèle standard sur les mêmes images...")
+        std_same = CNN()
+        std_same.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))
+        std_same.add(ReLU())
+        std_same.add(MaxPool2D(2))
+        std_same.add(Conv2D(32, 64, kernel_size=3, stride=1, pad=1))
+        std_same.add(ReLU())
+        std_same.add(MaxPool2D(2))
+        std_same.add(Flatten())
+        std_same.add(Dense(3136, 128))
+        std_same.add(ReLU())
+        std_same.add(Dense(128, 10))
+
+        from model import CNN as _  # noqa
+
+        N = len(x_tr)
+        rng2 = np.random.RandomState(0)
+        for epoch in range(args.epochs):
+            idx = rng2.permutation(N)
+            epoch_loss, correct, total = 0.0, 0, 0
+            for start in range(0, N, args.batch):
+                batch_idx = idx[start:start + args.batch]
+                bx = x_tr[batch_idx]
+                by = np.eye(10)[y_tr[batch_idx]]
+                logits = std_same.forward(bx)
+                loss = std_same.loss_fn.forward(logits, by)
+                grad = std_same.loss_fn.backward()
+                std_same.backward(grad)
+                std_same.update(args.lr)
+                epoch_loss += loss * len(bx)
+                total += len(bx)
+                correct += (np.argmax(logits, axis=1) == np.argmax(by, axis=1)).sum()
+            print(f"  Epoch {epoch + 1}/{args.epochs} -- loss: {epoch_loss / total:.4f} -- acc: {correct / total:.4f}")
+        std_same.save_weights(join(ROOT_DIR, "models", "standard_same_data.npz"))
+        print(f"[SAVE] Baseline standard -> models/standard_same_data.npz")
+
+        std_res = robustness(std_same, x_te, y_te, eps_list)
+        print("\n[EVAL] Comparaison ÉQUITABLE (mêmes données d'entraînement)")
+        print(f"{'eps':>6} | {'standard':>10} | {'défendu':>10} | {'gain':>8}")
+        print("-" * 42)
+        for eps in ["clean"] + eps_list:
+            s_acc, d_acc = std_res[eps], adv_res[eps]
+            print(f"{str(eps):>6} | {s_acc:>10.1%} | {d_acc:>10.1%} | {d_acc - s_acc:>+8.1%}")
+
+    # ── Comparaison robustesse : modèle standard (full) vs défendu ──
     eps_list = [0.05, 0.1, 0.2, 0.3]
     print("\n[EVAL] Robustesse FGSM (500 images de test)")
 

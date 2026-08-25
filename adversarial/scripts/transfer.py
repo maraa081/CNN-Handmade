@@ -39,12 +39,44 @@ sys.path.insert(0, ROOT_DIR)
 from adversarial.scripts.fgsm import build_model, load_data, accuracy, save_grid
 from adversarial.scripts.pgd import pgd
 
-# Modèles MNIST entraînés différemment (même architecture) → bons candidats
+# Modèles MNIST entraînés différemment (même architecture, sauf max_config
+# qui ajoute un Dropout) → bons candidats pour le transfert
 KNOWN_MODELS = {
     "full":      "models/model_weights_full.npz",     # entraînement complet
     "classic":   "models/model_weights.npz",          # entraînement classique
     "max_config": "models/max_config_weights.npz",    # Adam + Dropout + L2
 }
+
+
+def build_mnist_model(with_dropout=False):
+    """Même architecture que l'entraînement, avec ou sans Dropout."""
+    from layers import Conv2D, MaxPool2D, ReLU, Flatten, Dense, Dropout
+    from model import CNN
+    m = CNN()
+    m.add(Conv2D(1, 32, kernel_size=3, stride=1, pad=1))
+    m.add(ReLU())
+    m.add(MaxPool2D(2))
+    m.add(Conv2D(32, 64, kernel_size=3, stride=1, pad=1))
+    m.add(ReLU())
+    m.add(MaxPool2D(2))
+    m.add(Flatten())
+    m.add(Dense(3136, 128))
+    m.add(ReLU())
+    if with_dropout:
+        m.add(Dropout(p=0.5))
+    m.add(Dense(128, 10))
+    return m
+
+
+def load_mnist_model(path):
+    """Charge un modèle MNIST en détectant l'architecture (avec/sans Dropout)."""
+    m = build_mnist_model()
+    try:
+        m.load_weights(path)
+    except KeyError:
+        m = build_mnist_model(with_dropout=True)
+        m.load_weights(path)
+    return m
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -101,10 +133,8 @@ def main():
     print(f"[DST] {basename(dst_path)}")
 
     # ── Modèles ──
-    src_model = build_model("mnist")
-    src_model.load_weights(src_path)
-    dst_model = build_model("mnist")
-    dst_model.load_weights(dst_path)
+    src_model = load_mnist_model(src_path)
+    dst_model = load_mnist_model(dst_path)
 
     # ── Données ──
     x, y = load_data("mnist", args.n)
@@ -127,8 +157,8 @@ def main():
     for eps in args.eps:
         x_adv, noise = attack(src_model, x, y, eps, args.attack, args.steps, rng)
 
-        acc_src_adv = accuracy(src_model, x_adv)
-        acc_dst_adv = accuracy(dst_model, x_adv)
+        acc_src_adv = accuracy(src_model, x_adv, y)
+        acc_dst_adv = accuracy(dst_model, x_adv, y)
 
         # Taux de transfert : parmi les images que la SOURCE s'est trompée,
         # combien trompent aussi la CIBLE (et qui étaient bien prédites par la cible)

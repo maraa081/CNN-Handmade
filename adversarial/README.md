@@ -17,8 +17,8 @@ adversarial/
 ├── scripts/
 │   ├── fgsm.py        ← attaque FGSM (1 étape de gradient)        ✅ opérationnel
 │   ├── pgd.py         ← attaque PGD (itérative, plus forte)       ✅ opérationnel
-│   ├── transfer.py    ← transfert d'attaque entre modèles     [à faire]
-│   └── defend.py      ← adversarial training (défense)        [à faire]
+│   ├── transfer.py    ← transfert d'attaque entre modèles         ✅ opérationnel
+│   └── defend.py      ← adversarial training (défense)            ✅ opérationnel
 └── results/           ← images + chiffres générés par les scripts (gitignoré)
 ```
 
@@ -63,12 +63,13 @@ x_0 = x + U(-ε, ε)                       # démarrage aléatoire
 x_{t+1} = clip(x_t + α·sign(∇L), x-ε, x+ε)  # pas de gradient projeté
 ```
 
-### Transfert d'attaque *[à faire]*
+### Transfert d'attaque ✅ implémenté
 
 Un exemple adversarial généré contre MON modèle trompe aussi d'autres modèles.
 C'est ce qui rend les attaques dangereuses en pratique (attaques boîte noire).
+Mesuré sur 3 modèles MNIST entraînés différemment (full, classic, max_config).
 
-### La défense : adversarial training *[à faire]*
+### La défense : adversarial training ✅ implémenté
 
 Réentraîner le modèle **avec** des exemples adverses → il devient robuste.
 C'est le pendant défensif — indispensable pour raconter les deux côtés.
@@ -124,12 +125,48 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 > **Propre : 44.8%** (modèle rapide 5000 images — le full n'a pas abouti, relancé).
 
-### PGD vs FGSM — MNIST (à compléter après le run)
+### PGD vs FGSM — MNIST (500 images, même échantillon, modèle full 98.6%)
 
 | Attaque | ε=0.05 | ε=0.10 | ε=0.20 | ε=0.30 |
 |---|---|---|---|---|
-| FGSM | 94.0% | 76.1% | 21.9% | 2.1% |
-| PGD (20 steps) | — | — | — | — |
+| FGSM | 95.4% | 76.2% | 21.6% | 1.8% |
+| PGD (20 steps) | 90.0% | 44.4% | **0.0%** | **0.0%** |
+
+> **PGD est bien plus fort que FGSM** : à ε=0.2, FGSM laisse 21.6% d'accuracy,
+> PGD détruit tout (0.0%). Leçon : pour évaluer la robustesse d'un modèle,
+> FGSM seul ne suffit pas — il faut une attaque itérative (Madry et al. 2018).
+
+### Transfert d'attaque — MNIST (FGSM, 500 images)
+
+Taux de transfert = images où la CIBLE change de prédiction, parmi celles que la
+source a trompées et que la cible prédisait correctement.
+
+| Source → Cible | ε=0.10 | ε=0.20 | ε=0.30 |
+|---|---|---|---|
+| full → classic (même archi) | 25.7% | 50.0% | 72.3% |
+| full → max_config (Dropout+L2) | 8.2% | 15.1% | 50.2% |
+| max_config → full | 8.0% | 31.8% | 60.7% |
+
+> **La transferabilité dépend de la similarité des modèles** : deux SGD
+> entraînés pareil → les exemples adverses traversent (72% à ε=0.3). C'est ce
+> qui rend les attaques **boîte noire** possibles. La régularisation
+> (Dropout + L2) casse une partie du transfert.
+
+### La défense : adversarial training — MNIST (5000 img, 3 epochs, eps train 0.15)
+
+| ε | standard (full) | défendu | gain |
+|---|---|---|---|
+| clean | 98.6% | 88.8% | -9.8% |
+| 0.05 | 95.4% | 78.4% | -17.0% |
+| 0.10 | 76.2% | 60.4% | -15.8% |
+| 0.20 | 21.6% | 37.6% | +16.0% |
+| 0.30 | 1.8% | 18.0% | +16.2% |
+
+> **Le compromis robustesse/accuracy** : le modèle défendu perd ~10 pts en
+> accuracy propre mais résiste 10× mieux à ε=0.3 (18% vs 1.8%). À faible ε il
+> est moins bon que le standard (entraîné à ε=0.15, il n'est pas optimisé
+> pour les petits bruits). Comparaison équitable (même 5000 images) : voir
+> `memoire.md` — le baseline standard sur les mêmes données tourne en parallèle.
 
 ---
 
