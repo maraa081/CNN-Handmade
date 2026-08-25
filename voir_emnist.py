@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from os.path import join, dirname, abspath
 
-ROOT_DIR = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
+ROOT_DIR = dirname(abspath(__file__))
 sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import EMNISTLoader

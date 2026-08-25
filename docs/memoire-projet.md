@@ -114,7 +114,7 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
   - Orientation corrigée (transpose + flip = rotation 90° — les images EMNIST sont stockées pivotées)
   - Orientation validée visuellement en ASCII art avant entraînement
 - **`preprocess_pipeline()`** : paramètre `num_classes` ajouté (one-hot 26 au lieu de 10)
-- **`scripts/train_emnist.py`** : script dédié (rapide 5000 images / `--full` 124800 images, `--samples` pour vérifier l'orientation)
+- **`train_emnist.py`** : script dédié (rapide 5000 images / `--full` 124800 images, `--samples` pour vérifier l'orientation)
 - **Résultat rapide** (5000 images, 3 epochs, ~3m40) : train 63.5% -> test **43.2%**
 - [warn] **Piège découvert** : le test set EMNIST est TRIÉ PAR CLASSE. `x_test[:1000]` ne contenait que des 'a'/'b' -> accuracy 5.8% trompeuse. Il faut échantillonner aléatoirement (rng.choice).
 - Données dans `data/emnist/` (gitignorées, zip 561 Mo à télécharger depuis biometrics.nist.gov)

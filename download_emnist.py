@@ -22,7 +22,7 @@ import zipfile
 import urllib.request
 from os.path import join, dirname, abspath, exists
 
-ROOT = dirname(dirname(abspath(__file__)))  # -> CNN-Handmade/
+ROOT = dirname(abspath(__file__))
 DATA_DIR = join(ROOT, "data", "emnist")
 LOCAL_ZIP = join(ROOT, "data", "emnist_letters.zip")
 NIST_ZIP_URL = "https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip"
