@@ -26,8 +26,8 @@ emnist_samples.png
 emnist_training_result.png
 models/emnist_letters_weights*.npz
 
-# Résultats adversarial (générés)
-adversarial/results/
+# Resultats adversarial (versionnes dans le repo depuis 2026-08-26)
+# (les PNG sont generes par fgsm.py / pgd.py / transfer.py / defend.py)
 
 # Images générées à la racine du projet (results/)
 results/*.png
