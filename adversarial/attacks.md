@@ -215,8 +215,8 @@ d'entrée où ils se trompent se recouvrent partiellement : la direction
 C'est ce qui rend les attaques **boîte noire** possibles : on n'a pas besoin
 du modèle victime, on en entraîne un substitut local, on génère des exemples
 adverses dessus, et ils passent chez la victime. Mesuré dans nos runs :
-- `full -> classic` (mêmes SGD) : 72% de transfert à ε=0.3 → très vulnérable
-- `full -> max_config` (Dropout + L2) : 50% à ε=0.3 → la régularisation casse
+- `full -> classic` (mêmes SGD) : 72% de transfert à ε=0.3 -> très vulnérable
+- `full -> max_config` (Dropout + L2) : 50% à ε=0.3 -> la régularisation casse
   une partie du transfert (le modèle a des frontières "plus lisses")
 
 ---

@@ -200,8 +200,8 @@ perturbations à ε=0.3 "consomme" de la capacité à distinguer des images
 proches — des paires de lettres quasi identiques deviennent confondues.
 
 En pratique, **on ajuste eps_train au niveau de menace** :
-- eps 0.15 → meilleur clean, protection modérée
-- eps 0.3 → robustesse max, clean dégradé
+- eps 0.15 -> meilleur clean, protection modérée
+- eps 0.3 -> robustesse max, clean dégradé
 
 ### 5.2 Les autres effets mesurés
 
@@ -215,9 +215,9 @@ En pratique, **on ajuste eps_train au niveau de menace** :
 
 Aucune défense seule n'est parfaite. La démarche du dossier :
 
-1. **Adversarial training PGD** → robustesse des poids (la base, Madry)
-2. **Feature squeezing** → nettoyage d'entrée (complément, Xu)
-3. **Évaluation multi-attaques** → vérifier, pas croire
+1. **Adversarial training PGD** -> robustesse des poids (la base, Madry)
+2. **Feature squeezing** -> nettoyage d'entrée (complément, Xu)
+3. **Évaluation multi-attaques** -> vérifier, pas croire
 
 La leçon générale : **une défense se prouve contre l'attaquant le plus fort,
 pas contre la version la plus simple de l'attaque** — et le prix à payer
