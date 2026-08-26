@@ -12,7 +12,9 @@
 
 ```
 adversarial/
-|-- README.md          <- ce fichier : vue d'ensemble, concepts, résultats clés
+|-- README.md          <- vue d'ensemble : concepts, commandes, résultats clés
+|-- attacks.md         <- les ATTAQUES en détail : théorie, algorithmes, implémentation
+|-- defenses.md        <- les DÉFENSES en détail : min-max, adversarial training, limites
 |-- memoire.md         <- carnet de bord : chaque expérience tracée (date, paramètres, résultat)
 |-- scripts/
 |   |-- fgsm.py        <- attaque FGSM (1 étape de gradient)        OK opérationnel
@@ -21,8 +23,13 @@ adversarial/
 |   |-- defend.py      <- adversarial training (défense)            OK opérationnel
 |   |-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
 |   `-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
-`-- results/           <- images + chiffres générés par les scripts (gitignoré)
+`-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
+
+Pour la théorie complète : **`attacks.md`** (pourquoi les attaques marchent,
+modèle de menace, algorithmes pas à pas) et **`defenses.md`** (le min-max de
+Madry, pourquoi FGSM training échoue face à PGD, feature squeezing, la
+méthodologie de preuve, le compromis robustesse/accuracy).
 
 ##  Les concepts (à maîtriser)
 
