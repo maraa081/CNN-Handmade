@@ -194,6 +194,28 @@ grandes dimensions, Goodfellow).
 
 ---
 
+## 2026-08-26 — PGD vs FGSM sur EMNIST full (26 lettres, modèle 92.0%)
+
+- Commande (machine Maraa) : `pgd.py --dataset emnist --weights models/emnist_letters_weights_full.npz --n 500 --steps 20 --compare`
+- Modèle : `emnist_letters_weights_full.npz` (124 800 images, 10 epochs, 92.0% test)
+- Échantillon : 500 images de test tirées au hasard (le test set EMNIST est trié par classe)
+- Clean sur l'échantillon : **91.0%**
+- PGD : 20 itérations, alpha = eps/4, démarrage aléatoire
+
+| Attaque | ε=0.05 | ε=0.10 | ε=0.20 | ε=0.30 |
+|---|---|---|---|---|
+| PGD (acc attaqué) | 61.6% | 10.0% | **0.0%** | **0.0%** |
+| PGD (flip) | 29.6% | 81.6% | 93.8% | 95.2% |
+| FGSM (acc attaqué) | 74.8% | 48.2% | 10.0% | 4.0% |
+
+- Observation : EMNIST full est **beaucoup plus fragile que MNIST full** —
+  à ε=0.10 PGD passe à 10.0% quand MNIST tenait encore à 44.4%.
+  Plus de classes (26 vs 10) = frontières de décision plus denses = plus facile à tromper.
+- PGD ≫ FGSM confirmé aussi sur EMNIST : à ε=0.20, 0.0% vs 10.0%.
+- Même FGSM seul détruit le modèle : 4.0% à ε=0.30 (contre 1.8% sur MNIST).
+
+---
+
 ##  Tableau des résultats cumulés
 
 | Date | Attaque | Modèle | ε | Acc propre | Acc attaqué | Flip | Notes |
@@ -206,6 +228,14 @@ grandes dimensions, Goodfellow).
 | 2026-08-24 | FGSM untgt | EMNIST rapide | 0.10 | 44.8% | 16.2% | 34.8% | |
 | 2026-08-24 | FGSM untgt | EMNIST rapide | 0.20 | 44.8% | 6.2% | 49.8% | |
 | 2026-08-24 | FGSM untgt | EMNIST rapide | 0.30 | 44.8% | 2.8% | 55.8% | |
+| 2026-08-26 | PGD untgt (20 st.) | EMNIST full | 0.05 | 91.0% | 61.6% | 29.6% | 26 classes, plus fragile que MNIST |
+| 2026-08-26 | PGD untgt (20 st.) | EMNIST full | 0.10 | 91.0% | 10.0% | 81.6% | MNIST tenait à 44.4% |
+| 2026-08-26 | PGD untgt (20 st.) | EMNIST full | 0.20 | 91.0% | 0.0% | 93.8% | effondrement total |
+| 2026-08-26 | PGD untgt (20 st.) | EMNIST full | 0.30 | 91.0% | 0.0% | 95.2% | 0.0% exact |
+| 2026-08-26 | FGSM (rappel) | EMNIST full | 0.05 | 91.0% | 74.8% | — | même échantillon que PGD |
+| 2026-08-26 | FGSM (rappel) | EMNIST full | 0.10 | 91.0% | 48.2% | — | |
+| 2026-08-26 | FGSM (rappel) | EMNIST full | 0.20 | 91.0% | 10.0% | — | |
+| 2026-08-26 | FGSM (rappel) | EMNIST full | 0.30 | 91.0% | 4.0% | — | |
 | 2026-08-25 | PGD untgt (20 st.) | MNIST full | 0.05 | 98.6% | 90.0% | 8.8% | |
 | 2026-08-25 | PGD untgt (20 st.) | MNIST full | 0.10 | 98.6% | 44.4% | 54.4% | |
 | 2026-08-25 | PGD untgt (20 st.) | MNIST full | 0.20 | 98.6% | 0.0% | 99.0% | effondrement total |

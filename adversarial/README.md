@@ -116,12 +116,27 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 > **Propre : 98.5%** — une seule étape de gradient suffit à détruire le modèle.
 
-### FGSM — EMNIST letters (models/emnist_letters_weights.npz, 500 images)
+### PGD vs FGSM — EMNIST full (models/emnist_letters_weights_full.npz, 500 images)
 
-> **Modèle rapide** (5000 images, 44.8% propre). Le modèle **full** (124 800
-> images, **92.0% propre**) est prêt : `models/emnist_letters_weights_full.npz`
-> (entraîné sur la machine de Maraa le 2026-08-25, ~37 min).
-> Prochaine étape : FGSM/PGD sur les 26 lettres avec le modèle full.
+> **Modèle full** (124 800 images, **92.0% test** — entraîné sur la machine de
+> Maraa le 2026-08-25, ~37 min). Attaques lancées le 2026-08-26.
+
+| ε | PGD (acc) | FGSM (acc) | Observation |
+|---|---|---|---|
+| 0.05 | 61.6% | 74.8% | bruit invisible, déjà -29 pts |
+| 0.10 | 10.0% | 48.2% | effondrement PGD |
+| 0.20 | **0.0%** | 10.0% | PGD détruit tout |
+| 0.30 | **0.0%** | 4.0% | 0.0% exact |
+
+> **Propre : 91.0%** sur l'échantillon. EMNIST (26 classes) est **beaucoup plus
+> fragile que MNIST (10 classes)** : à ε=0.10 PGD tombe à 10.0% quand MNIST
+> tenait encore à 44.4%. Plus de classes = frontières de décision plus denses
+> = plus facile à tromper. PGD ≫ FGSM confirmé.
+
+### FGSM — EMNIST letters (modèle rapide, 500 images)
+
+> Modèle rapide (5000 images, 44.8% propre). Le full (92.0%) est documenté
+> ci-dessus — les résultats du rapide sont gardés pour comparaison historique.
 
 | ε | Acc attaqué | Flip | Observation |
 |---|---|---|---|
@@ -130,7 +145,7 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 | 0.20 | 6.2% | 49.8% | |
 | 0.30 | 2.8% | 55.8% | |
 
-> **Propre : 44.8%** (modèle rapide 5000 images — le full n'a pas abouti, relancé).
+> **Propre : 44.8%** (modèle rapide 5000 images).
 
 ### PGD vs FGSM — MNIST (500 images, même échantillon, modèle full 98.6%)
 
