@@ -106,6 +106,48 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 
 ##  Historique
 
+### 2026-09-10 - Optimisation du moteur NumPy (x2.4, gratuit)
+
+Le GPU n'est pour rien dans cette histoire : le code etait juste lent a cause de
+trois erreurs classiques. Mesures sur le i5-6300U (4 coeurs) :
+
+| Etape | Debit | Gain |
+|---|---|---|
+| depart | 73 img/s | - |
+| + produits matriciels sur tableaux contigus | 101 img/s | x1.38 |
+| + col2im sans `np.add.at` | 102 img/s | ~ |
+| + float32 partout (au lieu de float64) | 172 img/s | x1.69 |
+| **total** | **172 img/s** | **x2.4** |
+
+1. **Produits matriciels sur vues transposees.** `A @ B.T` ou `B.T` est une vue
+   (F-contigue, sans copie) tombe dans un chemin lent de NumPy. Mesure sur la
+   conv2 : **271 ms au lieu de 50 ms**, soit x5.4. Correction :
+   `A @ np.ascontiguousarray(B.T)`. Resultat **bit-identique** (ecart 0.0).
+2. **`col2im` sans `np.add.at`.** `np.add.at` est un chemin generique tres lent
+   (**43 ms par appel**, 13 % du temps total). Remplace par une boucle sur les
+   positions du noyau avec des `+=` vectorises (la destination d'une position
+   donnee ne se chevauche pas).
+3. **`float32` partout.** Les poids etaient crees en float64 (`np.random.randn`
+   sans `astype`) alors que les donnees sont en float32 -> **tous** les produits
+   matriciels tournaient en double precision. Les fichiers de poids passent de
+   3296 Ko a 1650 Ko.
+
+Consequences : epoch propre sur 60000 images de 13.7 min -> **5.8 min** ; epoch
+PGD-5 de ~90 min -> **~41 min**.
+
+Verifications : logits bit-identiques apres (1) et (2) ; accuracy propre sur
+l'echantillon de 500 images **98.60 %**, exactement la valeur documentee ;
+gradient check conv2d ecart 8.5e-11 ; FGSM bout-en-bout inchange (1.5 % a
+eps=0.3).
+
+> [warn] Piege : lancer `python3 src/cnn.py` (le script de demo) **ecrase**
+> `models/model_weights.npz`, qui est le modele "classic" utilise par les
+> experiences de transfert. Toujours travailler sur une copie.
+
+Ce qui reste : le moteur est desormais proche de la limite du BLAS de cette
+machine. Au-dela, il faut passer a autre chose qu'un tableau NumPy sur CPU
+(PyTorch / GPU), pas micro-optimiser.
+
 ### 2026-08-26 — Docs adversariales + résultats EMNIST full
 
 - `adversarial/attacks.md` (théorie FGSM / PGD / ciblées / transfert, threat model)

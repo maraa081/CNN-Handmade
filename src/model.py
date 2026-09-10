@@ -232,12 +232,15 @@ class CNN:
         """
         data = np.load(path)
         for i, layer in enumerate(self.layers):
+            # [perf] cast en float32 : les poids des fichiers existants sont en
+            # float64, ce qui forcait tous les produits matriciels en double
+            # precision (2x plus lent) alors que les donnees sont en float32.
             if hasattr(layer, 'kernels'):
-                layer.kernels = data[f'conv_{i}_kernels']
-                layer.bias = data[f'conv_{i}_bias']
+                layer.kernels = data[f'conv_{i}_kernels'].astype(np.float32)
+                layer.bias = data[f'conv_{i}_bias'].astype(np.float32)
             elif hasattr(layer, 'W'):
-                layer.W = data[f'dense_{i}_W']
-                layer.b = data[f'dense_{i}_b']
+                layer.W = data[f'dense_{i}_W'].astype(np.float32)
+                layer.b = data[f'dense_{i}_b'].astype(np.float32)
         print(f"   Poids chargés depuis -> {path}")
 
     def predict(self, x):
