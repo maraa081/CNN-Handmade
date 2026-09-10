@@ -87,7 +87,8 @@ CNN-Handmade/
 |   |-- attacks.md                    - théorie des attaques (FGSM, PGD, transfert)
 |   |-- defenses.md                   - théorie des défenses + méthodologie
 |   |-- results/                      - courbes et images (PNG)
-|   `-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, harden2.py, augment.py, eval_defended.py)
+|   |-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, harden2.py, augment.py, eval_defended.py)
+|   `-- torch/                        - piste PyTorch (autograd, GPU) : harden_torch.py
 |-- docs/
 |   |-- data-flow.md
 |   `-- memoire-projet.md          <- carnet de bord du projet
@@ -108,6 +109,16 @@ CNN-Handmade/
 ```bash
 pip install numpy matplotlib
 ```
+
+Optionnel, pour la piste PyTorch (entraînement plus rapide + GPU) :
+
+```bash
+pip install torch          # CPU
+# ou, pour un GPU AMD : voir adversarial/torch/README.md
+```
+
+> [warn] PyTorch ne supporte pas toutes les versions de Python. Python 3.10 à
+> 3.12 est le plus sûr.
 
 ### 2. Lancer les tests + entraînement rapide
 
@@ -224,6 +235,16 @@ python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
 
 > **Leçon centrale** : FGSM sous-estime la vulnérabilité réelle. Un modèle se
 > juge contre l'attaque la plus forte (PGD), pas contre la plus simple.
+
+**Deux moteurs, mêmes maths.** Le dossier `adversarial/scripts/` contient
+l'implémentation faite main (chaque gradient écrit à la main : la référence
+pédagogique). `adversarial/torch/` rejoue **exactement les mêmes expériences**
+avec PyTorch et l'autograd : même architecture, mêmes attaques, mêmes recettes,
+mais ~9x plus rapide sur CPU et utilisable sur GPU. Les poids sont
+interchangeables entre les deux (format `.npz`), et le mode `--parite` vérifie
+que les deux donnent le même résultat.
+
+Détail et setup GPU : [`adversarial/torch/README.md`](adversarial/torch/README.md).
 
 Le détail complet est dans [`adversarial/README.md`](adversarial/README.md) :
 théorie et algorithmes dans [`attacks.md`](adversarial/attacks.md) et

@@ -47,3 +47,7 @@ experiments/*/results*.csv
 # Points de reprise de harden2 (gros, regenerables) : on ne versionne que le meilleur
 models/*_last.npz
 adversarial/results/logs/
+
+# Piste PyTorch : checkpoints et modeles (lourds, regenerables)
+models/*.pt
+models/*_last.pt

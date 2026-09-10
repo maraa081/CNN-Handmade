@@ -1,0 +1,223 @@
+# Piste PyTorch — quand le modele grossit
+
+> Cette piste existe pour une raison precise : **le code fait main a une limite
+> de debit**. Tant que le modele est petit, ecrire les gradients soi-meme est
+> pedagogiquement imbattable et suffisant. Quand le modele grossit, ce n'est
+> plus tenable — et c'est la qu'on passe a PyTorch.
+
+Les deux pistes vivent cote a cote. **Aucune ne remplace l'autre.**
+
+| Piste | Dossier | Role |
+|---|---|---|
+| Faite main (NumPy) | `src/`, `adversarial/scripts/` | la **reference pedagogique** : chaque gradient est ecrit a la main, rien n'est cache |
+| PyTorch (autograd) | `adversarial/torch/` | le **banc d'essai rapide** : memes maths, moteur optimise, GPU possible |
+
+---
+
+## 1. Pourquoi il a fallu changer de moteur
+
+Mesures sur la meme machine (i5-6300U, 4 coeurs), apres optimisation :
+
+| | Faite main (NumPy) | PyTorch (CPU) |
+|---|---|---|
+| Entrainement propre | 172 img/s | ~1 500 img/s |
+| 5000 images, PGD-5, 1 epoch | ~3 min 20 | **23 s** |
+| 60000 images, 1 epoch propre | 5.8 min | ~40 s |
+| GPU | impossible | oui |
+
+Le code NumPy a ete optimise de 2.4x (voir `docs/memoire-projet.md`), mais il
+est maintenant **au plafond de son BLAS** : le temps est passe dans les produits
+matriciels eux-memes. Doubler la taille du modele double le temps
+d'entrainement. Ajouter une couche de convolution, passer a 128 canaux, utiliser
+des images en 224x224 : chacune de ces decisions multiplie une duree deja
+longue.
+
+PyTorch change trois choses :
+
+1. **L'autograd** : plus besoin d'ecrire `Conv2D.backward()` ni `col2im`. Le
+   gradient se deduit du forward.
+2. **Des noyaux optimises** : les convolutions sont des primitives natives
+   (MIOpen sur AMD, cuDNN sur NVIDIA), pas une boucle im2col maison.
+3. **Le GPU** : le meme code tourne sur carte graphique, avec un facteur
+   supplementaire de plusieurs dizaines.
+
+---
+
+## 2. Ce qui est identique (volontairement)
+
+L'objectif n'est pas de faire "un autre projet" mais **le meme**, avec un autre
+moteur. La correspondance est volontairement terme a terme :
+
+| Fait main | PyTorch | Remarque |
+|---|---|---|
+| `src/layers.py :: Conv2D` | `nn.Conv2d` | meme im2col a la main / noyau natif |
+| `src/layers.py :: MaxPool2D` | `nn.MaxPool2d` | |
+| `src/layers.py :: Dense` | `nn.Linear` | |
+| `src/model.py :: CNN.backward()` | `loss.backward()` | autograd |
+| `src/optimizers.py :: SGD` | `torch.optim.SGD` | |
+| `adversarial/scripts/fgsm.py` | `torch/attaques.py :: fgsm` | **meme formule** |
+| `adversarial/scripts/pgd.py` | `torch/attaques.py :: pgd` | alpha = eps/4, random start |
+| `adversarial/scripts/harden2.py` | `torch/entrainement.py` | memes recettes |
+| `adversarial/scripts/augment.py` | `torch/entrainement.py :: augmenter` | memes transformations |
+
+Memes recettes d'entrainement : `pgdat`, `trades`, mix propre/adverse,
+decroissance du learning rate, ecrêtage des gradients, selection du modele sur
+la robustesse de validation.
+
+Meme architecture, a la virgule pres :
+
+    Conv2d(1 -> 32, k=3, pad=1) -> ReLU -> MaxPool2d(2)
+    Conv2d(32 -> 64, k=3, pad=1) -> ReLU -> MaxPool2d(2)
+    Flatten (3136) -> Linear(3136 -> 128) -> ReLU -> Linear(128 -> 10)
+
+421 642 parametres, comme la version faite main.
+
+---
+
+## 3. La preuve que c'est bien le meme modele
+
+Deux mecanismes, parce qu'une reecriture non verifiee ne vaut rien.
+
+### 3.1 Les poids sont interchangeables
+
+`modele.py` sait **lire et ecrire le format `.npz` de la version NumPy**
+(memes cles `conv_0_kernels`, `dense_7_W`, ... ; biais remis en forme `(C, 1)`).
+
+Consequences :
+- on peut charger dans PyTorch un modele entraine a la main et **continuer** dessus ;
+- on peut sauvegarder depuis PyTorch et **reutiliser les poids dans les scripts NumPy** ;
+- les experiences des deux pistes restent comparables.
+
+### 3.2 Le mode `--parite`
+
+Charge **le meme fichier de poids** dans les deux implementations, calcule
+l'accuracy propre et sous attaque sur **le meme echantillon**, et compare :
+
+    python3 adversarial/torch/harden_torch.py --parite
+
+Resultat obtenu (200 images, `model_weights_full.npz`) :
+
+| Mesure | PyTorch | NumPy | Ecart |
+|---|---|---|---|
+| propre | 98.50% | 98.50% | **0.00%** |
+| FGSM eps=0.30 | 1.50% | 1.50% | **0.00%** |
+| PGD eps=0.20 | 0.00% | 0.00% | **0.00%** |
+| FGSM eps=0.10 | 76.50% | 77.00% | 0.50% |
+
+L'ecart de 0.50% sur FGSM eps=0.10 correspond a **une seule image sur 200** :
+les deux implementations somment les gradients dans des ordres differents
+(float32), et une image pile sur la frontiere de decision bascule. C'est le
+comportement attendu, et c'est la raison d'etre du test.
+
+---
+
+## 4. Ce qu'on perd (et qu'il faut assumer)
+
+- **La pedagogie du backward manuel.** C'est tout l'interet de `src/` : avoir
+  ecrit `col2im`, la retropropagation de la convolution, le routage du gradient
+  dans le MaxPool. PyTorch le fait pour nous, donc on n'apprend plus rien a ce
+  niveau.
+- **Le controle fin.** Un `loss.backward()` cache l'ordre des operations. Quand
+  quelque chose se comporte bizarrement, on debugue moins facilement.
+- **Une dependance lourde.** PyTorch, c'est ~800 Mo installe, et une version
+  supportee par ta version de Python.
+
+C'est pour ca que **`src/` reste la reference** : c'est lui qui montre comment
+ca marche, `adversarial/torch/` sert a produire des chiffres a une vitesse
+utilisable.
+
+---
+
+## 5. Utilisation
+
+    # 1. Verifier l'equivalence avec la version faite main (a faire en premier)
+    python3 adversarial/torch/harden_torch.py --parite
+
+    # 2. Verifier que tout tourne
+    python3 adversarial/torch/harden_torch.py --quick
+
+    # 3. La recette recommandee
+    python3 adversarial/torch/harden_torch.py --n-train 60000 --epochs 15 --pgd-steps 5 --augment
+
+    # 4. Variante TRADES
+    python3 adversarial/torch/harden_torch.py --n-train 60000 --epochs 15 --loss trades
+
+    # 5. Evaluation honnete d'un modele (accepte aussi un .npz en entree)
+    python3 adversarial/torch/harden_torch.py --report models/harden_torch_best.pt --restarts 3
+
+    # 6. Sauvegarder aussi au format NumPy (reutilisable dans les scripts faits main)
+    python3 adversarial/torch/harden_torch.py ... --npz models/harden_torch_best.npz
+
+    # 7. La campagne des 3 runs (reference / augmentation / TRADES) avec ce moteur
+    ./adversarial/scripts/campagne.sh --torch --liste
+    ./adversarial/scripts/campagne.sh --torch
+
+Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,
+`--augment`, `--aug-fort`, `--aug-config`, `--lr`, `--lr-drop`, `--clip`,
+`--warm-start`, `--restarts`...), plus :
+
+    --device auto|cpu|cuda|dml      choix du peripherique (auto par defaut)
+    --batch 256                     conseille sur GPU
+    --parite                        test d'equivalence avec NumPy
+    --npz FICHIER                   exporter les poids au format NumPy
+
+---
+
+## 6. Preparer le GPU (carte AMD)
+
+Le code detecte tout seul : `cuda` (qui couvre aussi ROCm) > `directml` > `cpu`.
+
+### Voie recommandee : ROCm sous WSL2
+
+Le **RX 7800 XT** (nom de code `gfx1101`) est listé dans la matrice de
+compatibilite ROCm en WSL2 (ROCm 6.4.2, Ubuntu 22.04 ou 24.04, avec
+AMD Software Adrenalin Edition « for WSL2 »).
+
+    # cote Windows : installer AMD Software Adrenalin Edition pour WSL2
+    # puis dans WSL (Ubuntu 22.04 ou 24.04) :
+    pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+    export HSA_OVERRIDE_GFX_VERSION=11.0.0
+    python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+
+Sous ROCm, PyTorch expose le GPU via l'API `cuda` (c'est HIP derriere) : le
+`True` ci-dessus signifie que la carte est vue.
+
+### Voie de repli : DirectML (Windows natif)
+
+    pip install torch-directml
+    python adversarial/torch/harden_torch.py --device dml ...
+
+DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
+**maintenance mode** : plus de developpement actif, et plus lent que ROCm.
+
+### Deux reglages qui comptent sur GPU
+
+- **Batch** : 256 minimum. A 64 images les noyaux sont trop petits pour occuper
+  la carte, et le gain s'effondre.
+- **AMP** (precision mixte float16) : a activer si la memoire devient limitante
+  — pas encore implemente ici, a ajouter si besoin.
+
+---
+
+## 7. Regles de la piste
+
+1. **`src/` reste la reference.** Aucune modification du moteur fait main au
+   nom de la performance PyTorch.
+2. **Tout resultat obtenu en PyTorch doit etre signale comme tel** dans
+   `adversarial/memoire.md` (piste « torch »), pour ne pas melanger les mesures
+   des deux moteurs.
+3. **Re-verifier `--parite` a chaque changement d'architecture.** C'est le seul
+   garde-fou contre une divergence silencieuse entre les deux implementations.
+4. Les poids restent **interchangeables au format `.npz`** : c'est ce qui garde
+   les deux pistes comparables.
+
+---
+
+## 8. Fichiers
+
+    torch/
+    |-- README.md          <- ce fichier
+    |-- modele.py          <- meme architecture en nn.Module + conversion .npz
+    |-- attaques.py        <- FGSM et PGD (memes formules)
+    |-- entrainement.py    <- pgdat / trades, augmentation, validation robuste
+    `-- harden_torch.py    <- point d'entree (memes options que harden2.py)

@@ -1,0 +1,277 @@
+"""Entrainement durci en PyTorch : memes recettes que `harden2.py`.
+
+Recettes disponibles (identiques a la version NumPy) :
+  - pgdat  : entrainement sur exemples propres + adverses (Madry)
+  - trades : CE(propre) + beta * KL(propre || adverse) (Zhang et al. 2019)
+
+Plus : warm start, decroissance du learning rate, ecrasement des gradients,
+augmentation de donnees, selection du modele sur la robustesse de validation.
+
+L'augmentation reproduit les memes transformations que `augment.py` (rotation,
+zoom, translation, bruit impulsionnel, cutout, epaisseur) mais avec des
+operations PyTorch, donc sur GPU et sans boucle Python sur les images.
+"""
+
+import sys
+import time
+from os.path import abspath, dirname, join
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))
+sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, join(ROOT_DIR, "src"))
+
+from data import MNISTLoader, normalize, add_channel_dim  # noqa: E402
+from adversarial.torch.attaques import attaque, accuracy  # noqa: E402
+
+
+CONFIG_AUG = {
+    "rotation": 12.0, "translation": 2, "zoom": 0.10,
+    "bruit_p": 0.02, "bruit_intensite": (0.5, 1.0),
+    "cutout": 6, "epaisseur": 0.3, "epaisseur_melange": 0.6, "prob": 0.5,
+}
+
+
+# --------------------------------------------------------------------------
+#  Donnees (meme selection que harden2.py, pour une comparaison equitable)
+# --------------------------------------------------------------------------
+
+def charger_train(n_train, n_val, dataset="mnist"):
+    """Reproduit exactement la selection de donnees de harden2.py."""
+    loader = MNISTLoader()
+    (x_all, y_all), _ = loader.load(join(ROOT_DIR, "data"))
+    rng = np.random.RandomState(0)
+    idx = rng.choice(len(x_all), size=min(n_train + n_val, len(x_all)), replace=False)
+    x = np.ascontiguousarray(normalize(add_channel_dim(x_all[idx])).transpose(0, 3, 1, 2))
+    y = y_all[idx]
+    x = torch.from_numpy(x).float()
+    y = torch.from_numpy(y).long()
+    return (x[n_val:], y[n_val:]), (x[:n_val], y[:n_val])
+
+
+def charger_test(dataset="mnist", n=500):
+    """Meme echantillon de test que les scripts NumPy (load_data de fgsm.py).
+
+    Reimplemente ici plutot qu'importe, pour que la piste PyTorch n'ait besoin
+    que de torch et numpy (les scripts NumPy importent matplotlib au chargement).
+    La selection est identique : RandomState(42) sur l'ordre du test set.
+    """
+    if dataset == "mnist":
+        loader = MNISTLoader()
+        (_, _), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
+    else:
+        from data import EMNISTLoader
+        from adversarial.scripts.fgsm import ensure_data
+        ensure_data()
+        loader = EMNISTLoader("letters")
+        (_, _), (x_test, y_test) = loader.load(join(ROOT_DIR, "data", "emnist"))
+
+    rng = np.random.RandomState(42)
+    idx = rng.choice(len(x_test), size=min(n, len(x_test)), replace=False)
+    x = np.ascontiguousarray(
+        normalize(add_channel_dim(x_test[idx])).transpose(0, 3, 1, 2))
+    return torch.from_numpy(x).float(), torch.from_numpy(y_test[idx]).long()
+
+
+# --------------------------------------------------------------------------
+#  Augmentation (memes transformations que augment.py)
+# --------------------------------------------------------------------------
+
+def _affine(x, degre_max, zoom_max):
+    """Rotation + echelle via grid_sample (le fond reste noir)."""
+    n, _, h, w = x.shape
+    dev = x.device
+    a = torch.deg2rad(torch.empty(n, device=dev).uniform_(-degre_max, degre_max))
+    s = 1.0 + torch.empty(n, device=dev).uniform_(-zoom_max, zoom_max)
+    cos, sin = torch.cos(a) * s, torch.sin(a) * s
+    zero = torch.zeros_like(cos)
+    theta = torch.stack([
+        torch.stack([cos, sin, zero], dim=1),
+        torch.stack([-sin, cos, zero], dim=1),
+    ], dim=1)                                   # (N, 2, 3)
+    grille = F.affine_grid(theta, x.shape, align_corners=False)
+    return F.grid_sample(x, grille, align_corners=False, padding_mode="zeros")
+
+
+def _translation(x, decalage_max):
+    n, _, h, w = x.shape
+    dev = x.device
+    dx = torch.randint(-decalage_max, decalage_max + 1, (n,), device=dev).float()
+    dy = torch.randint(-decalage_max, decalage_max + 1, (n,), device=dev).float()
+    cos = torch.ones_like(dx)
+    zero = torch.zeros_like(dx)
+    theta = torch.stack([
+        torch.stack([cos, zero, -2.0 * dx / w], dim=1),
+        torch.stack([zero, cos, -2.0 * dy / h], dim=1),
+    ], dim=1)
+    grille = F.affine_grid(theta, x.shape, align_corners=False)
+    return F.grid_sample(x, grille, align_corners=False, padding_mode="zeros")
+
+
+def _bruit(x, p, intensite):
+    """Sel et poivre : pixels allumes sur le fond, quelques pixels du trait eteints."""
+    fond = x < 0.2
+    sel = (torch.rand_like(x) < p) & fond
+    bas, haut = intensite
+    val = torch.rand_like(x) * (haut - bas) + bas
+    x = torch.where(sel, val, x)
+    poi = (torch.rand_like(x) < p * 0.5) & (x > 0.2)
+    return torch.where(poi, torch.zeros_like(x), x)
+
+
+def _cutout(x, taille_max):
+    n, _, h, w = x.shape
+    dev = x.device
+    t = torch.randint(taille_max // 2, taille_max + 1, (n,), device=dev)
+    y0 = (torch.rand(n, device=dev) * (h - t).float()).long()
+    x0 = (torch.rand(n, device=dev) * (w - t).float()).long()
+    yy = torch.arange(h, device=dev).view(1, 1, h, 1)
+    xx = torch.arange(w, device=dev).view(1, 1, 1, w)
+    masque = ((yy >= y0.view(-1, 1, 1, 1)) & (yy < (y0 + t).view(-1, 1, 1, 1))
+              & (xx >= x0.view(-1, 1, 1, 1)) & (xx < (x0 + t).view(-1, 1, 1, 1)))
+    return torch.where(masque, torch.zeros_like(x), x)
+
+
+def _epaisseur(x, melange):
+    """Epaissit ou amincit le trait (element en croix = max_pool 3x3, padding 1)."""
+    n = x.shape[0]
+    dil = F.max_pool2d(x, 3, stride=1, padding=1)
+    ero = -F.max_pool2d(-x, 3, stride=1, padding=1)
+    choix = (torch.rand(n, 1, 1, 1, device=x.device) < 0.5).float()
+    epais = x + melange * (dil - x)
+    fin = x + melange * (ero - x)
+    return choix * epais + (1 - choix) * fin
+
+
+def augmenter(x, cfg=None):
+    """Pipeline aleatoire, memes transformations que augment.py."""
+    c = dict(CONFIG_AUG)
+    if cfg:
+        c.update(cfg)
+    if c["rotation"] or c["zoom"]:
+        x = _affine(x, c["rotation"], c["zoom"])
+    if c["translation"] and torch.rand(()) < c["prob"]:
+        x = _translation(x, c["translation"])
+    if c["epaisseur"] and torch.rand(()) < c["epaisseur"]:
+        x = _epaisseur(x, c["epaisseur_melange"])
+    if c["bruit_p"] and torch.rand(()) < c["prob"]:
+        x = _bruit(x, c["bruit_p"], c["bruit_intensite"])
+    if c["cutout"] and torch.rand(()) < c["prob"] * 0.5:
+        x = _cutout(x, c["cutout"])
+    return x.clamp(0.0, 1.0)
+
+
+# --------------------------------------------------------------------------
+#  Entrainement
+# --------------------------------------------------------------------------
+
+def entrainer(modele, opt, train, val, args, device):
+    x_tr, y_tr = train
+    x_val, y_val = val
+    n = len(x_tr)
+    meilleur = -1.0
+    lr = args.lr
+    gen = torch.Generator(device="cpu").manual_seed(args.seed)
+
+    for epoch in range(1, args.epochs + 1):
+        t0 = time.time()
+
+        if args.lr_drop:
+            paliers = [float(p) for p in args.lr_drop.split(",")]
+            if any(abs(epoch / args.epochs - p) < 0.5 / args.epochs for p in paliers):
+                lr *= 0.1
+                for g in opt.param_groups:
+                    g["lr"] = lr
+                print(f"  [LR] epoch {epoch} : lr -> {lr:.5f}")
+
+        ordre = torch.randperm(n, generator=gen)
+        perte_tot = 0.0
+        modele.train()
+
+        for debut in range(0, n, args.batch):
+            bi = ordre[debut:debut + args.batch]
+            bx = x_tr[bi].to(device)
+            by = y_tr[bi].to(device)
+            if args.augment:
+                bx = augmenter(bx, args.aug_cfg)
+
+            # 1) exemple adverse (genere avec le modele courant)
+            modele.eval()
+            bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps)
+            modele.train()
+
+            # 2) perte : pgdat (propre + adverse) ou trades (CE + beta*KL)
+            if args.loss == "trades":
+                logits = modele(bx)
+                logits_adv = modele(bx_adv)
+                ce = F.cross_entropy(logits, by)
+                kl = F.kl_div(F.log_softmax(logits, dim=1),
+                              F.softmax(logits_adv.detach(), dim=1),
+                              reduction="batchmean")
+                perte = ce + args.beta * kl
+            else:
+                if args.mix < 1.0:
+                    k = int(round(len(bx) * args.mix))
+                    cx = torch.cat([bx, bx_adv[:k]], dim=0)
+                    cy = torch.cat([by, by[:k]], dim=0)
+                else:
+                    cx, cy = bx_adv, by
+                perte = F.cross_entropy(modele(cx), cy)
+
+            opt.zero_grad(set_to_none=True)
+            perte.backward()
+            if args.clip:
+                torch.nn.utils.clip_grad_norm_(modele.parameters(), args.clip)
+            opt.step()
+            perte_tot += perte.item() * len(bx)
+
+        # 3) validation : propre + sous attaque
+        modele.eval()
+        with torch.no_grad():
+            acc_clean = accuracy(modele, x_val.to(device), y_val.to(device))
+        xa = attaque(modele, x_val.to(device), y_val.to(device),
+                     args.eps, "pgd", args.val_steps)
+        acc_rob = accuracy(modele, xa, y_val.to(device))
+
+        dt = time.time() - t0
+        reste = (args.epochs - epoch) * dt / 60
+        print(f"  Epoch {epoch:>2}/{args.epochs} | loss {perte_tot / n:6.4f} | "
+              f"val clean {acc_clean:6.2%} | val PGD{args.val_steps} {acc_rob:6.2%} | "
+              f"{dt / 60:5.1f} min | reste ~{reste:4.0f} min")
+
+        torch.save(modele.state_dict(), args.out + "_last.pt")
+        if acc_rob > meilleur:
+            meilleur = acc_rob
+            torch.save(modele.state_dict(), args.out)
+            print(f"           -> meilleur modele sauvegarde (val PGD {acc_rob:.2%})")
+
+    return meilleur
+
+
+# --------------------------------------------------------------------------
+#  Evaluation
+# --------------------------------------------------------------------------
+
+def evaluer(modele, x_te, y_te, eps_list, steps, restarts, device):
+    res = {"fgsm": {}, "pgd": {}}
+    for eps in eps_list:
+        res["fgsm"][eps] = accuracy(modele, attaque(modele, x_te, y_te, eps, "fgsm"), y_te)
+        pires = []
+        for r in range(restarts):
+            torch.manual_seed(1000 + r)
+            pires.append(accuracy(modele, attaque(modele, x_te, y_te, eps, "pgd", steps), y_te))
+        res["pgd"][eps] = min(pires)
+    return res
+
+
+def rapport(modele, x_te, y_te, eps_list, steps, restarts, label, device):
+    print(f"\n[EVAL] {label} ({len(x_te)} images, PGD {steps} pas, {restarts} restart(s))")
+    print(f"{'eps':>6} | {'FGSM':>8} | {'PGD (pire cas)':>15}")
+    print("-" * 36)
+    res = evaluer(modele, x_te, y_te, eps_list, steps, restarts, device)
+    for eps in eps_list:
+        print(f"{eps:>6} | {res['fgsm'][eps]:>8.1%} | {res['pgd'][eps]:>15.1%}")
+    return res

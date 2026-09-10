@@ -1,0 +1,14 @@
+# Dependances du moteur fait main (obligatoires)
+numpy>=2.0
+matplotlib>=3.8
+
+# Piste PyTorch (optionnelle) : entrainement plus rapide + GPU.
+# Voir adversarial/torch/README.md pour le detail et le setup ROCm / DirectML.
+#
+#   CPU                  : pip install torch
+#   GPU AMD (Linux/WSL)  : pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+#   GPU AMD (Windows)    : pip install torch-directml
+#
+# Attention : PyTorch ne supporte pas toutes les versions de Python.
+# Python 3.10 a 3.12 est le plus sur.
+# torch>=2.4

@@ -25,6 +25,7 @@ adversarial/
 |   |-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
 |   |-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
 |   `-- augment.py     <- augmentation de données (rotation, zoom, bruit, cutout)  OK opérationnel
+|-- torch/             <- piste PyTorch : mêmes maths, autograd, ~9x plus rapide, GPU
 `-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
 
@@ -386,6 +387,43 @@ Reproduire : `python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3`
 > script les écrit lui-même dans `adversarial/results/harden_curve_pgd.png` et
 > `adversarial/results/harden_history_pgd.png` au moment du run (elles ont été
 > générées sur la machine de Maraa, pas poussées).
+
+---
+
+##  La piste PyTorch — quand le modèle grossit
+
+Le dossier `adversarial/scripts/` contient l'implémentation **faite main** :
+chaque gradient est écrit à la main (`Conv2D.backward`, `col2im`, le routage du
+gradient dans le MaxPool...). C'est la référence pédagogique du projet, et elle
+ne bouge pas.
+
+Mais elle est **au plafond de son BLAS** : mesuré à 172 img/s sur un i5-6300U,
+avec un temps dominé par les produits matriciels eux-mêmes. Doubler la taille du
+modèle double la durée d'entraînement, et le GPU n'est pas accessible depuis
+NumPy.
+
+`adversarial/torch/` rejoue **exactement les mêmes expériences** avec PyTorch :
+
+- même architecture (421 642 paramètres), mêmes formules d'attaque,
+  mêmes recettes (`pgdat`, `trades`, augmentation, warm start, écrasement des
+  gradients, sélection sur la robustesse) ;
+- les poids sont **interchangeables** (format `.npz` dans les deux sens) ;
+- environ **9x plus rapide sur CPU**, et utilisable sur GPU.
+
+```bash
+# Vérifier l'équivalence avec la version faite main (à lancer en premier)
+python3 adversarial/torch/harden_torch.py --parite
+
+# Même campagne qu'en NumPy, en plus rapide
+python3 adversarial/torch/harden_torch.py --n-train 60000 --epochs 15 --pgd-steps 5 --augment
+```
+
+Résultat du test de parité (200 images, mêmes poids) : accuracy propre
+**98.50 %** dans les deux implémentations, FGSM ε=0.3 **1.50 %** dans les deux,
+PGD ε=0.2 **0.00 %** dans les deux.
+
+Tout le détail (correspondance terme à terme, ce qu'on perd, setup ROCm pour
+cartes AMD, réglage du batch) : [`torch/README.md`](torch/README.md).
 
 ---
 

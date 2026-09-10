@@ -27,20 +27,27 @@ FORCER=0
 EPOCHS=10
 IMAGES=60000
 ETAPES=5
-if [ "$MODE" = "--rapide" ]; then
-    EPOCHS=2
-    IMAGES=10000
-    ETAPES=3
-fi
+MOTEUR="adversarial/scripts/harden2.py"
+EXT="npz"
+LISTE=0
+for a in "$@"; do
+    case "$a" in
+        --rapide) EPOCHS=2; IMAGES=10000; ETAPES=3 ;;
+        --forcer) FORCER=1 ;;
+        --torch)  MOTEUR="adversarial/torch/harden_torch.py"; EXT="pt" ;;
+        --liste)  LISTE=1 ;;
+    esac
+done
 
 # nom|options
 RUNS=(
-"a_ref_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --out models/harden2_ref_pgdat.npz"
-"b_aug_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --out models/harden2_aug_pgdat.npz"
-"c_aug_trades|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --loss trades --out models/harden2_aug_trades.npz"
+"a_ref_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --out models/harden2_ref_pgdat.$EXT"
+"b_aug_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --out models/harden2_aug_pgdat.$EXT"
+"c_aug_trades|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --loss trades --out models/harden2_aug_trades.$EXT"
 )
 
-if [ "$MODE" = "--liste" ]; then
+if [ "$LISTE" -eq 1 ]; then
+    echo "Moteur : $MOTEUR"
     echo "Runs prevus (ressources : $IMAGES images, $EPOCHS epochs, PGD-$ETAPES) :"
     for r in "${RUNS[@]}"; do echo "  - ${r%%|*}  ->  ${r#*|}"; done
     exit 0
@@ -48,6 +55,7 @@ fi
 
 echo "================================================================"
 echo "  CAMPAGNE DURCIE   ($IMAGES images, $EPOCHS epochs, PGD-$ETAPES)"
+echo "  moteur    : $MOTEUR"
 echo "  demarrage : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  logs      : $LOGS/"
 echo "================================================================"
@@ -68,7 +76,7 @@ for entree in "${RUNS[@]}"; do
 
     t0=$(date +%s)
     # shellcheck disable=SC2086
-    python3 adversarial/scripts/harden2.py $opts 2>&1 | tee "$LOGS/$nom.log"
+    python3 "$MOTEUR" $opts 2>&1 | tee "$LOGS/$nom.log"
     rc=${PIPESTATUS[0]}
     t1=$(date +%s)
     m=$(( (t1 - t0) / 60 ))
@@ -86,6 +94,6 @@ echo "  CAMPAGNE TERMINEE - $(date '+%Y-%m-%d %H:%M:%S')"
 echo "================================================================"
 echo
 echo "Resultats a comparer :"
-echo "  python3 adversarial/scripts/harden2.py --report models/harden2_ref_pgdat.npz  --restarts 3"
-echo "  python3 adversarial/scripts/harden2.py --report models/harden2_aug_pgdat.npz  --restarts 3"
-echo "  python3 adversarial/scripts/harden2.py --report models/harden2_aug_trades.npz --restarts 3"
+echo "  python3 $MOTEUR --report models/harden2_ref_pgdat.$EXT --restarts 3"
+echo "  python3 $MOTEUR --report models/harden2_aug_pgdat.$EXT --restarts 3"
+echo "  python3 $MOTEUR --report models/harden2_aug_trades.$EXT --restarts 3"

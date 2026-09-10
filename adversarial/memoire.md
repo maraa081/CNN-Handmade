@@ -291,6 +291,33 @@
   pas l'adversarial training (elle aide la precision propre et les perturbations
   naturelles ; une attaque L-inf bornee reste du ressort de PGD-AT).
 
+### 2026-09-10 - Piste PyTorch (`adversarial/torch/`) : le banc d'essai rapide
+
+- Contexte : Maraa veut utiliser son GPU (RX 7800 XT). Or le moteur fait main
+  est en NumPy -> CPU uniquement, par construction. Aucun outil ne peut
+  accelerer une boucle NumPy : "utiliser le GPU" implique de changer de moteur.
+- Decision (choix de Maraa) : **option B** — garder le code fait main intact
+  comme reference pedagogique, et ajouter une piste PyTorch avec autograd qui
+  rejoue exactement les memes experiences.
+- Ecrit : `adversarial/torch/{modele,attaques,entrainement}.py` +
+  `harden_torch.py`. Memes options que `harden2.py`, plus `--device`, `--parite`,
+  `--npz`.
+- **Parite verifiee** (200 images, `model_weights_full.npz`) : accuracy propre
+  98.50 % dans les deux implementations, FGSM eps=0.30 → 1.50 % dans les deux,
+  PGD eps=0.20 → 0.00 % dans les deux. Seul ecart : 0.50 % sur FGSM eps=0.10,
+  soit UNE image sur 200 (ordres de sommation differents en float32).
+- Debit mesure : 5000 images en PGD-5 = 23 s en PyTorch CPU, contre ~3 min 20
+  estime en NumPy -> **environ 9x**.
+- Les poids restent interchangeables (.npz dans les deux sens) : c'est ce qui
+  garde les deux pistes comparables.
+- Doc dediee : `adversarial/torch/README.md` (correspondance terme a terme,
+  ce qu'on perd, setup ROCm WSL2 pour le RX 7800 XT / gfx1101, DirectML en
+  repli, reglage du batch a 256 sur GPU).
+- [warn] PyTorch ne supporte pas Python 3.14 (cette machine) : venv en Python
+  3.11 utilise pour la validation.
+- [todo] Installer le stack ROCm sur le PC gaming, puis mesurer le gain GPU
+  reel et le documenter ici.
+
 ---
 
 ##  Tableau des résultats cumulés
