@@ -106,6 +106,39 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 
 ##  Historique
 
+### 2026-08-26 — Docs adversariales + résultats EMNIST full
+
+- `adversarial/attacks.md` (théorie FGSM / PGD / ciblées / transfert, threat model)
+  et `adversarial/defenses.md` (min-max de Madry, limites, méthodologie) écrits.
+- PGD vs FGSM sur EMNIST full (26 lettres, 92.0% test) : PGD tombe à **0.0% dès
+  eps=0.20** (FGSM 10.0%). EMNIST est plus fragile que MNIST (44.4% à eps=0.10).
+- 7 courbes versionnées dans `adversarial/results/`.
+- Nettoyage : flèches unicode remplacées par `->` dans les deux nouveaux docs.
+
+### 2026-08-25 — Défenses : adversarial training puis version durcie
+
+- `defend.py` : adversarial training FGSM (eps 0.15), avec comparaison ÉQUITABLE
+  à données égales (5000 images identiques) -> gain de +5 à +18.4 pts partout.
+  Limite : ne tient pas face à PGD (à eps=0.05 le défendu est même pire que le
+  standard). FGSM training est une base, pas une fin.
+- `harden.py` : version durcie en 3 couches (adversarial training PGD 7 steps
+  eps 0.3, feature squeezing, évaluation multi-attaques).
+  Résultats : clean 67.2% (vs 98.6%), FGSM eps=0.30 -> 23.8% (vs 1.8%),
+  PGD eps=0.20 -> 9.6% (vs 0.0%), attaques ciblées tenues à 49-64%.
+- Leçon : une défense se prouve contre l'attaquant le plus fort, pas contre la
+  version la plus simple de l'attaque. Prix payé : l'accuracy propre.
+
+### 2026-08-24 — Attaques adversariales (FGSM, PGD, transfert)
+
+- `adversarial/fgsm.py` opérationnel : MNIST full 98.5% -> **2.1%** à eps=0.30.
+- `adversarial/pgd.py` : **0.0% dès eps=0.20** — PGD écrase FGSM (21.6% à eps=0.20) :
+  FGSM sous-estime la vulnérabilité réelle.
+- `adversarial/transfer.py` : transfert full -> classic jusqu'à **72.3%** à eps=0.30
+  (attaque boîte noire viable) ; la régularisation (Dropout + L2) freine le transfert.
+- EMNIST full entraîné (124 800 images, 10 epochs, 92.0% test) sur la machine de Maraa.
+- Leçon : le CNN from scratch est vulnérable, comme tout modèle linéaire en grande
+  dimension (Goodfellow 2014).
+
 ### 2026-08-24 — EMNIST Letters (26 classes) 
 
 - **Objectif** : passer de MNIST (10 chiffres) aux lettres manuscrites a-z.
@@ -153,8 +186,6 @@ Tous utilisent la **même architecture**, les **mêmes données**, seul l'optimi
 - `cnn.py` réécrit comme script de démo/test
 - Ajout du stub `Dense` dans layers (prêt à implémenter)
 - README mis à jour avec la structure
-
-### 2026-07-04 — Conv2D backward + col2im
 
 ### 2026-07-04 — Conv2D backward + col2im
 

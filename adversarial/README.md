@@ -344,7 +344,11 @@ Poids du modèle durci : `models/defend_pgd_mnist_weights.npz`.
 > modèle : la robustesse se transfère aussi contre le transfert d'attaque.
 
 Reproduire : `python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3`
-(courbes : `adversarial/results/harden_curve_pgd.png`, `harden_history_pgd.png`)
+
+> [warn] Ces deux courbes ne sont pas encore versionnées dans le dépôt : le
+> script les écrit lui-même dans `adversarial/results/harden_curve_pgd.png` et
+> `adversarial/results/harden_history_pgd.png` au moment du run (elles ont été
+> générées sur la machine de Maraa, pas poussées).
 
 ---
 

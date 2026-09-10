@@ -31,6 +31,8 @@ Comprendre chaque brique du deep learning en la codant soi-même — im2col, ré
 | **Optimiseur Momentum** (SGD + élan + weight_decay) | OK |
 | **Optimiseur Adam** (lr adaptatif + momentum + weight_decay) | OK |
 | **Framework d'expérimentations** (comparaison d'optimiseurs) | OK |
+| **Attaques adversariales** (FGSM, PGD, ciblées, transfert) | OK |
+| **Défenses** (adversarial training FGSM, version durcie PGD, feature squeezing) | OK |
 
 ##  Architecture
 
@@ -80,8 +82,12 @@ CNN-Handmade/
 |   `-- max_config_weights.npz     — Adam + Dropout + L2
 |-- results/                     <- graphiques générés (PNG/CSV)
 |-- adversarial/                 <- sécurité IA : attaques & défense
-|   |-- README.md / memoire.md
-|   `-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py)
+|   |-- README.md                     - mode d'emploi + résultats clés
+|   |-- memoire.md                    - carnet de bord des expériences
+|   |-- attacks.md                    - théorie des attaques (FGSM, PGD, transfert)
+|   |-- defenses.md                   - théorie des défenses + méthodologie
+|   |-- results/                      - courbes et images (PNG)
+|   `-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, eval_defended.py)
 |-- docs/
 |   |-- data-flow.md
 |   `-- memoire-projet.md          <- carnet de bord du projet
@@ -185,6 +191,44 @@ Si le zip local n'est pas là, il télécharge automatiquement depuis le site NI
 **Résultat rapide** (5000 images, 3 epochs) : **43.2% test** (hasard = 3.8%). L'entraînement complet vise ~90%.
 
 > [warn] **Piège** : le test set EMNIST est trié par classe — échantillonner aléatoirement pour évaluer, jamais `x_test[:N]`.
+
+##  Sécurité IA — attaques et défense (adversarial)
+
+Un modèle à 98.6% peut tomber à 0% à cause d'un bruit invisible à l'oeil.
+C'est la partie "sécurité IA" du projet : attaquer mon propre CNN, puis
+chercher à le défendre. Tout est fait à la main, sans bibliothèque d'attaque.
+
+```bash
+# Attaque FGSM sur le modèle MNIST complet
+python3 adversarial/scripts/fgsm.py --weights models/model_weights_full.npz --n 1000
+
+# Attaque PGD (20 itérations, démarrage aléatoire) + comparaison avec FGSM
+python3 adversarial/scripts/pgd.py --weights models/model_weights_full.npz --n 500 --compare
+
+# Transfert d'attaque entre deux modèles (simule une attaque boîte noire)
+python3 adversarial/scripts/transfer.py --src full --dst max_config --attack pgd
+
+# Défense : adversarial training PGD + feature squeezing, puis évaluation multi-attaques
+python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
+```
+
+**Résultats clés**
+
+| Expérience | Résultat |
+|---|---|
+| FGSM, MNIST full (98.6% propre) | 1.8% à eps=0.30 |
+| PGD, MNIST full (98.6% propre) | 0.0% dès eps=0.20 |
+| PGD, EMNIST full (92.0% propre) | 0.0% dès eps=0.20 |
+| Transfert full -> classic | 72.3% de transfert à eps=0.30 |
+| Modèle durci (PGD training) | clean 67.2%, et 23.8% sous FGSM eps=0.30 (vs 1.8%) |
+
+> **Leçon centrale** : FGSM sous-estime la vulnérabilité réelle. Un modèle se
+> juge contre l'attaque la plus forte (PGD), pas contre la plus simple.
+
+Le détail complet est dans [`adversarial/README.md`](adversarial/README.md) :
+théorie et algorithmes dans [`attacks.md`](adversarial/attacks.md) et
+[`defenses.md`](adversarial/defenses.md), historique des runs dans
+[`adversarial/memoire.md`](adversarial/memoire.md).
 
 ##  Expérimentations — Comparer les techniques
 
