@@ -29,6 +29,7 @@ IMAGES=60000
 ETAPES=5
 MOTEUR="adversarial/scripts/harden2.py"
 EXT="npz"
+SUFIXE=""
 # Permet de pointer un autre interpreteur (venv) : PYTHON=python ./campagne.sh
 if [ -z "${PYTHON:-}" ]; then
     if command -v python3 >/dev/null 2>&1; then PYTHON=python3; else PYTHON=python; fi
@@ -36,18 +37,22 @@ fi
 LISTE=0
 for a in "$@"; do
     case "$a" in
-        --rapide) EPOCHS=2; IMAGES=10000; ETAPES=3 ;;
+        --rapide) EPOCHS=2; IMAGES=10000; ETAPES=3; SUFIXE="_rapide" ;;
         --forcer) FORCER=1 ;;
         --torch)  MOTEUR="adversarial/torch/harden_torch.py"; EXT="pt" ;;
         --liste)  LISTE=1 ;;
     esac
 done
 
+# Le suffixe evite que la version courte et la version complete ecrivent dans le
+# meme fichier : sinon la campagne complete saute tous les runs en croyant
+# qu'ils sont deja faits (bug constate le 2026-09-10 chez Maraa).
+
 # nom|options
 RUNS=(
-"a_ref_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --out models/harden2_ref_pgdat.$EXT"
-"b_aug_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --out models/harden2_aug_pgdat.$EXT"
-"c_aug_trades|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --loss trades --out models/harden2_aug_trades.$EXT"
+"a_ref_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --out models/harden2_ref_pgdat$SUFIXE.$EXT"
+"b_aug_pgdat|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --out models/harden2_aug_pgdat$SUFIXE.$EXT"
+"c_aug_trades|--n-train $IMAGES --epochs $EPOCHS --pgd-steps $ETAPES --augment --loss trades --beta 2 --out models/harden2_aug_trades$SUFIXE.$EXT"
 )
 
 if [ "$LISTE" -eq 1 ]; then
@@ -61,6 +66,7 @@ echo "================================================================"
 echo "  CAMPAGNE DURCIE   ($IMAGES images, $EPOCHS epochs, PGD-$ETAPES)"
 echo "  moteur    : $MOTEUR"
 echo "  python    : $PYTHON"
+echo "  suffixe   : '${SUFIXE:-aucun}'"
 echo "  demarrage : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  logs      : $LOGS/"
 echo "================================================================"
@@ -99,6 +105,6 @@ echo "  CAMPAGNE TERMINEE - $(date '+%Y-%m-%d %H:%M:%S')"
 echo "================================================================"
 echo
 echo "Resultats a comparer :"
-echo "  python3 $MOTEUR --report models/harden2_ref_pgdat.$EXT --restarts 3"
-echo "  python3 $MOTEUR --report models/harden2_aug_pgdat.$EXT --restarts 3"
-echo "  python3 $MOTEUR --report models/harden2_aug_trades.$EXT --restarts 3"
+echo "  $PYTHON $MOTEUR --report models/harden2_ref_pgdat$SUFIXE.$EXT --restarts 3"
+echo "  $PYTHON $MOTEUR --report models/harden2_aug_pgdat$SUFIXE.$EXT --restarts 3"
+echo "  $PYTHON $MOTEUR --report models/harden2_aug_trades$SUFIXE.$EXT --restarts 3"

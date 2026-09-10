@@ -151,22 +151,53 @@ def attaque(model, x, y, eps, attack, steps, rng=None):
 #  Entrainement
 # --------------------------------------------------------------------------
 
+def _paliers_lr(spec, epochs):
+    """Epochs ou le learning rate est divise par 10 (voir harden_torch.py)."""
+    if not spec or epochs < 4:
+        return []
+    return sorted({max(1, int(round(float(p) * epochs)))
+                   for p in spec.split(",") if p.strip()})
+
+
+def _beta_effectif(beta, epoch, epochs, warmup):
+    """Rampe de beta pour TRADES (voir harden_torch.py)."""
+    if warmup <= 0:
+        return beta
+    # Rampe etalee sur AU MOINS 3 epochs, et partant de ZERO :
+    # le premier epoch est du CE pur (aucune KL), puis beta monte.
+    # Mesure : sans ce depart a zero, un modele deja converge s'effondre
+    # (val clean 98% -> 29% en 2 epochs, constate le 2026-09-10). La raison est
+    # que sur un modele converge la CE vaut ~0.01 quand la KL vaut ~1.3 : le
+    # terme KL ecrase tout et le modele minimise la KL en devenant constant.
+    frac = (epoch - 1) / max(3.0, warmup * epochs)
+    return beta * min(1.0, frac)
+
+
 def entrainer(model, x_tr, y_tr, x_val, y_val, args):
     N = len(x_tr)
     rng = np.random.RandomState(args.seed)
     historique = []
     meilleur = -1.0
     lr = args.lr
+    paliers = _paliers_lr(args.lr_drop, args.epochs)
+    if args.lr_drop and not paliers:
+        print(f"  [LR] planificateur desactive ({args.epochs} epochs : trop court)")
+    elif paliers:
+        print(f"  [LR] paliers aux epochs {paliers}")
 
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
 
-        # Decroissance du learning rate
-        if args.lr_drop:
-            paliers = [float(p) for p in args.lr_drop.split(",")]
-            if any(abs(epoch / args.epochs - p) < 0.5 / args.epochs for p in paliers):
-                lr *= 0.1
-                print(f"  [LR] epoch {epoch} : lr -> {lr:.5f}")
+        # Decroissance du learning rate. Paliers calcules en numeros d'epoch
+        # entiers : avec l'ancienne formule, un run de 2 epochs declenchait les
+        # deux paliers des le premier epoch et le lr s'effondrait.
+        if paliers and epoch in paliers:
+            lr *= 0.1
+            print(f"  [LR] epoch {epoch} : lr -> {lr:.5f}")
+
+        beta = _beta_effectif(args.beta, epoch, args.epochs, args.beta_warmup)
+        if args.loss == "trades" and epoch == 1:
+            print(f"  [TRADES] beta effectif : {beta:.2f} -> {args.beta:.2f}")
 
         idx = rng.permutation(N)
         perte, n_vus = 0.0, 0
@@ -185,18 +216,52 @@ def entrainer(model, x_tr, y_tr, x_val, y_val, args):
 
             # 2) gradient combine (propre + adversarial)
             if args.loss == "trades":
-                z_adv = model.forward(bx_adv)          # activations ecrasees
-                z = model.forward(bx)                  # activations propres
-                p, q = softmax(z), softmax(z_adv)
-                kl_vec = kl_divergence(p, q)           # (N,) par echantillon
+                # [fix CRITIQUE] Le gradient doit passer par LES DEUX branches.
+                # La premiere version ne retropropageait que par la branche
+                # propre, en traitant p_adverse comme une constante : la KL
+                # poussait alors la prediction propre vers la prediction
+                # ADVERSE (qui est fausse). Le modele apprenait a se tromper.
+                # Mesure en PyTorch : val clean 99.6% -> 8.0% en un epoch.
+                #
+                # Perte de reference : CE(z, y) + beta * KL(p_adv || p_clean)
+                #   d KL / d z_clean = p_clean - p_adv
+                #   d KL / d z_adv   = p_adv * (log(p_adv/p_clean) - KL)
+                # On retropropage la branche adverse d'abord, on met ses
+                # gradients de cote, puis la branche propre, et on additionne.
+                zb = model.forward(bx)
+                z_adv = model.forward(bx_adv)
+                p_clean, p_adv = softmax(zb), softmax(z_adv)
+                kl_vec = kl_divergence(p_adv, p_clean)
                 kl = kl_vec.mean()
-                y_oh = np.eye(p.shape[1])[by]
-                ce = -np.log(p[np.arange(len(by)), by] + 1e-12).mean()
-                # d/dz [ CE + beta*KL ] : (p - y) + beta * p * (log(p/q) - KL)
-                grad = ((p - y_oh)
-                        + args.beta * p * (np.log(p + 1e-12)
-                                           - np.log(q + 1e-12) - kl_vec[:, None]))
-                perte += (ce + args.beta * kl) * len(by)
+                y_oh = np.eye(p_clean.shape[1])[by]
+                ce = -np.log(p_clean[np.arange(len(by)), by] + 1e-12).mean()
+                n_b = len(by)
+
+                grad_adv = (beta / n_b) * p_adv * (
+                    np.log(p_adv + 1e-12) - np.log(p_clean + 1e-12)
+                    - kl_vec[:, None])
+                model.backward(grad_adv)
+                sauv = [(l.d_kernels.copy(), l.d_bias.copy())
+                        if hasattr(l, "kernels")
+                        else (l.dW.copy(), l.db.copy())
+                        for l in model.layers
+                        if hasattr(l, "kernels") or hasattr(l, "W")]
+
+                zb = model.forward(bx)
+                p_clean = softmax(zb)
+                grad_clean = ((p_clean - y_oh) + beta * (p_clean - p_adv)) / n_b
+                model.backward(grad_clean)
+                for l, (gk, gb) in zip(
+                        [l for l in model.layers
+                         if hasattr(l, "kernels") or hasattr(l, "W")], sauv):
+                    if hasattr(l, "kernels"):
+                        l.d_kernels += gk
+                        l.d_bias += gb
+                    else:
+                        l.dW += gk
+                        l.db += gb
+                grad = None
+                perte += (ce + beta * kl) * n_b
             else:
                 if args.mix < 1.0:
                     n_adv = int(round(len(bx) * args.mix))
@@ -208,7 +273,8 @@ def entrainer(model, x_tr, y_tr, x_val, y_val, args):
                 perte += model.loss_fn.forward(z, np.eye(z.shape[1])[cy]) * len(by)
                 grad = model.loss_fn.backward()
 
-            model.backward(grad)
+            if grad is not None:
+                model.backward(grad)
             clip_gradients(model, args.clip)
             model.update(lr)
             n_vus += len(by)
@@ -280,6 +346,8 @@ def main():
     p.add_argument("--val-steps", type=int, default=10)
     p.add_argument("--loss", choices=["pgdat", "trades"], default="pgdat")
     p.add_argument("--beta", type=float, default=6.0, help="poids KL (TRADES)")
+    p.add_argument("--beta-warmup", type=float, default=0.3,
+                   help="fraction du run sur laquelle beta monte de 10%% a 100%% (0 = pas de rampe)")
     p.add_argument("--mix", type=float, default=0.5,
                    help="part d'exemples adverses dans le batch (1.0 = Madry pur)")
     p.add_argument("--augment", action="store_true", help="active l'augmentation de donnees")

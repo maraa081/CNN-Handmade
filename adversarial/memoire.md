@@ -318,6 +318,51 @@
 - [todo] Installer le stack ROCm sur le PC gaming, puis mesurer le gain GPU
   reel et le documenter ici.
 
+### 2026-09-10 (soir) - Premier run chez Maraa : 3 bugs trouves et corriges
+
+Maraa a lance `campagne.sh --torch` sur son Windows. Trois problemes reels
+sont sortis du run.
+
+**1. La campagne complete a tout saute (bug de nommage).** La version `--rapide`
+et la version complete ecrivaient dans les MEMES fichiers `models/harden2_*.pt` :
+la campagne complete croyait donc les runs deja faits. Correction : suffixe
+`_rapide` ajoute aux noms de sortie en mode court.
+
+**2. Le learning rate s'effondrait des le premier epoch.** L'ancienne formule
+comparaît des fractions a chaque epoch : sur un run de 2 epochs, les DEUX
+paliers (0.5 et 0.8) se declenchaient a l'epoch 1, et le lr tombait de 0.05 a
+0.0005. Le modele n'apprenait quasiment rien. Correction : paliers calcules une
+seule fois en numeros d'epoch entiers, planificateur desactive sous 4 epochs.
+
+**3. TRADES etait FAUX (gradient sur une seule branche).** Le gradient ne
+passait que par la branche propre, en traitant la branche adverse comme une
+constante. Consequence : la KL poussait la prediction PROPRE vers la prediction
+ADVERSE (fausse) - le modele apprenait a se tromper. Mesure : val clean
+99.6% -> 8.0% en un seul epoch. Corrections :
+- PyTorch : les deux branches restent dans le graphe (forme de l'implementation
+  de reference : `F.kl_div(log_softmax(z_clean), softmax(z_adv))`).
+- NumPy : deux passes avant/arriere avec accumulation explicite des gradients
+  (`d KL / d z_clean = p_clean - p_adv`, `d KL / d z_adv = p_adv*(log(p_adv/p_clean) - KL)`).
+Apres correction : val clean 99.5% -> **98.0%** sur le meme test NumPy.
+
+**4. TRADES + warm start = piege.** Sur un modele deja converge, CE ~0.01 et
+KL ~1.3 : la KL ecrase tout. Mesures en PyTorch (2 epochs, 10000 images) :
+beta=6 -> clean 69%, beta=2 -> 87%, beta=1 -> 93%. Conclusion : avec
+`--warm-start auto`, garder **beta <= 2** ; beta=6 suppose un entrainement
+depuis zero. Run C de la campagne passe a `--beta 2`.
+
+**Resultats du run de Maraa (utiles malgre les bugs) :**
+- Sa machine est ~4x plus rapide que la machine OpenClaw en PyTorch :
+  epoch de 10000 images en PGD-3 = ~6-12 s (contre ~24 s ici).
+- Le run A (pgdat + warm start) a bien fonctionne : val clean 98.2-98.4%
+  conserve, et FGSM eps=0.3 passe de 1.8% (modele non durci) a **25%** en
+  2 epochs seulement. La piste est bonne.
+- Estimation : la campagne complete (60000 images, 10 epochs, PGD-5) devrait
+  prendre **~15 min par run**, soit ~45 min pour les 3 runs.
+
+Corrige dans les commits du 2026-09-10 (campagne.sh, harden2.py,
+torch/entrainement.py, defenses.md section 6).
+
 ---
 
 ##  Tableau des résultats cumulés

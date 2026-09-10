@@ -168,6 +168,41 @@ def augmenter(x, cfg=None):
 #  Entrainement
 # --------------------------------------------------------------------------
 
+def _paliers_lr(spec, epochs):
+    """Epochs ou le learning rate est divise par 10.
+
+    Calcule une seule fois, en numeros d'epoch entiers (pas en fractions) :
+    avec l'ancienne formule, un run de 2 epochs declenchait les DEUX paliers
+    (0.5 et 0.8) des le premier epoch, et le lr s'effondrait a 0.0005 avant
+    d'avoir servi. Le modele n'apprenait alors quasiment rien.
+    Sous 4 epochs, le planificateur est desactive (trop court pour decroitre).
+    """
+    if not spec or epochs < 4:
+        return []
+    return sorted({max(1, int(round(float(p) * epochs)))
+                   for p in spec.split(",") if p.strip()})
+
+
+def _beta_effectif(beta, epoch, epochs, warmup):
+    """Rampe de beta pour TRADES.
+
+    Sur un modele deja entraine, la cross-entropy vaut ~0 alors que la KL vaut
+    ~1 : si on demarre a beta plein, le terme KL ecrase tout et le modele
+    s'effondre (val clean 98% -> 50% observe le 2026-09-10). On demarre donc a
+    10% de beta et on monte progressivement.
+    """
+    if warmup <= 0:
+        return beta
+    # Rampe etalee sur AU MOINS 3 epochs, et partant de ZERO :
+    # le premier epoch est du CE pur (aucune KL), puis beta monte.
+    # Mesure : sans ce depart a zero, un modele deja converge s'effondre
+    # (val clean 98% -> 29% en 2 epochs, constate le 2026-09-10). La raison est
+    # que sur un modele converge la CE vaut ~0.01 quand la KL vaut ~1.3 : le
+    # terme KL ecrase tout et le modele minimise la KL en devenant constant.
+    frac = (epoch - 1) / max(3.0, warmup * epochs)
+    return beta * min(1.0, frac)
+
+
 def entrainer(modele, opt, train, val, args, device):
     x_tr, y_tr = train
     x_val, y_val = val
@@ -175,17 +210,25 @@ def entrainer(modele, opt, train, val, args, device):
     meilleur = -1.0
     lr = args.lr
     gen = torch.Generator(device="cpu").manual_seed(args.seed)
+    paliers = _paliers_lr(args.lr_drop, args.epochs)
+    if args.lr_drop and not paliers:
+        print(f"  [LR] planificateur desactive ({args.epochs} epochs : trop court)")
+    elif paliers:
+        print(f"  [LR] paliers aux epochs {paliers}")
 
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
 
-        if args.lr_drop:
-            paliers = [float(p) for p in args.lr_drop.split(",")]
-            if any(abs(epoch / args.epochs - p) < 0.5 / args.epochs for p in paliers):
-                lr *= 0.1
-                for g in opt.param_groups:
-                    g["lr"] = lr
-                print(f"  [LR] epoch {epoch} : lr -> {lr:.5f}")
+        if paliers and epoch in paliers:
+            lr *= 0.1
+            for g in opt.param_groups:
+                g["lr"] = lr
+            print(f"  [LR] epoch {epoch} : lr -> {lr:.5f}")
+
+        beta = _beta_effectif(args.beta, epoch, args.epochs, args.beta_warmup)
+        if args.loss == "trades" and epoch == 1:
+            print(f"  [TRADES] beta effectif : {beta:.2f} -> {args.beta:.2f} "
+                  f"(rampe sur {args.beta_warmup:.0%} du run)")
 
         ordre = torch.randperm(n, generator=gen)
         perte_tot = 0.0
@@ -205,13 +248,23 @@ def entrainer(modele, opt, train, val, args, device):
 
             # 2) perte : pgdat (propre + adverse) ou trades (CE + beta*KL)
             if args.loss == "trades":
+                # [fix CRITIQUE] Le gradient doit passer par LES DEUX branches.
+                # x_adv est detache (on ne derive pas par rapport a la
+                # perturbation), mais logits_adv = modele(x_adv) reste dans le
+                # graphe : les parametres sont partages.
+                # En detachant logits_adv, on obtient une catastrophe : la KL
+                # pousse alors la prediction PROPRE vers la prediction ADVERSE
+                # (qui est fausse), donc le modele apprend a se tromper.
+                # Mesure : val clean 99.6% -> 8.0% en un seul epoch.
+                # Formulation identique a l'implementation de reference de
+                # TRADES : KL(p_adverse || p_propre), les deux derivees.
                 logits = modele(bx)
                 logits_adv = modele(bx_adv)
                 ce = F.cross_entropy(logits, by)
                 kl = F.kl_div(F.log_softmax(logits, dim=1),
-                              F.softmax(logits_adv.detach(), dim=1),
+                              F.softmax(logits_adv, dim=1),
                               reduction="batchmean")
-                perte = ce + args.beta * kl
+                perte = ce + beta * kl
             else:
                 if args.mix < 1.0:
                     k = int(round(len(bx) * args.mix))

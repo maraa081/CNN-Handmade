@@ -257,9 +257,15 @@ n'a pas besoin de re-apprendre la reconnaissance.
 
 Un lr fixe fait osciller la loss sans converger. La recette classique : garder
 un lr eleve tant que la loss descend, puis le diviser par 10 aux 2/3 et aux 4/5
-de l'entrainement. C'est ce qui permet d'atteindre un vrai minimum.
+de l'entrainement.
 
-    --lr 0.005 --lr-drop 0.5,0.8      # x0.1 aux fractions 50% et 80%
+    --lr 0.005 --lr-drop 0.5,0.8      # x0.1 aux epochs 5 et 8 (run de 10)
+
+> [fix] Les paliers sont calcules en **numeros d'epoch entiers**, une seule fois.
+> L'ancienne formule comparait des fractions a chaque epoch : sur un run de
+> 2 epochs elle declenchait les DEUX paliers des le premier epoch, et le lr
+> tombait a 0.0005 avant d'avoir servi. Le modele n'apprenait quasiment rien
+> (constate le 2026-09-10). Sous 4 epochs, le planificateur est desactive.
 
 ### 6.4 L'ecrêtage des gradients (indispensable pour TRADES)
 
@@ -280,11 +286,29 @@ Deux facons d'utiliser les exemples adverses :
   cross-entropy. `loss = CE(f(x_adv), y)`. Robustesse forte, mais l'accuracy
   propre baisse beaucoup.
 - **TRADES (Zhang et al. 2019)** : on demande au modele de rester *d'accord avec
-  lui-meme*. `loss = CE(f(x), y) + beta * KL(f(x) || f(x_adv))`. Le terme CE
-garde la precision propre, la KL apporte la robustesse. En pratique TRADES
-donne une **meilleure frontiere** : a robustesse egale, plus d'accuracy propre.
+  lui-meme*. `loss = CE(f(x), y) + beta * KL`. Le terme CE garde la precision
+  propre, la KL apporte la robustesse.
 
-    --loss trades --beta 6.0
+    --loss trades --beta 2
+
+> [warn] **TRADES est delicat avec un warm start.** Sur un modele deja
+> converge, la CE vaut ~0.01 alors que la KL vaut ~1.3 : le terme KL ecrase
+> tout, et le modele minimise la KL en devenant constant (il perd toute
+> precision propre). Consequence pratique : avec `--warm-start auto`, garder
+> **beta <= 2**. Le beta=6 de l'article suppose un entrainement depuis zero, ou
+> la CE est grande au depart et garde l'equilibre.
+>
+> Si on veut beta=6, il faut partir de zero : `--warm-start none` et beaucoup
+> plus d'epochs.
+
+> [fix] **Le gradient doit passer par LES DEUX branches.** Une premiere version
+> ne retropropageait que par la branche propre (la branche adverse etait traitee
+> comme constante). La KL poussait alors la prediction propre vers la prediction
+> **adverse** (qui est fausse) : le modele apprenait a se tromper. Mesure :
+> val clean 99.6% -> 8.0% en un seul epoch. Corrections dans les deux moteurs
+> (`harden2.py` : deux passes avec accumulation des gradients ;
+> `torch/entrainement.py` : les deux branches restent dans le graphe).
+> Apres correction, val clean reste a 98.0% en NumPy sur le meme test.
 
 ### 6.6 Le mix propre / adversarial
 

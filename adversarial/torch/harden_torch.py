@@ -146,6 +146,8 @@ def main():
     p.add_argument("--val-steps", type=int, default=10)
     p.add_argument("--loss", choices=["pgdat", "trades"], default="pgdat")
     p.add_argument("--beta", type=float, default=6.0)
+    p.add_argument("--beta-warmup", type=float, default=0.3,
+                   help="fraction du run sur laquelle beta monte de 10%% a 100%% (0 = pas de rampe)")
     p.add_argument("--mix", type=float, default=0.5)
     p.add_argument("--augment", action="store_true")
     p.add_argument("--aug-fort", action="store_true")
@@ -219,7 +221,7 @@ def main():
     print(f"[DATA] {len(train[0])} train / {len(val[0])} val / {len(x_te)} test")
 
     if args.lr is None:
-        args.lr = 0.01 if args.loss == "trades" else 0.05
+        args.lr = 0.002 if args.loss == "trades" else 0.05
         print(f"[LR] defaut pour {args.loss} -> lr {args.lr}")
 
     if args.augment:
