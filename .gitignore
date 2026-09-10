@@ -43,3 +43,7 @@ experiments/*/*_weights.npz
 # Benchmark / résultats numériques
 experiments/*/benchmark*.txt
 experiments/*/results*.csv
+
+# Points de reprise de harden2 (gros, regenerables) : on ne versionne que le meilleur
+models/*_last.npz
+adversarial/results/logs/
