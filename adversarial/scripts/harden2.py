@@ -308,6 +308,7 @@ def main():
         args.n_train, args.epochs, args.val = 800, 1, 100
         args.pgd_steps, args.val_steps = 2, 2
         args.lr_drop = ""
+        args.eval_steps, args.eval_n, args.restarts = 5, 200, 1
 
     if args.lr is None:
         args.lr = 0.001 if args.loss == "trades" else 0.005
