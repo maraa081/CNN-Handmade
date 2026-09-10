@@ -52,6 +52,7 @@ sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, normalize, add_channel_dim  # noqa: E402
 from adversarial.scripts.fgsm import build_model, load_data, accuracy  # noqa: E402
+from adversarial.scripts.augment import augmenter, CONFIG_DEFAUT  # noqa: E402
 
 EPS_EVAL = [0.05, 0.1, 0.2, 0.3]
 
@@ -95,16 +96,13 @@ def clip_gradients(model, max_norm):
 
 
 def augment_shift(x, max_shift=2, rng=None):
-    """Translation aleatoire de chaque image de +-max_shift pixels (bords noirs)."""
-    rng = rng or np.random
-    n, c, h, w = x.shape
-    out = np.zeros_like(x)
-    for i in range(n):
-        dy = rng.randint(-max_shift, max_shift + 1)
-        dx = rng.randint(-max_shift, max_shift + 1)
-        out[i, :, max(dy, 0):h + min(dy, 0), max(dx, 0):w + min(dx, 0)] = \
-            x[i, :, max(-dy, 0):h + min(-dy, 0), max(-dx, 0):w + min(-dx, 0)]
-    return out
+    """Translations aleatoires (conservé pour compatibilite).
+
+    Utilise le module `augment.py`, qui offre en plus la rotation, le zoom,
+    le bruit impulsionnel (pixels parasites) et le cutout.
+    """
+    from adversarial.scripts.augment import translation
+    return translation(x, max_shift, rng or np.random)
 
 
 # --------------------------------------------------------------------------
@@ -177,7 +175,7 @@ def entrainer(model, x_tr, y_tr, x_val, y_val, args):
             bi = idx[start:start + args.batch]
             bx, by = x_tr[bi], y_tr[bi]
             if args.augment:
-                bx = augment_shift(bx, args.shift, rng)
+                bx = augmenter(bx.copy(), rng=rng, config=args.aug_cfg)
 
             # 1) attaque du batch avec le modele courant
             model.eval_mode()
@@ -284,8 +282,12 @@ def main():
     p.add_argument("--beta", type=float, default=6.0, help="poids KL (TRADES)")
     p.add_argument("--mix", type=float, default=0.5,
                    help="part d'exemples adverses dans le batch (1.0 = Madry pur)")
-    p.add_argument("--augment", action="store_true")
-    p.add_argument("--shift", type=int, default=2)
+    p.add_argument("--augment", action="store_true", help="active l'augmentation de donnees")
+    p.add_argument("--shift", type=int, default=2, help="decalage max (pixels)")
+    p.add_argument("--aug-fort", action="store_true",
+                   help="preset d'augmentation appuyee (rotation 15, bruit 0.03, cutout 8)")
+    p.add_argument("--aug-config", default="",
+                   help="surcharge la config d'augmentation, ex: rotation=15,bruit_p=0.03")
     p.add_argument("--lr", type=float, default=None,
                    help="defaut: 0.005 (pgdat) ou 0.001 (trades)")
     p.add_argument("--clip", type=float, default=1.0,
@@ -339,6 +341,24 @@ def main():
     print(f"[CONF] attack={args.attack} steps={args.pgd_steps} eps={args.eps} "
           f"loss={args.loss} mix={args.mix} lr={args.lr} clip={args.clip} "
           f"epochs={args.epochs} augment={args.augment}")
+    if args.augment:
+        cfg = dict(CONFIG_DEFAUT)
+        cfg["translation"] = args.shift
+        if args.aug_fort:
+            cfg.update({"rotation": 15.0, "bruit_p": 0.03, "cutout": 8,
+                        "zoom": 0.12, "prob": 0.6})
+        for morceau in filter(None, args.aug_config.split(",")):
+            cle, _, val = morceau.partition("=")
+            cle = cle.strip()
+            if cle not in cfg:
+                print(f"[AUG] cle inconnue ignoree : {cle}")
+                continue
+            cfg[cle] = type(cfg[cle])(val) if not isinstance(cfg[cle], tuple) else val
+        args.aug_cfg = cfg
+        lu = ", ".join(f"{k}={v}" for k, v in cfg.items())
+        print(f"[AUG] {lu}")
+    else:
+        args.aug_cfg = None
 
     # -- Modele --
     model = build_model(args.dataset)

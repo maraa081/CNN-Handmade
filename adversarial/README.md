@@ -23,7 +23,8 @@ adversarial/
 |   |-- defend.py      <- adversarial training (défense)            OK opérationnel
 |   |-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
 |   |-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
-|   `-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
+|   |-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
+|   `-- augment.py     <- augmentation de données (rotation, zoom, bruit, cutout)  OK opérationnel
 `-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
 

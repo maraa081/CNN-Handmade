@@ -292,11 +292,55 @@ donne une **meilleure frontiere** : a robustesse egale, plus d'accuracy propre.
   compromis.
 - `--mix 1.0` : Madry pur, 100% d'exemples adverses. Plus robuste, moins precis.
 
-### 6.7 L'augmentation de donnees
+### 6.7 L'augmentation de donnees (`augment.py`)
 
-Translations aleatoires de +-2 pixels (`--augment`). Sur MNIST c'est efficace :
-ca empeche le modele de se reposer sur la position exacte du trait, ce qui aide a
-la fois la precision propre et la robustesse.
+Idee : brusquer artificiellement les images d'entrainement pour que le modele
+apprenne des **invariants** (position, orientation, epaisseur du trait, tolerance
+au bruit) au lieu de memoriser chaque pixel.
+
+Cout : **zero**. Tout se fait en memoire, a la volee, sans ecrire sur le disque.
+Mesure : 11 ms par batch de 64, soit **10 s pour un epoch complet de 60000
+images**. A comparer aux 90 minutes d'un epoch PGD-5 : 0,2 % de surcout.
+
+Cinq transformations, chacune activee avec une probabilite :
+
+| Transformation | Effet | Densite d'encre (mesuree sur 500 images) |
+|---|---|---|
+| rotation (12 deg max) | orientation du chiffre | x1.09 |
+| zoom (+-10 %) | taille du chiffre | x1.09 |
+| translation (+-2 px) | position dans l'image | x1.00 |
+| bruit impulsionnel (p=0.02) | pixels parasites sur le fond, quelques pixels du trait eteints | x1.09 |
+| cutout (6 px) | carre efface, empeche de dependre d'une zone | x0.96 |
+| epaisseur (prob 0.3) | trait plus epais ou plus fin | x1.17 |
+
+Le bruit impulsionnel est la transformation la plus interessante pour notre
+sujet : il ajoute des ecarts "qui n'existent pas de base" (des pixels allumes sur
+le fond noir). C'est formellement proche d'une attaque **L0** (peu de pixels,
+valeur libre), meme si ce n'est pas borne en norme L-inf.
+
+**Piege evite** : une premiere version utilisait une dilatation 3x3 pour
+epaissir le trait. Mesure : la densite d'encre passait de 0.162 a 0.292, soit
+**x1.80**. A ce niveau le chiffre change de forme. Remplacer par un element en
+croix avec facteur de melange ramene l'effet a x1.17. Regle : **mesurer l'effet
+de chaque transformation separement** avant de l'activer.
+
+**Deux regles a ne pas oublier** :
+
+1. Ne JAMAIS augmenter le test ni la validation. Sinon on ne mesure plus les
+   performances reelles, on mesure la performance sur un jeu qu'on a soi-meme
+   deforme dans le sens favorable au modele.
+2. L'augmentation **ne remplace pas** l'adversarial training. Elle aide la
+   precision propre et la robustesse aux transformations naturelles. Une attaque
+   L-inf bornee reste du ressort de PGD-AT. Les deux se combinent : le pipeline
+   de `harden2.py` applique l'augmentation ET l'attaque sur le meme batch.
+
+    --augment                      # rotation, zoom, translation, bruit, cutout
+    --aug-fort                     # preset appuye (rotation 15, bruit 0.03)
+    --aug-config rotation=20,bruit_p=0.05,translation=3
+
+Previsualiser avant d'entrainer (genere une planche original/augmente) :
+
+    python3 adversarial/scripts/augment.py --n 12
 
 ### 6.8 Selectionner sur la robustesse, pas sur la precision
 

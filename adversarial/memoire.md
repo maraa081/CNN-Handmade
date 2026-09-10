@@ -269,6 +269,28 @@
 - [todo] Lancer le run complet (PGD-5 puis TRADES), trier les résultats et les
   documenter dans ce carnet. Objectif : battre nettement 67% / 24%.
 
+### 2026-09-10 - augment.py : augmentation de donnees (brusquer le dataset)
+
+- Demande de Maraa : appliquer aleatoirement au dataset des ecarts "pas presents
+  de base" (rotation, pixels parasites...). Reflexe important : **aucune
+  regeneration du dataset, aucun appel API** — tout se fait en memoire, a la
+  volee, pendant l'entrainement.
+- Module `augment.py` ecrit : rotation, zoom, translation, bruit impulsionnel
+  (sel sur le fond noir + poivre sur le trait), cutout, variation d'epaisseur.
+- Cout mesure : 11 ms par batch de 64 -> **10 s par epoch de 60000 images**,
+  soit 0.2 % du cout d'un epoch PGD-5 (90 min). Negligeable.
+- Effet mesure de chaque transformation (densite d'encre, 500 images) :
+  rotation x1.09, zoom x1.09, translation x1.00, bruit x1.09, cutout x0.96,
+  epaisseur x1.17.
+- [fix] Premiere version : dilatation 3x3 -> densite **x1.80** (le chiffre change
+  de forme, un 1 devient un pate). Remplacee par un element en croix avec facteur
+  de melange -> x1.17. Lecon : mesurer chaque transformation separement.
+- Integre dans `harden2.py` : `--augment`, `--aug-fort`, `--aug-config`.
+- Planche de controle : `adversarial/results/augmentation_samples.png`
+- Regles : ne JAMAIS augmenter le test/validation ; l'augmentation ne remplace
+  pas l'adversarial training (elle aide la precision propre et les perturbations
+  naturelles ; une attaque L-inf bornee reste du ressort de PGD-AT).
+
 ---
 
 ##  Tableau des résultats cumulés
