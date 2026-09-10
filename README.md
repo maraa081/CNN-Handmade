@@ -231,7 +231,14 @@ python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
 | PGD, MNIST full (98.6% propre) | 0.0% dès eps=0.20 |
 | PGD, EMNIST full (92.0% propre) | 0.0% dès eps=0.20 |
 | Transfert full -> classic | 72.3% de transfert à eps=0.30 |
-| Modèle durci (PGD training) | clean 67.2%, et 23.8% sous FGSM eps=0.30 (vs 1.8%) |
+| v1 durcie (`harden.py`, 5000 img) | clean 67.2%, 23.8% sous FGSM eps=0.30 |
+| **v3 durcie (piste torch, 60000 img, PGD-5)** | **clean 98.8%, 65.4% sous PGD eps=0.30** |
+
+> **Résultat de référence (2026-09-10).** Le modèle durci entraîné en PyTorch
+> sur 60000 images (10 epochs, PGD-5, sans augmentation) atteint **98.8% de
+> précision propre et 65.4% sous PGD-20 à eps=0.30** — contre 67.2% et 1.2%
+> pour la première version durcie. Détail complet et comparaison des 3 recettes
+> (référence / augmentation / TRADES) dans [`memoire.md`](memoire.md).
 
 > **Leçon centrale** : FGSM sous-estime la vulnérabilité réelle. Un modèle se
 > juge contre l'attaque la plus forte (PGD), pas contre la plus simple.

@@ -363,6 +363,55 @@ depuis zero. Run C de la campagne passe a `--beta 2`.
 Corrige dans les commits du 2026-09-10 (campagne.sh, harden2.py,
 torch/entrainement.py, defenses.md section 6).
 
+### 2026-09-10 (nuit) - CAMPAGNE COMPLETE : le modele durci est enfin la
+
+Premier vrai run complet, en PyTorch (piste torch), 60000 images, 10 epochs,
+PGD-5, warm start depuis `model_weights_full.npz` (98.60% propre).
+Machine de Maraa : **~1 min par epoch**, soit 9-10 min par run.
+
+Protocole d'evaluation : 500 images de test, PGD 20 pas, 1 restart.
+
+| | v1 (`harden.py`) | **Run A** | Run B | Run C |
+|---|---|---|---|---|
+| augmentation | non | non | oui | oui |
+| perte | pgdat | pgdat | pgdat | trades beta=2 |
+| **propre** | 67.2% | **98.8%** | 99.5% | 96.9% |
+| FGSM eps=0.05 | 58.8% | **97.0%** | 97.6% | 91.8% |
+| FGSM eps=0.10 | 49.2% | **95.4%** | 87.4% | 80.4% |
+| FGSM eps=0.20 | 34.8% | **91.8%** | 60.6% | 48.2% |
+| FGSM eps=0.30 | 23.8% | **88.2%** | 54.8% | 23.4% |
+| PGD eps=0.05 | 53.4% | **96.6%** | 96.0% | 86.4% |
+| PGD eps=0.10 | 37.2% | **94.6%** | 78.0% | 56.8% |
+| PGD eps=0.20 | 9.6% | **85.8%** | 44.8% | 9.6% |
+| PGD eps=0.30 | 1.2% | **65.4%** | 29.8% | 2.2% |
+
+**Le run A gagne partout, et de loin.** Compare a la v1 : **+31.6 pts de
+precision propre**, et de +64.4 pts (FGSM) a +76.2 pts (PGD) a eps=0.30.
+
+Trajectoire de la robustesse de validation du run A (val PGD-10) :
+26.3 -> 36.7 -> 55.3 -> 64.5 -> 68.5 -> 69.2 -> 70.1 -> 70.1 -> 70.7 -> 70.3.
+Elle plafonne a ~70% des l'epoch 5 : le budget d'epochs est maintenant le
+facteur limitant, pas la recette.
+
+**L'augmentation a NUIT (run B).** Contre-intuitif, mais explique : la perte du
+run B reste bloquee a ~0.82 alors que celle du run A descend a 0.24. Autrement
+dit le modele augmente est **sous-entraine** : l'augmentation rend chaque epoch
+plus difficile, donc a budget d'epochs egal il prend du retard. Il gagne en
+precision propre (99.5% contre 98.8%) mais perd 35 pts de robustesse a eps=0.3.
+Conclusion : l'augmentation paie seulement avec 2-3x plus d'epochs, et elle ne
+remplace pas l'adversarial training.
+
+**TRADES reste en echec (run C)** : 2.2% a eps=0.3. Deux causes :
+1. `--lr 0.002` est beaucoup trop bas (la perte reste bloquee a ~1.68) ; le lr
+   par defaut de TRADES avait ete baisse a cause du probleme d'equilibre
+   CE/KL, mais trop loin.
+2. La decroissance du lr aux epochs 5 et 8 acheve de figer le modele
+   (0.00002 a la fin).
+A reprendre avec `--lr 0.01` et sans decroissance agressive.
+
+Fichiers : `models/harden2_ref_pgdat.pt` (le meilleur),
+`models/harden2_aug_pgdat.pt`, `models/harden2_aug_trades.pt`.
+
 ---
 
 ##  Tableau des résultats cumulés
