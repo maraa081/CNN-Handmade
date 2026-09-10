@@ -28,10 +28,16 @@
 - Résultat : l'accuracy s'effondre de 98.5% -> 2.1% à ε=0.30 (flip 96.7%)
 - Observation : la chute est **progressive** (94% -> 76% -> 22% -> 2%) : FGSM
   est une attaque « de force », plus l'amplitude autorisée est grande,
-  plus le modèle s'effondre. À ε=0.05 (bruit quasi invisible) on perd déjà 4.5 pts.
-- Leçon : mon CNN from scratch est **vulnérable** — il suffit d'un bruit de
-  ±0.3/255 pour le faire tomber à ~2%. Conforme à la théorie (linearité
-grandes dimensions, Goodfellow).
+  plus le modèle s'effondre. À ε=0.05 (bruit discret) on perd déjà 4.5 pts.
+- Leçon : mon CNN from scratch est **vulnérable** — un bruit borné à 0.3 par
+  pixel suffit à le faire tomber à ~2%. Conforme à la théorie (linéarité en
+  grandes dimensions, Goodfellow).
+- [fix] **Échelle de ε** : les images sont normalisées dans `[0, 1]`
+  (`images / 255.0` dans `src/data.py`) et FGSM applique
+  `clip(x + eps*sign(grad), 0, 1)`. Donc **ε = 0.3 signifie 30% de la plage,
+  soit ~76 niveaux de gris sur 255 : c'est une perturbation VISIBLE.** L'erreur
+  « ±0.3/255 » qui figurait ici était fausse d'un facteur 255 ; corrigée le
+  2026-09-10. Repères : ε=0.05 ~ 13/255 (discret), ε=0.30 ~ 76/255 (très net).
 
 ### 2026-08-24 — FGSM non ciblée sur EMNIST letters (modèle rapide)
 
@@ -125,9 +131,24 @@ grandes dimensions, Goodfellow).
   2. **full -> max_config transfère peu** : la régularisation (Dropout + L2)
      lisse la frontière -> les exemples adverses de l'autre modèle y sont
      moins efficaces. La régularisation est une défense partielle.
-  3. **max_config -> full** : attaquer le modèle robuste produit des exemples
-     moins transférables vers le modèle faible (ils sont « calibrés » sur un
-     paysage de loss plus lisse).
+  3. **max_config -> full transfère PLUS que l'inverse** : 31.8% contre 15.1%
+     à ε=0.20. C'est contre-intuitif : attaquer le modèle *régularisé* produit
+     des exemples qui passent *mieux* sur le modèle simple.
+     Pourquoi : le taux de transfert est mesuré **parmi les images où la SOURCE
+     a été trompée**. max_config étant plus dur à tromper, ce sous-ensemble ne
+     contient que des perturbations fortes -> elles traversent aussi le modèle
+     simple. **Le taux brut est donc biaisé par la robustesse de la source.**
+     Le chiffre qui compte côté défense est l'accuracy ABSOLUE de la cible :
+     `full` tombe à 40.2% à ε=0.30 sous une attaque transférée depuis
+     max_config (contre 49.6% dans l'autre sens).
+- [fix] L'observation n°3 affirmait l'inverse (« attaquer le modèle robuste
+  produit des exemples moins transférables »), ce qui **contredisait le tableau
+  juste au-dessus**. Corrigé le 2026-09-10.
+- [todo] Pistes NON testées au 2026-09-10 :
+  - transfert avec **PGD** comme source (plus fort que FGSM) : `--attack pgd`
+  - transfert **cross-dataset** MNIST -> EMNIST (le cas réaliste)
+  - **attaque d'ensemble** : attaquer plusieurs modèles à la fois pour renforcer
+    le transfert
 - Leçon : la transferabilité dépend de la **similarité des modèles**
   (architecture + entraînement). C'est ce qui rend les attaques boîte
   noire possibles en pratique (Papernot et al., 2016).
@@ -213,6 +234,24 @@ grandes dimensions, Goodfellow).
   Plus de classes (26 vs 10) = frontières de décision plus denses = plus facile à tromper.
 - PGD ≫ FGSM confirmé aussi sur EMNIST : à ε=0.20, 0.0% vs 10.0%.
 - Même FGSM seul détruit le modèle : 4.0% à ε=0.30 (contre 1.8% sur MNIST).
+
+---
+
+### 2026-09-10 — Vérification du transfert (re-run) + corrections de doc
+
+- Re-run des 3 configurations de transfert (500 images, FGSM, seed 42) sur la
+  machine OpenClaw : chiffres **identiques** à ceux du 2026-08-25
+  (full->classic 25.7 / 50.0 / 72.3 ; full->max_config 8.2 / 15.1 / 50.2 ;
+  max_config->full 8.0 / 31.8 / 60.7). Le run est donc reproductible d'une
+  machine à l'autre.
+- [fix] Échelle de ε corrigée (voir l'entrée du 2026-08-24 : « ±0.3/255 » était
+  faux d'un facteur 255).
+- [fix] Observation n°3 du transfert corrigée : elle contredisait son propre
+  tableau.
+- [doc] Section « Sécurité IA » ajoutée au README principal, historique 24-26/08
+  ajouté à `docs/memoire-projet.md`, références de courbes corrigées dans
+  `adversarial/README.md`.
+- 12 courbes de transfert versionnées dans `adversarial/results/`.
 
 ---
 

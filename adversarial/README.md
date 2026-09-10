@@ -180,6 +180,13 @@ source a trompées et que la cible prédisait correctement.
 > entraînés pareil -> les exemples adverses traversent (72% à ε=0.3). C'est ce
 > qui rend les attaques **boîte noire** possibles. La régularisation
 > (Dropout + L2) casse une partie du transfert.
+>
+> [warn] **Attention à la lecture du taux** : il est mesuré *parmi les images où
+> la SOURCE a été trompée*. max_config étant plus dur à tromper, son taux brut
+> paraît plus élevé (31.8% contre 15.1% à ε=0.20) sans que le modèle simple soit
+> mieux protégé. Le chiffre qui compte côté défense, c'est l'accuracy **absolue**
+> de la cible : `full` tombe à **40.2%** à ε=0.30 sous une attaque transférée
+> depuis max_config.
 
 ### La défense : adversarial training — MNIST (5000 img, 3 epochs, eps train 0.15)
 
