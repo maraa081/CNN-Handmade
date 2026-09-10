@@ -87,7 +87,7 @@ CNN-Handmade/
 |   |-- attacks.md                    - théorie des attaques (FGSM, PGD, transfert)
 |   |-- defenses.md                   - théorie des défenses + méthodologie
 |   |-- results/                      - courbes et images (PNG)
-|   `-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, eval_defended.py)
+|   `-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, harden2.py, eval_defended.py)
 |-- docs/
 |   |-- data-flow.md
 |   `-- memoire-projet.md          <- carnet de bord du projet

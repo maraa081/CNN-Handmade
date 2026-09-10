@@ -22,7 +22,8 @@ adversarial/
 |   |-- transfer.py    <- transfert d'attaque entre modèles         OK opérationnel
 |   |-- defend.py      <- adversarial training (défense)            OK opérationnel
 |   |-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
-|   `-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
+|   |-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
+|   `-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
 `-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
 
@@ -302,6 +303,34 @@ python3 adversarial/scripts/harden.py --load models/defend_pgd_mnist_weights.npz
 ```
 
 Poids du modèle durci : `models/defend_pgd_mnist_weights.npz`.
+
+### Version durcie v2 (`harden2.py`) - pousser la frontière
+
+La v1 plafonne à 67% propre / 24% sous FGSM ε=0.3 : c'est un problème de budget
+(5000 images, 3 epochs, départ aléatoire), pas de méthode. La v2 part du modèle
+propre à 98.6%, utilise les 60000 images, décroît le learning rate, écrête les
+gradients et sélectionne le modèle sur sa robustesse réelle.
+
+```bash
+# Recette recommandée (warm start automatique sur le modèle propre)
+python3 adversarial/scripts/harden2.py --n-train 60000 --epochs 15 --pgd-steps 5
+
+# TRADES : meilleure frontière précision/robustesse (Zhang et al. 2019)
+python3 adversarial/scripts/harden2.py --n-train 60000 --epochs 15 --loss trades
+
+# Fast-AT : beaucoup plus rapide, robustesse moindre (Wong et al. 2020)
+python3 adversarial/scripts/harden2.py --n-train 60000 --epochs 15 --attack fgsm-rs
+
+# Évaluation honnête d'un modèle sauvegardé (PGD 20 pas, 3 restarts, pire cas)
+python3 adversarial/scripts/harden2.py --report models/harden2_best.npz --restarts 3
+
+# Vérifier que tout tourne avant de lancer un long run
+python3 adversarial/scripts/harden2.py --quick
+```
+
+Chaque epoch affiche l'accuracy propre **et** la robustesse sur un jeu de
+validation, avec le temps restant estimé. Les leviers sont détaillés dans
+[`defenses.md`](defenses.md) section 6.
 
 ### Résultats de la version durcie (2026-08-25)
 

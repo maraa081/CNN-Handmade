@@ -253,6 +253,22 @@
   `adversarial/README.md`.
 - 12 courbes de transfert versionnées dans `adversarial/results/`.
 
+### 2026-09-10 - harden2.py : version durcie v2 (code livré, run à venir)
+
+- Diagnostic : la v1 plafonne à 67% propre / 24% sous FGSM ε=0.3 à cause du
+  **budget** (5000 images, 3 epochs, départ aléatoire, lr fixe), pas de la
+  méthode. Le modèle standard atteint 98.6% avec les 60000 images.
+- `harden2.py` écrit : warm start (auto), 60000 images, décroissance du lr,
+  TRADES, écrêtage des gradients, augmentation (translations ±2 px),
+  sélection du modèle sur la robustesse de validation, éval multi-restarts.
+- Gradient TRADES validé par **gradient check numérique** : erreur relative 5e-9.
+- [fix] Sans écrêtage des gradients, TRADES **détruit** le modèle : sur un
+  modèle déjà convergé le terme KL (beta=6) vaut ~100x le terme CE.
+- Coût mesuré : 73 img/s sur le i5-6300U -> PGD-5 = ~90 min par epoch sur 60000
+  images. Le run complet doit être lancé sur la machine la plus rapide.
+- [todo] Lancer le run complet (PGD-5 puis TRADES), trier les résultats et les
+  documenter dans ce carnet. Objectif : battre nettement 67% / 24%.
+
 ---
 
 ##  Tableau des résultats cumulés

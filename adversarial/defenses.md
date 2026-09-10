@@ -225,7 +225,126 @@ pas contre la version la plus simple de l'attaque** — et le prix à payer
 
 ---
 
-## 6. Ce qu'on n'a PAS fait (scope honnête)
+## 6. Pousser la frontiere precision/robustesse (`harden2.py`)
+
+`harden.py` (v1) plafonne a **67.2% propre / 23.8% sous FGSM eps=0.3**. Ce n'est
+pas une limite de la methode : c'est un manque de budget. La v1 entraine 5000
+images pendant 3 epochs, depuis zero, sans decroissance du learning rate. Le
+modele standard, lui, atteint 98.6% propre avec 60000 images.
+
+`harden2.py` corrige exactement ca. Les leviers, par ordre d'impact.
+
+### 6.1 Le budget (la cause racine)
+
+| Ressource | v1 (`harden.py`) | v2 (`harden2.py`) | Effet |
+|---|---|---|---|
+| Images d'entrainement | 5000 | 60000 | le plus gros gain |
+| Epochs | 3 | 15-30 | convergence reelle |
+| Point de depart | aleatoire | modele deja a 98.6% | gain immediat |
+| Learning rate | fixe 0.01 | decroissant | indispensable |
+| Selection du modele | dernier epoch | meilleure robustesse val | evite de garder le pire |
+
+### 6.2 Warm start : ne pas repartir de zero
+
+On dispose deja de `model_weights_full.npz` (98.6% propre, 60000 images).
+Repartir d'un modele aleatoire pour lui apprendre a la fois a reconnaitre les
+chiffres ET a resister aux attaques est un gaspillage : l'adversarial training
+n'a pas besoin de re-apprendre la reconnaissance.
+
+    --warm-start auto      # choisit le bon modele selon le dataset
+
+### 6.3 La decroissance du learning rate
+
+Un lr fixe fait osciller la loss sans converger. La recette classique : garder
+un lr eleve tant que la loss descend, puis le diviser par 10 aux 2/3 et aux 4/5
+de l'entrainement. C'est ce qui permet d'atteindre un vrai minimum.
+
+    --lr 0.005 --lr-drop 0.5,0.8      # x0.1 aux fractions 50% et 80%
+
+### 6.4 L'ecrêtage des gradients (indispensable pour TRADES)
+
+Sans lui, TRADES detruit le modele en 3 batches. Raison : sur un modele deja
+converge, le terme CE vaut environ 0.01 alors que le terme KL (multiplie par
+beta=6) vaut environ 1.3, soit 100 fois plus. Le gradient est donc domine par la
+KL et la premiere mise a jour fait exploser les poids.
+
+L'ecrêtage ramene la norme L2 globale des gradients sous un seuil :
+
+    --clip 1.0        # defaut
+
+### 6.5 TRADES vs PGD-AT
+
+Deux facons d'utiliser les exemples adverses :
+
+- **PGD-AT (Madry)** : on entraine sur les exemples attaques avec la
+  cross-entropy. `loss = CE(f(x_adv), y)`. Robustesse forte, mais l'accuracy
+  propre baisse beaucoup.
+- **TRADES (Zhang et al. 2019)** : on demande au modele de rester *d'accord avec
+  lui-meme*. `loss = CE(f(x), y) + beta * KL(f(x) || f(x_adv))`. Le terme CE
+garde la precision propre, la KL apporte la robustesse. En pratique TRADES
+donne une **meilleure frontiere** : a robustesse egale, plus d'accuracy propre.
+
+    --loss trades --beta 6.0
+
+### 6.6 Le mix propre / adversarial
+
+- `--mix 0.5` (defaut) : un exemple sur deux est propre, l'autre attaque. Bon
+  compromis.
+- `--mix 1.0` : Madry pur, 100% d'exemples adverses. Plus robuste, moins precis.
+
+### 6.7 L'augmentation de donnees
+
+Translations aleatoires de +-2 pixels (`--augment`). Sur MNIST c'est efficace :
+ca empeche le modele de se reposer sur la position exacte du trait, ce qui aide a
+la fois la precision propre et la robustesse.
+
+### 6.8 Selectionner sur la robustesse, pas sur la precision
+
+Piege classique : garder le modele du dernier epoch. La v2 evalue a chaque epoch
+sur un jeu de validation **sous attaque PGD** et ne sauvegarde le modele que
+quand cette robustesse s'ameliore. L'accuracy propre seule est un mauvais
+critere : elle est souvent meilleure sur un modele non robuste.
+
+### 6.9 Evaluer honnetement (le pire cas)
+
+Un modele entraine avec PGD-k et evalue avec PGD-k peut sembler robuste pour de
+mauvaises raisons (gradient masking). La v2 :
+
+- evalue avec **PGD 20 pas** alors qu'elle s'entraine avec 5 ;
+- repete l'attaque avec plusieurs **restarts aleatoires** (`--restarts`) et garde
+  le **pire cas**.
+
+Le chiffre affiche est donc prudent, pas flatteur.
+
+### 6.10 Le budget de calcul (a savoir avant de lancer)
+
+Le CNN from scratch en NumPy fait environ 73 images/s sur un i5-6300U (4 coeurs).
+PGD-5 coute environ 7 fois le cout d'une epoch propre.
+
+| Configuration | 60000 images, 1 epoch |
+|---|---|
+| entrainement propre | ~14 min |
+| PGD-5 | ~90 min |
+| PGD-3 | ~65 min |
+| FGSM + random start (Fast-AT) | ~40 min |
+
+Sur une machine 5 fois plus rapide (mesuree sur EMNIST full), les memes chiffres
+tombent a ~3 / ~18 / ~13 / ~8 min par epoch. Un run complet PGD-5 sur 15 epochs
+y prend environ 4h30.
+
+Consequence pratique : lancer le run complet sur la machine la plus rapide
+disponible, et garder les tests de recette (`--quick`) sur la machine lente.
+
+### 6.11 Verifier le gradient plutot que le croire
+
+Le gradient de TRADES a ete valide par gradient check numerique (perturbation
+d'un parametre, comparaison analytique/numerique) : erreur relative maximale
+**5e-9**. Sans ce test, un signe inverse peut passer inapercu et produire un
+modele qui a l'air de s'entrainer mais se detruit silencieusement.
+
+---
+
+## 7. Ce qu'on n'a PAS fait (scope honnête)
 
 - **Robustesse certifiée** (bornes formelles type interval bound propagation)
 - **Détection d'attaques** (rejeter les entrées adverses au lieu de prédire)
@@ -237,7 +356,7 @@ notre périmètre — un mémoire honnête liste ce qui n'a pas été couvert.
 
 ---
 
-## 7. Références
+## 8. Références
 
 - Goodfellow et al., *Explaining and Harnessing Adversarial Examples* (2014)
 - Madry et al., *Towards Deep Learning Models Resistant to Adversarial Attacks* (2018)
