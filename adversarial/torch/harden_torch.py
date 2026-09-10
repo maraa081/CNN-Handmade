@@ -27,7 +27,25 @@ import time
 from os.path import abspath, dirname, join
 
 import numpy as np
-import torch
+
+try:
+    import torch
+except ImportError:
+    print("=" * 68)
+    print("  PyTorch n'est pas installe sur ce Python.")
+    print("=" * 68)
+    print(f"\n  Python utilise : {sys.executable}")
+    print(f"  Version        : {sys.version.split()[0]}\n")
+    print("  Installation (CPU, le plus simple et le plus fiable) :")
+    print("    python3 -m pip install torch --index-url https://download.pytorch.org/whl/cpu")
+    print()
+    print("  GPU AMD sous Windows :  pip install torch-directml")
+    print("  GPU AMD (le plus rapide) : ROCm sous WSL2")
+    print()
+    print("  Attention : PyTorch ne supporte pas toutes les versions de Python")
+    print("  (3.10 a 3.12 est le plus sur ; 3.14 n'est pas supporte).")
+    print("  Detail complet : adversarial/torch/README.md, section 6.\n")
+    sys.exit(1)
 
 ROOT_DIR = dirname(dirname(dirname(abspath(__file__))))
 sys.path.insert(0, ROOT_DIR)

@@ -29,6 +29,10 @@ IMAGES=60000
 ETAPES=5
 MOTEUR="adversarial/scripts/harden2.py"
 EXT="npz"
+# Permet de pointer un autre interpreteur (venv) : PYTHON=python ./campagne.sh
+if [ -z "${PYTHON:-}" ]; then
+    if command -v python3 >/dev/null 2>&1; then PYTHON=python3; else PYTHON=python; fi
+fi
 LISTE=0
 for a in "$@"; do
     case "$a" in
@@ -56,6 +60,7 @@ fi
 echo "================================================================"
 echo "  CAMPAGNE DURCIE   ($IMAGES images, $EPOCHS epochs, PGD-$ETAPES)"
 echo "  moteur    : $MOTEUR"
+echo "  python    : $PYTHON"
 echo "  demarrage : $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  logs      : $LOGS/"
 echo "================================================================"
@@ -76,7 +81,7 @@ for entree in "${RUNS[@]}"; do
 
     t0=$(date +%s)
     # shellcheck disable=SC2086
-    python3 "$MOTEUR" $opts 2>&1 | tee "$LOGS/$nom.log"
+    "$PYTHON" "$MOTEUR" $opts 2>&1 | tee "$LOGS/$nom.log"
     rc=${PIPESTATUS[0]}
     t1=$(date +%s)
     m=$(( (t1 - t0) / 60 ))
