@@ -148,6 +148,11 @@ source .venv/Scripts/activate        # Linux/macOS: source .venv/bin/activate
 pip install torch --index-url https://download.pytorch.org/whl/cpu numpy
 ```
 
+> [warn] **On Windows/Git Bash, use `python`, NOT `python3`.** The venv does not
+> expose `python3`: the command falls back to the Windows Python Manager alias
+> (the system Python), which has no PyTorch and may fail to initialise. When in
+> doubt, use the explicit path `.venv/Scripts/python.exe`.
+
 ### 2. Run the tests + quick training
 
 ```bash
