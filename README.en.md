@@ -107,6 +107,7 @@ CNN-Handmade/
 |   |   `-- campagne.sh                        - the 3 hardened recipes in series
 |   `-- torch/                        - PyTorch path (autograd, GPU)
 |       |-- modele.py / attaques.py / entrainement.py  - same maths, another engine
+|       |-- lire-le-code.md                            - guided tour of the code
 |       `-- harden_torch.py                            - entry point (same options)
 |-- docs/
 |   |-- data-flow.md

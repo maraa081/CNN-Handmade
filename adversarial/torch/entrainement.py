@@ -245,19 +245,26 @@ def entrainer(modele, opt, train, val, args, device):
         perte_tot = 0.0
         modele.train()
 
+        # ---- Un batch = les etapes [1] a [5] de la visite guidee ----
         for debut in range(0, n, args.batch):
+            # [1] un lot d'images (l'ordre a ete melange une fois par epoch)
             bi = ordre[debut:debut + args.batch]
             bx = x_tr[bi].to(device)
             by = y_tr[bi].to(device)
+
+            # [2] augmentation : les memes images, deformees a la volee
             if args.augment:
                 bx = augmenter(bx, args.aug_cfg)
 
-            # 1) exemple adverse (genere avec le modele courant)
+            # [3] exemple adverse (genere avec le modele courant)
+            #     eval() pendant l'attaque : on vise le modele tel qu'il se
+            #     comporte a l'inference (dropout desactive), puis on revient
+            #     en train().
             modele.eval()
             bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps)
             modele.train()
 
-            # 2) perte : pgdat (propre + adverse) ou trades (CE + beta*KL)
+            # [4] perte : pgdat (propre + adverse) ou trades (CE + beta*KL)
             if args.loss == "trades":
                 # [fix CRITIQUE] Le gradient doit passer par LES DEUX branches.
                 # x_adv est detache (on ne derive pas par rapport a la
@@ -285,6 +292,7 @@ def entrainer(modele, opt, train, val, args, device):
                     cx, cy = bx_adv, by
                 perte = F.cross_entropy(modele(cx), cy)
 
+            # [5] mise a jour des poids (zero_grad -> backward -> clip -> step)
             opt.zero_grad(set_to_none=True)
             perte.backward()
             if args.clip:
@@ -292,7 +300,8 @@ def entrainer(modele, opt, train, val, args, device):
             opt.step()
             perte_tot += perte.item() * len(bx)
 
-        # 3) validation : propre + sous attaque
+        # [6] validation : propre + sous attaque. C'est ce chiffre (et non
+        #     l'accuracy propre) qui decide quel modele est sauvegarde.
         modele.eval()
         with torch.no_grad():
             acc_clean = accuracy(modele, x_val.to(device), y_val.to(device))

@@ -130,6 +130,10 @@ utilisable.
 
 ## 5. Utilisation
 
+> **Pour modifier le code** (et pas seulement le lancer) : lire d'abord
+> [`lire-le-code.md`](lire-le-code.md) — visite guidee du trajet d'un batch,
+> tableau "ou toucher pour faire X" et trois exercices d'entree.
+
     # 1. Verifier l'equivalence avec la version faite main (a faire en premier)
     python3 adversarial/torch/harden_torch.py --parite
 
@@ -233,6 +237,7 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
 
     torch/
     |-- README.md          <- ce fichier
+    |-- lire-le-code.md    <- visite guidee du code (pour MODIFIER, pas juste lire)
     |-- modele.py          <- meme architecture en nn.Module + conversion .npz
     |-- attaques.py        <- FGSM et PGD (memes formules)
     |-- entrainement.py    <- pgdat / trades, augmentation, validation robuste
