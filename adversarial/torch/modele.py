@@ -26,15 +26,29 @@ import torch.nn as nn
 
 
 class CNN(nn.Module):
-    """Meme architecture que la version NumPy (voir src/model.py)."""
+    """Meme architecture que la version NumPy (voir src/model.py).
 
-    def __init__(self, num_classes=10):
+    `large=True` double les largeurs : deux fois plus de canaux dans les deux
+    convolutions, et 256 neurones au lieu de 128 en fully connected. On passe
+    de 421 642 a environ 1,7 million de parametres. Sert a tester l'hypothese
+    "plus de capacite = plus de robustesse" (Madry et al. montrent que la
+    robustesse augmente avec la taille, mais seulement a attaque d'entrainement
+    EGALE et assez forte).
+
+    [warn] La conversion `.npz` avec le moteur fait main ne s'applique qu'a
+    l'architecture standard : les poids du modele large n'ont pas de
+    correspondance cote NumPy.
+    """
+
+    def __init__(self, num_classes=10, large=False):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.large = large
+        c1, c2, f = (64, 128, 256) if large else (32, 64, 128)
+        self.conv1 = nn.Conv2d(1, c1, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(c1, c2, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2)
-        self.fc1 = nn.Linear(3136, 128)
-        self.fc2 = nn.Linear(128, num_classes)
+        self.fc1 = nn.Linear(c2 * 7 * 7, f)
+        self.fc2 = nn.Linear(f, num_classes)
         self.reset_parameters()
 
     def reset_parameters(self):

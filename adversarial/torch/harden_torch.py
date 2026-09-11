@@ -169,6 +169,9 @@ def main():
     p.add_argument("--out", default="models/harden_torch_best.pt")
     p.add_argument("--npz", default=None,
                    help="sauvegarder AUSSI les poids au format .npz (compatible NumPy)")
+    p.add_argument("--large", action="store_true",
+                   help="modele large (~1,7M parametres au lieu de 421k) : test de\n"
+                        "l'hypothese 'plus de capacite = plus de robustesse'")
     p.add_argument("--resume", default=None,
                    help="reprendre un run interrompu depuis <out>_last.pt")
     p.add_argument("--start-epoch", type=int, default=0,
@@ -254,7 +257,7 @@ def main():
           f"batch={args.batch} epochs={args.epochs} augment={args.augment}")
 
     # -- Modele --
-    modele = CNN().to(device)
+    modele = CNN(large=args.large).to(device)
     print(f"[MODEL] {nb_parametres(modele):,} parametres".replace(",", " "))
 
     # -- Reprise d'un run interrompu (veille du PC, arret manuel...) --
@@ -318,7 +321,7 @@ def main():
     print(f"\n[TRAIN] termine en {int(m)} min {int(s)} s")
 
     # -- Sauvegarde .npz compatible NumPy --
-    best = CNN().to("cpu")
+    best = CNN(large=args.large).to("cpu")
     best.load_state_dict(torch.load(args.out, map_location="cpu"))
     if args.npz:
         sauver_npz(best, join(ROOT_DIR, args.npz))

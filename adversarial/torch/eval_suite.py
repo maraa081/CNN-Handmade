@@ -55,17 +55,24 @@ EPS_DEFAUT = [0.1, 0.2, 0.3]
 
 
 def charger_modele(chemin, device, dataset):
-    """Charge un modele depuis un .pt (state_dict ou checkpoint) ou un .npz."""
+    """Charge un modele depuis un .pt (state_dict ou checkpoint) ou un .npz.
+
+    L'architecture (standard ou large) est DEDUITE de la forme des poids :
+    la premiere convolution a 32 canaux en standard et 64 en large. Comme ca,
+    aucun risque de se tromper de taille en evaluant un modele sauvegarde.
+    """
     num_classes = 10 if dataset == "mnist" else 26
-    modele = CNN(num_classes=num_classes).to(device)
     if chemin.endswith(".npz"):
+        modele = CNN(num_classes=num_classes).to(device)   # .npz = standard
         charger_npz(modele, chemin)
     else:
         ck = torch.load(chemin, map_location=device, weights_only=False)
-        if isinstance(ck, dict) and "model" in ck:
-            modele.load_state_dict(ck["model"])       # checkpoint complet (_last.pt)
-        else:
-            modele.load_state_dict(ck)                # state_dict simple (fichier "best")
+        sd = ck["model"] if isinstance(ck, dict) and "model" in ck else ck
+        large = int(sd["conv1.weight"].shape[0]) > 32
+        modele = CNN(num_classes=num_classes, large=large).to(device)
+        modele.load_state_dict(sd)
+        if large:
+            print("[MODEL] architecture LARGE detectee (~1,7M parametres)")
     modele.eval()
     return modele
 
