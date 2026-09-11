@@ -303,8 +303,8 @@
   `harden_torch.py`. Memes options que `harden2.py`, plus `--device`, `--parite`,
   `--npz`.
 - **Parite verifiee** (200 images, `model_weights_full.npz`) : accuracy propre
-  98.50 % dans les deux implementations, FGSM eps=0.30 → 1.50 % dans les deux,
-  PGD eps=0.20 → 0.00 % dans les deux. Seul ecart : 0.50 % sur FGSM eps=0.10,
+  98.50 % dans les deux implementations, FGSM eps=0.30 -> 1.50 % dans les deux,
+  PGD eps=0.20 -> 0.00 % dans les deux. Seul ecart : 0.50 % sur FGSM eps=0.10,
   soit UNE image sur 200 (ordres de sommation differents en float32).
 - Debit mesure : 5000 images en PGD-5 = 23 s en PyTorch CPU, contre ~3 min 20
   estime en NumPy -> **environ 9x**.
