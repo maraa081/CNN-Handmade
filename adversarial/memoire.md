@@ -500,7 +500,7 @@ il donnait 28.8% propre au lieu des 67.2% documentes. Restaure depuis b8e573f
 (verifie : 67.2% de nouveau). Lecon : apres chaque session, verifier que les
 poids versionnes reproduisent bien les chiffres du README.
 
-### 2026-09-11 (soir) - RUN B LONG : 91.4% sous PGD eps=0.30
+### 2026-09-11 (soir) - RUN B LONG : 91.0% sous PGD eps=0.30
 
 Suite de la campagne. Le run B (augmentation) avait ete juge mauvais a 10
 epochs (29.8% sous PGD). Hypothese : ce n'etait pas l'augmentation, c'etait le
@@ -516,16 +516,20 @@ complet + planning du lr conserve).
 | v1 (`harden.py`) | 3 | - | 67.2% | 1.2% |
 | Run A (sans augment) | 10 | 0.24 | 98.8% | 65.4% |
 | Run B (augment) | 10 | 0.82 (bloquee) | 99.5% | 29.8% |
-| **Run B (augment)** | **120** | **0.308** | **99.6%** | **91.4%** |
+| **Run B (augment)** | **120** | **0.308** | **99.6%** | **91.0%** |
 
-Protocole d'evaluation : 500 images de test, PGD 20 pas, 1 restart.
-Detail : FGSM eps=0.30 -> 96.0% ; PGD eps=0.05 -> 94.6%, 0.1 -> 92.6%,
-0.2 -> 91.6%, 0.3 -> 91.4%. Entrainement : 57 min 33 s (apres reprise).
+Protocole d'evaluation : 500 images de test, PGD 20 pas, **pire cas sur 3
+restarts**.
+Detail (pire cas) : FGSM eps=0.30 -> 96.0% ; PGD eps=0.05 -> 94.4%,
+0.1 -> 92.4%, 0.2 -> 91.6%, 0.3 -> 91.0%. Entrainement : 57 min 33 s (apres
+reprise). Avec 1 seul restart on lisait 94.6 / 92.6 / 91.6 / 91.4 : l'ecart va
+de 0.2 a 0.4 pt, ce qui confirme que PGD-20 avait deja converge au premier
+essai (chiffre stable, donc fiable).
 
 LECTURE :
-1. **L'hypothese est validee.** Le run B passe de 29.8% a 91.4% en ne changeant
+1. **L'hypothese est validee.** Le run B passe de 29.8% a 91.0% en ne changeant
    QUE le nombre d'epochs. La cause etait bien le sous-entrainement.
-2. **A budget suffisant, l'augmentation GAGNE.** 91.4% contre 65.4% pour le run
+2. **A budget suffisant, l'augmentation GAGNE.** 91.0% contre 65.4% pour le run
    A (sans augmentation). A 10 epochs elle semblait nuire ; a 120 elle apporte
    +26 pts de robustesse. La lecon du run B a 10 epochs etait donc une lecon de
    budget, pas de methode.
@@ -535,8 +539,8 @@ LECTURE :
 4. La robustesse de validation (PGD-10) plafonne autour de 91-93% a partir de
    l'epoch 80 ; le meilleur modele est celui de l'epoch 95 (val PGD 93.2%).
 5. Ordre de grandeur : Madry et al. 2018 rapportent environ 93% sous PGD eps=0.3
-   sur MNIST avec un CNN plus gros et PGD-40. On est a 91.4% avec 421 642
+   sur MNIST avec un CNN plus gros et PGD-40. On est a 91.0% avec 421 642
    parametres et PGD-20.
 
-A FAIRE : relancer l'evaluation avec `--restarts 3` (pire cas) pour figer le
-chiffre officiel.
+CHIFFRE OFFICIEL (2026-09-11) : **91.0%** sous PGD-20 eps=0.30, pire cas sur
+3 restarts, 500 images de test, modele de l'epoch 95.

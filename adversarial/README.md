@@ -408,7 +408,7 @@ qui compte ?** Trois runs identiques, sauf un point chacun.
 | **A** | référence (60000 img, PGD-5, sans augmentation) | **98.8%** | **88.2%** | **65.4%** |
 | **B** | A + augmentation de données | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (β=2) | 96.9% | 23.4% | 2.2% |
-| **B (120 epochs)** | B poussé à 120 epochs | **99.6%** | **96.0%** | **91.4%** |
+| **B (120 epochs)** | B poussé à 120 epochs | **99.6%** | **96.0%** | **91.0%** |
 
 ```bash
 ./campagne.sh              # NumPy (harden2.py)
@@ -427,7 +427,7 @@ quand celle du run A descend à **0.24** : le modèle augmenté est
 déformées). C'était donc une leçon de **budget**, pas de méthode.
 
 Vérifié en poussant le run B à **120 epochs** : la loss descend à **0.31** et la
-robustesse passe à **91.4%** sous PGD ε=0.30, soit **+26 pts devant le run A**.
+robustesse passe à **91.0%** sous PGD ε=0.30, soit **+26 pts devant le run A**.
 Autrement dit : l'augmentation paie — mais seulement avec 2-3x plus d'epochs —
 et elle ne remplace pas l'adversarial training.
 

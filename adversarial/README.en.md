@@ -408,7 +408,7 @@ that matters?** Three identical runs, except on one point each.
 | **A** | reference (60000 img, PGD-5, no augmentation) | **98.8%** | **88.2%** | **65.4%** |
 | **B** | A + data augmentation | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (β=2) | 96.9% | 23.4% | 2.2% |
-| **B (120 epochs)** | B pushed to 120 epochs | **99.6%** | **96.0%** | **91.4%** |
+| **B (120 epochs)** | B pushed to 120 epochs | **99.6%** | **96.0%** | **91.0%** |
 
 ```bash
 ./campagne.sh              # NumPy (harden2.py)
@@ -427,7 +427,7 @@ instructive result in the folder. At equal budget, the run B loss stays stuck at
 was therefore a lesson about the **budget**, not the method.
 
 Verified by pushing run B to **120 epochs**: the loss drops to **0.31** and
-robustness jumps to **91.4%** under PGD ε=0.30, i.e. **+26 pts ahead of run A**.
+robustness jumps to **91.0%** under PGD ε=0.30, i.e. **+26 pts ahead of run A**.
 In other words: augmentation pays off — but only with 2-3x more epochs — and it
 does not replace adversarial training.
 

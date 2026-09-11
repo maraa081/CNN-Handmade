@@ -6,8 +6,8 @@
 > - Pas de TensorFlow, pas de PyTorch, pas de Keras : Python et NumPy seulement. Chaque couche est écrite à la main (forward im2col, backward, update).
 > - MNIST propre : **98.6%** d'accuracy test ; les optimiseurs (SGD, Momentum, Adam) sont faits main eux aussi.
 > - Attaques adversariales, faites main aussi : FGSM fait tomber le modèle full à **1.8%**, PGD à **0.0%** à eps=0.30.
-> - Modèle durci (PyTorch, 60000 images, PGD-5, **120 epochs avec augmentation**) : **99.6% propre**, **91.4% sous PGD-20** à eps=0.30.
-> - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.4%** à 120) ; TRADES (C) reste à reprendre.
+> - Modèle durci (PyTorch, 60000 images, PGD-5, **120 epochs avec augmentation**) : **99.6% propre**, **91.0% sous PGD-20** à eps=0.30.
+> - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.0%** à 120) ; TRADES (C) reste à reprendre.
 > - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
 > - La suite : attaques adaptatives (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
 
@@ -273,14 +273,15 @@ python3 adversarial/scripts/bpda_eot.py
 | **campagne A (torch, 60k img, PGD-5)** | **clean 98.8%, 65.4% sous PGD eps=0.30** |
 | campagne B (A + augmentation) | clean 99.5%, 29.8% sous PGD eps=0.30 |
 | campagne C (B + TRADES) | clean 96.9%, 2.2% sous PGD eps=0.30 |
-| **campagne B, 120 epochs (augmentation)** | **clean 99.6%, 91.4% sous PGD eps=0.30** |
+| **campagne B, 120 epochs (augmentation)** | **clean 99.6%, 91.0% sous PGD eps=0.30** |
 | Attaques adaptatives BPDA+EOT (défense v1) | gradient masking : l'attaquant naïf laisse 62.5%, BPDA la casse à 1.5% (eps=0.30) |
 
 > **Résultat de référence (2026-09-11).** Le modèle durci entraîné en PyTorch sur
 > 60000 images (**120 epochs**, PGD-5, **avec augmentation**) atteint **99.6% de
-> précision propre et 91.4% sous PGD-20 à eps=0.30** — contre 65.4% pour la
-> version à 10 epochs, et 1.2% pour la première version durcie. La leçon : le
-> facteur limitant était le **budget d'epochs**, pas la recette.
+> précision propre et 91.0% sous PGD-20 à eps=0.30** (pire cas sur 3 restarts)
+> — contre 65.4% pour la version à 10 epochs, et 1.2% pour la première version
+> durcie. La leçon : le facteur limitant était le **budget d'epochs**, pas la
+> recette.
 
 ### La campagne durcie : 3 recettes, une seule variable qui change
 
@@ -294,7 +295,7 @@ compte ?*
 | **B** | A + augmentation de données | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (beta=2) | 96.9% | 23.4% | 2.2% |
 
-| **B (120 epochs)** | B poussé à 120 epochs | **99.6%** | **96.0%** | **91.4%** |
+| **B (120 epochs)** | B poussé à 120 epochs | **99.6%** | **96.0%** | **91.0%** |
 
 ```bash
 # La campagne complète (3 runs, reprise automatique), en NumPy ou en PyTorch
@@ -309,7 +310,7 @@ compte ?*
 > d'entraînement du run B reste bloquée à ~0.82 quand celle du run A descend à
 > 0.24 : le modèle augmenté est **sous-entraîné** (chaque epoch est plus
 > difficile). C'était une leçon de **budget**, pas de méthode. Vérifié en
-> poussant le run B à **120 epochs** : loss **0.31** et **91.4%** sous PGD —
+> poussant le run B à **120 epochs** : loss **0.31** et **91.0%** sous PGD —
 > **+26 pts devant le run A** (65.4%). L'augmentation paie, mais seulement avec
 > 2-3x plus d'epochs, et elle ne remplace pas l'adversarial training.
 >
@@ -332,7 +333,7 @@ Détail et setup GPU : [`adversarial/torch/README.md`](adversarial/torch/README.
 
 ### La suite prévue
 
-Le modèle durci tient 91.4% sous PGD — mais PGD est justement l'attaque contre
+Le modèle durci tient 91.0% sous PGD — mais PGD est justement l'attaque contre
 laquelle il a été entraîné. Première étape faite le **2026-09-11** : les attaques
 adaptatives BPDA + EOT montrent que la défense de la v1 (feature squeezing)
 n'était que du **gradient masking** (l'attaquant naïf laisse 62.5% au modèle à

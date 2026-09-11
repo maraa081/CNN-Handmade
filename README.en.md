@@ -6,8 +6,8 @@
 > - No TensorFlow, no PyTorch, no Keras: Python and NumPy only. Every layer is written by hand (im2col forward, backward, update).
 > - Clean MNIST: **98.6%** test accuracy; the optimizers (SGD, Momentum, Adam) are hand-made too.
 > - Adversarial attacks, hand-made as well: FGSM drops the full model to **1.8%**, PGD to **0.0%** at eps=0.30.
-> - Hardened model (PyTorch, 60000 images, PGD-5, **120 epochs with augmentation**): **99.6% clean**, **91.4% under PGD-20** at eps=0.30.
-> - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.4%** at 120); TRADES (C) still needs another go.
+> - Hardened model (PyTorch, 60000 images, PGD-5, **120 epochs with augmentation**): **99.6% clean**, **91.0% under PGD-20** at eps=0.30.
+> - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.0%** at 120); TRADES (C) still needs another go.
 > - Two engines, same maths: hand-made NumPy and PyTorch, ~9x faster on CPU, interchangeable `.npz` weights.
 > - Next step: adaptive attacks (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
 
@@ -273,14 +273,15 @@ python3 adversarial/scripts/bpda_eot.py
 | **campaign A (torch, 60k img, PGD-5)** | **clean 98.8%, 65.4% under PGD eps=0.30** |
 | campaign B (A + augmentation) | clean 99.5%, 29.8% under PGD eps=0.30 |
 | campaign C (B + TRADES) | clean 96.9%, 2.2% under PGD eps=0.30 |
-| **campaign B, 120 epochs (augmentation)** | **clean 99.6%, 91.4% under PGD eps=0.30** |
+| **campaign B, 120 epochs (augmentation)** | **clean 99.6%, 91.0% under PGD eps=0.30** |
 | Adaptive attacks BPDA+EOT (v1 defence) | gradient masking: the naive attacker leaves 62.5%, BPDA breaks it to 1.5% (eps=0.30) |
 
 > **Reference result (2026-09-11).** The hardened model trained in PyTorch on
 > 60000 images (**120 epochs**, PGD-5, **with augmentation**) reaches **99.6% clean
-> accuracy and 91.4% under PGD-20 at eps=0.30** — against 65.4% for the 10-epoch
-> version, and 1.2% for the first hardened version. The lesson: the limiting
-> factor was the **epoch budget**, not the recipe.
+> accuracy and 91.0% under PGD-20 at eps=0.30** (worst case over 3 restarts)
+> — against 65.4% for the 10-epoch version, and 1.2% for the first hardened
+> version. The lesson: the limiting factor was the **epoch budget**, not the
+> recipe.
 
 ### The hardening campaign: 3 recipes, a single variable that changes
 
@@ -293,7 +294,7 @@ matters?*
 | **A** | reference (60000 img, PGD-5, no augmentation) | **98.8%** | **88.2%** | **65.4%** |
 | **B** | A + data augmentation | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (beta=2) | 96.9% | 23.4% | 2.2% |
-| **B (120 epochs)** | B pushed to 120 epochs | **99.6%** | **96.0%** | **91.4%** |
+| **B (120 epochs)** | B pushed to 120 epochs | **99.6%** | **96.0%** | **91.0%** |
 
 ```bash
 # The complete campaign (3 runs, automatic resume), in NumPy or PyTorch
@@ -308,7 +309,7 @@ matters?*
 > training loss of run B stays stuck at ~0.82 while run A goes down to 0.24:
 > the augmented model is **under-trained** (each epoch is harder). It was a lesson
 > about the **budget**, not the method. Verified by pushing run B to **120
-> epochs**: loss **0.31** and **91.4%** under PGD — **+26 pts ahead of run A**
+> epochs**: loss **0.31** and **91.0%** under PGD — **+26 pts ahead of run A**
 > (65.4%). Augmentation pays off, but only with 2-3x more epochs, and it does not
 > replace adversarial training.
 >
@@ -331,7 +332,7 @@ Details and GPU setup: [`adversarial/torch/README.md`](adversarial/torch/README.
 
 ### What's next
 
-The hardened model holds 91.4% under PGD — but PGD is precisely the attack
+The hardened model holds 91.0% under PGD — but PGD is precisely the attack
 against which it was trained. First step done on **2026-09-11**: the adaptive
 attacks BPDA + EOT show that the v1 defence (feature squeezing) was only
 **gradient masking** (the naive attacker leaves 62.5% to the model at eps=0.30,
