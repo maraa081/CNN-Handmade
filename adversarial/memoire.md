@@ -456,3 +456,46 @@ Fichiers : `models/harden2_ref_pgdat.pt` (le meilleur),
 | 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.10 | 43.0% | 59.6% | — | +16.6 pts |
 | 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.20 | 16.2% | 34.6% | — | +18.4 pts |
 | 2026-08-25 | Adv. training (équitable) | défendu vs same-data | 0.30 | 8.4% | 17.4% | — | +9.0 pts | |
+
+### 2026-09-11 - ATTAQUES ADAPTATIVES : la defense v1 etait du gradient masking
+
+Question posee par Maraa : le modele durci tient 65.4% sous PGD, mais PGD est
+justement l'attaque contre laquelle il a ete entraine. Est-ce une vraie defense
+ou un gradient obfusque ? (Athalye, Carlini & Wagner, 2018)
+
+Nouveau script : `adversarial/scripts/bpda_eot.py`. Il attaque le modele
+DEPLOYE (poids durcis v1 + feature squeezing 3 bits a l'inference) avec quatre
+attaquants : PGD sans tenir compte du squeezing, PGD avec le VRAI jacobien de la
+quantification (nul presque partout, comme torch.round), BPDA (forward exact,
+passe arriere = identite), et BPDA+EOT (moyenne sur bits 2/3/4 et translation
++/-2 px).
+
+Run : 200 images, PGD-20, squeezing 3 bits, accuracy propre 67.0%.
+
+| eps | sans defense | naif (vrai jacobien) | BPDA | BPDA+EOT |
+|---|---|---|---|---|
+| 0.10 | 27.5% | 68.0% | 27.0% | 41.0% |
+| 0.20 | 22.5% | 66.5% | 21.5% | 37.0% |
+| 0.30 | 1.0% | 62.5% | 1.5% | 10.0% |
+
+CONSTAT : l'attaquant naif laisse 62.5% a eps=0.30 (la defense parait solide),
+BPDA la fait tomber a 1.5% (niveau d'un modele non defendu). La couche de
+feature squeezing n'apportait donc AUCUNE protection reelle : elle rendait
+seulement le gradient inutilisable. C'est le piege classique du gradient
+masking, et c'est la raison pour laquelle une defense doit toujours etre
+evaluee sous attaque ADAPTATIVE.
+
+Note : BPDA+EOT est ici moins efficace que BPDA seul (10.0% contre 1.5% a
+eps=0.30) car la moyenne EOT dilue le signal a nombre de pas fixe.
+
+Portee : le modele durci de la piste torch (98.8% / 65.4%) n'embarque PAS de
+feature squeezing et n'est pas stochastique. Son vrai test est plus loin : CW
+puis AutoAttack.
+
+### 2026-09-11 - Regression corrigee : models/defend_pgd_mnist_weights.npz
+
+Le fichier livre dans le depot avait ete ECRASE par erreur le 2026-09-10
+(commit 66d1e85, pendant la mise au point de harden2.py). Verifie en direct :
+il donnait 28.8% propre au lieu des 67.2% documentes. Restaure depuis b8e573f
+(verifie : 67.2% de nouveau). Lecon : apres chaque session, verifier que les
+poids versionnes reproduisent bien les chiffres du README.

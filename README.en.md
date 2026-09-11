@@ -250,6 +250,9 @@ python3 adversarial/scripts/transfer.py --src full --dst max_config --attack pgd
 
 # Defence: PGD adversarial training + feature squeezing, then multi-attack evaluation
 python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
+
+# Adaptive attacks: break the defence (BPDA + EOT)
+python3 adversarial/scripts/bpda_eot.py
 ```
 
 **Key results**
@@ -264,6 +267,7 @@ python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
 | **campaign A (torch, 60k img, PGD-5)** | **clean 98.8%, 65.4% under PGD eps=0.30** |
 | campaign B (A + augmentation) | clean 99.5%, 29.8% under PGD eps=0.30 |
 | campaign C (B + TRADES) | clean 96.9%, 2.2% under PGD eps=0.30 |
+| Adaptive attacks BPDA+EOT (v1 defence) | gradient masking: the naive attacker leaves 62.5%, BPDA breaks it to 1.5% (eps=0.30) |
 
 > **Reference result (2026-09-10).** The hardened model trained in PyTorch
 > on 60000 images (10 epochs, PGD-5, without augmentation) reaches **98.8% clean
@@ -319,12 +323,15 @@ Details and GPU setup: [`adversarial/torch/README.md`](adversarial/torch/README.
 ### What's next
 
 The hardened model holds 65.4% under PGD — but PGD is precisely the attack
-against which it was trained. The next step is to check that this is not
-*gradient masking* (a defence that only moves the vulnerability around).
+against which it was trained. First step done on **2026-09-11**: the adaptive
+attacks BPDA + EOT show that the v1 defence (feature squeezing) was only
+**gradient masking** (the naive attacker leaves 62.5% to the model at eps=0.30,
+BPDA brings it down to 1.5%). Detail in `adversarial/scripts/bpda_eot.py` and
+the "Adaptive attacks" section of [`adversarial/README.md`](adversarial/README.md).
 
 | Step | Content | Reference |
 |---|---|---|
-| 1 | **Adaptive attacks**: BPDA + EOT on the hardened model | Athalye et al. 2018; Tramèr et al. 2020 |
+| 1 | **Adaptive attacks**: BPDA + EOT (**done on 2026-09-11**) | Athalye et al. 2018; Tramèr et al. 2020 |
 | 2 | **Carlini-Wagner (CW)**: the reference white-box attack | Carlini & Wagner 2017 |
 | 3 | **Black-box**: score-based (ZOO/NES) then decision-based (Boundary/HSJA) | Chen et al. 2017; Brendel & Bethge 2019 |
 | 4 | **Certified robustness**: randomized smoothing (guaranteed L2 bound) | Cohen et al. 2019 |

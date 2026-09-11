@@ -438,6 +438,63 @@ d'épochs**.
 
 ---
 
+## Attaques adaptatives : BPDA + EOT (2026-09-11)
+
+Le modèle durci tient 65-67% sous PGD — mais PGD est justement l'attaque contre
+laquelle il a été entraîné. Pour savoir si la défense est **réelle**, il faut la
+tester avec un attaquant qui la connaît. C'est le test du "gradient masking"
+(Athalye, Carlini & Wagner, 2018).
+
+`bpda_eot.py` attaque le modèle **tel qu'il serait déployé** (poids durcis +
+feature squeezing à l'inférence) avec quatre attaquants :
+
+- **sans défense** : PGD sur le modèle brut, sans tenir compte du squeezing (le
+  squeezing n'est appliqué qu'à l'évaluation) ;
+- **naïf** : PGD propage à travers la quantification avec son **vrai** jacobien.
+  L'arrondi est une fonction en escalier : sa dérivée est nulle presque partout
+  (c'est exactement ce que fait `torch.round`). Le gradient qui remonte à
+  l'entrée est donc nul, et l'attaque ne bouge pas d'un pixel ;
+- **BPDA** : forward exact, passe arrière approximée par l'identité ;
+- **BPDA + EOT** : BPDA avec moyenne du gradient sur des transformations
+  aléatoires (profondeur de bits tirée dans {2, 3, 4}, translation +/-2 px).
+
+Résultat (200 images, PGD-20, squeezing 3 bits, accuracy propre 67.0%) :
+
+| eps | sans défense | naïf (vrai jacobien) | BPDA | BPDA + EOT |
+|---|---|---|---|---|
+| 0.10 | 27.5% | **68.0%** | 27.0% | 41.0% |
+| 0.20 | 22.5% | **66.5%** | 21.5% | 37.0% |
+| 0.30 | 1.0% | **62.5%** | 1.5% | 10.0% |
+
+```bash
+# Modele durci v1 + feature squeezing 3 bits (defaut)
+python3 adversarial/scripts/bpda_eot.py
+
+# Plus de tirages EOT, autres eps
+python3 adversarial/scripts/bpda_eot.py --bits 3 --eot 8 --eps 0.2 0.3
+
+# Test rapide de la chaine
+python3 adversarial/scripts/bpda_eot.py --quick
+```
+
+> **Verdict : la défense de la v1 était du gradient masking.** L'attaquant naïf
+> laisse 62.5% au modèle à eps=0.30 — elle *paraît* solide. BPDA la fait tomber
+> à **1.5%**, soit le niveau d'un modèle non défendu. La couche de feature
+> squeezing n'apportait donc **aucune protection réelle** : elle rendait
+> simplement le gradient inutilisable pour l'attaquant.
+>
+> Note honnête : BPDA+EOT est ici *moins* efficace que BPDA seul (10.0% contre
+> 1.5% à eps=0.30), parce que la moyenne EOT dilue le signal à nombre de pas
+> fixé. La leçon reste la même : une défense stochastique ne protège pas, elle
+> rend juste l'attaque plus chère.
+
+**Ce que ça change pour le reste du dossier** : le modèle durci de la piste
+torch (98.8% / 65.4%) **n'embarque pas** de feature squeezing et n'est pas
+stochastique. Les attaques adaptatives s'y appliquent donc différemment, et le
+bon test pour lui est plus loin : CW (bientôt) et AutoAttack.
+
+---
+
 ## La piste PyTorch — quand le modèle grossit
 
 Le dossier `adversarial/scripts/` contient l'implémentation **faite main** :

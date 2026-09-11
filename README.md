@@ -249,6 +249,9 @@ python3 adversarial/scripts/transfer.py --src full --dst max_config --attack pgd
 
 # Défense : adversarial training PGD + feature squeezing, puis évaluation multi-attaques
 python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
+
+# Attaques adaptatives : casser la défense (BPDA + EOT)
+python3 adversarial/scripts/bpda_eot.py
 ```
 
 **Résultats clés**
@@ -263,6 +266,7 @@ python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
 | **campagne A (torch, 60k img, PGD-5)** | **clean 98.8%, 65.4% sous PGD eps=0.30** |
 | campagne B (A + augmentation) | clean 99.5%, 29.8% sous PGD eps=0.30 |
 | campagne C (B + TRADES) | clean 96.9%, 2.2% sous PGD eps=0.30 |
+| Attaques adaptatives BPDA+EOT (défense v1) | gradient masking : l'attaquant naïf laisse 62.5%, BPDA la casse à 1.5% (eps=0.30) |
 
 > **Résultat de référence (2026-09-10).** Le modèle durci entraîné en PyTorch
 > sur 60000 images (10 epochs, PGD-5, sans augmentation) atteint **98.8% de
@@ -318,12 +322,15 @@ Détail et setup GPU : [`adversarial/torch/README.md`](adversarial/torch/README.
 ### La suite prévue
 
 Le modèle durci tient 65.4% sous PGD — mais PGD est justement l'attaque contre
-laquelle il a été entraîné. La prochaine étape est de vérifier que ce n'est pas
-du *gradient masking* (une défense qui ne fait que déplacer la vulnérabilité).
+laquelle il a été entraîné. Première étape faite le **2026-09-11** : les attaques
+adaptatives BPDA + EOT montrent que la défense de la v1 (feature squeezing)
+n'était que du **gradient masking** (l'attaquant naïf laisse 62.5% au modèle à
+eps=0.30, BPDA le fait tomber à 1.5%). Détail dans `adversarial/scripts/bpda_eot.py`
+et la section "Attaques adaptatives" de [`adversarial/README.md`](adversarial/README.md).
 
 | Étape | Contenu | Référence |
 |---|---|---|
-| 1 | **Attaques adaptatives** : BPDA + EOT sur le modèle durci | Athalye et al. 2018 ; Tramèr et al. 2020 |
+| 1 | **Attaques adaptatives** : BPDA + EOT (**fait le 2026-09-11**) | Athalye et al. 2018 ; Tramèr et al. 2020 |
 | 2 | **Carlini-Wagner (CW)** : l'attaque white-box de référence | Carlini & Wagner 2017 |
 | 3 | **Black-box** : score-based (ZOO/NES) puis decision-based (Boundary/HSJA) | Chen et al. 2017 ; Brendel & Bethge 2019 |
 | 4 | **Robustesse certifiée** : randomized smoothing (borne L2 garantie) | Cohen et al. 2019 |

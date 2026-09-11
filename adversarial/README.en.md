@@ -438,6 +438,63 @@ budget**.
 
 ---
 
+## Adaptive attacks: BPDA + EOT (2026-09-11)
+
+The hardened model holds 65-67% under PGD -- but PGD is exactly the attack it
+was trained against. To know whether the defence is **real**, it must be tested
+with an attacker that knows about it. That is the "gradient masking" test
+(Athalye, Carlini & Wagner, 2018).
+
+`bpda_eot.py` attacks the model **as it would be deployed** (hardened weights +
+feature squeezing at inference) with four attackers:
+
+- **without defence**: PGD on the raw model, ignoring the squeezing (squeezing
+  is applied at evaluation time only);
+- **naive**: PGD propagates through the quantisation with its **true** Jacobian.
+  Rounding is a step function: its derivative is zero almost everywhere (exactly
+  what `torch.round` does). The gradient that comes back to the input is zero,
+  so the attack does not move a single pixel;
+- **BPDA**: exact forward pass, backward pass approximated by the identity;
+- **BPDA + EOT**: BPDA with the gradient averaged over random transformations
+  (bit depth drawn from {2, 3, 4}, translation +/-2 px).
+
+Result (200 images, PGD-20, squeezing 3 bits, clean accuracy 67.0%):
+
+| eps | without defence | naive (true Jacobian) | BPDA | BPDA + EOT |
+|---|---|---|---|---|
+| 0.10 | 27.5% | **68.0%** | 27.0% | 41.0% |
+| 0.20 | 22.5% | **66.5%** | 21.5% | 37.0% |
+| 0.30 | 1.0% | **62.5%** | 1.5% | 10.0% |
+
+```bash
+# Hardened v1 model + 3-bit feature squeezing (default)
+python3 adversarial/scripts/bpda_eot.py
+
+# More EOT draws, other eps values
+python3 adversarial/scripts/bpda_eot.py --bits 3 --eot 8 --eps 0.2 0.3
+
+# Quick pipeline check
+python3 adversarial/scripts/bpda_eot.py --quick
+```
+
+> **Verdict: the v1 defence was gradient masking.** The naive attacker leaves
+> 62.5% to the model at eps=0.30 -- it *looks* solid. BPDA brings it down to
+> **1.5%**, the level of an undefended model. The feature squeezing layer
+> therefore provided **no real protection**: it merely made the gradient
+> unusable for the attacker.
+>
+> Honest note: BPDA+EOT is here *less* effective than BPDA alone (10.0% vs 1.5%
+> at eps=0.30), because the EOT average dilutes the signal at a fixed number of
+> steps. The lesson stands: a stochastic defence does not protect, it only makes
+> the attack more expensive.
+
+**What this means for the rest of the folder**: the hardened model from the
+torch path (98.8% / 65.4%) **does not include** feature squeezing and is not
+stochastic. Adaptive attacks therefore apply to it differently, and its real
+test comes later: CW (soon) and AutoAttack.
+
+---
+
 ## The PyTorch path — when the model grows
 
 The `adversarial/scripts/` folder contains the **hand-made** implementation:
