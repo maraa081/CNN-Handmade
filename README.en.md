@@ -6,7 +6,7 @@
 > - No TensorFlow, no PyTorch, no Keras: Python and NumPy only. Every layer is written by hand (im2col forward, backward, update).
 > - Clean MNIST: **98.6%** test accuracy; the optimizers (SGD, Momentum, Adam) are hand-made too.
 > - Adversarial attacks, hand-made as well: FGSM drops the full model to **1.8%**, PGD to **0.0%** at eps=0.30.
-> - Hardened model (PyTorch, 60000 images, PGD-5, **120 epochs with augmentation**): **99.6% clean**, **91.0% under PGD-20** at eps=0.30.
+> - Hardened model (PyTorch, 60000 images, 120 epochs, augmentation): **99.8% clean**, and **42.0% under the strongest attack found** (Square, gradient-free) -- the number measured against the training attack (PGD) was 91%, hence misleading.
 > - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.0%** at 120); TRADES (C) still needs another go.
 > - Two engines, same maths: hand-made NumPy and PyTorch, ~9x faster on CPU, interchangeable `.npz` weights.
 > - Next step: adaptive attacks (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
@@ -311,14 +311,21 @@ python3 adversarial/scripts/bpda_eot.py
 | campaign B (A + augmentation) | clean 99.5%, 29.8% under PGD eps=0.30 |
 | campaign C (B + TRADES) | clean 96.9%, 2.2% under PGD eps=0.30 |
 | **campaign B, 120 epochs (augmentation)** | **clean 99.6%, 91.0% under PGD eps=0.30** |
+| **attack suite on that same model** | **worst case 42.0%** (Square, gradient-free) versus 91.0% under PGD-20 |
 | Adaptive attacks BPDA+EOT (v1 defence) | gradient masking: the naive attacker leaves 62.5%, BPDA breaks it to 1.5% (eps=0.30) |
 
 > **Reference result (2026-09-11).** The hardened model trained in PyTorch on
-> 60000 images (**120 epochs**, PGD-5, **with augmentation**) reaches **99.6% clean
-> accuracy and 91.0% under PGD-20 at eps=0.30** (worst case over 3 restarts)
-> — against 65.4% for the 10-epoch version, and 1.2% for the first hardened
-> version. The lesson: the limiting factor was the **epoch budget**, not the
-> recipe.
+> 60000 images (**120 epochs**, PGD-5, **with augmentation**) reaches **99.8%
+> clean accuracy**. Its robustness depends heavily on the attack used: **91.0%
+> under PGD-20**, but **42.0% under Square Attack** (gradient-free, 3000
+> queries). So **42.0% is the number to keep**.
+>
+> **Central lesson: the training number is not the robustness number.** The
+> model was trained against PGD and evaluated against PGD: 91%. Handed to an
+> attack from another family, it drops to 42%. A model is judged against **the
+> strongest attack one can build**, not the one used for training. The limiting
+> factor was the **epoch budget** for accuracy, and the **attack budget** for
+> robustness.
 
 ### The hardening campaign: 3 recipes, a single variable that changes
 

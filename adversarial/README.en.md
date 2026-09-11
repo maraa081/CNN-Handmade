@@ -602,6 +602,39 @@ gradient-free attacks are weaker at equal query budget (the price of the black
 box); Boundary "succeeds" but at a large distance, which is normal for a
 decision-based attack on a small ball.
 
+### Result on the reference model (120 epochs, 500 images, eps=0.30)
+
+| Attack | Family | Accuracy |
+|---|---|---|
+| (clean) | - | **99.8%** |
+| FGSM (1 step) | gradient | 96.0% |
+| PGD-20 (3 restarts) | gradient | 91.0% |
+| PGD-50 (10 restarts, step eps/10) | gradient | 92.0% |
+| APGD-CE | gradient | 90.0% |
+| **APGD-DLR** | gradient | **79.0%** |
+| Square (500 steps) | gradient-free | 70.0% |
+| **Square (3000 steps, 2 restarts)** | gradient-free | **42.0%** |
+| NES | gradient-free | 93.8% |
+
+> **Result: the worst case is 42.0%, not 91.0%.** The model was announced at 91%
+under PGD-20 -- that is, measured against the attack from its own training. A
+**gradient-free** attack with 3000 queries brings it down to **42.0%**. The
+49-point gap is the most important result in the folder.
+>
+> **Why does a gradient-free attack beat the gradient?** Adversarial training
+has flattened the loss landscape: the gradient gives the attacker poor
+information, while a search guided by the scores alone still finds the way. It
+is the signature of a model where the blind attacker beats the seeing one.
+>
+> **Verification**: the perturbation bound was checked directly
+(|delta|inf = 0.300000, never exceeded), the result is monotone with the budget
+(500 steps -> 70.0%, 3000 steps -> 42.0%) and reproduced (39.0% on 200 images,
+42.0% on 500).
+>
+> **Main lead**: the training attack was too coarse (PGD-5, step eps/4).
+Strengthening the inner attack (PGD-20, step eps/10, `--pgd-alpha`) is the next
+step.
+
 ## CERTIFIED robustness: randomized smoothing
 
 Every previous defence is **empirical**: we attack, and we look at what is left.

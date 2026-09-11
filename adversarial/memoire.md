@@ -544,3 +544,49 @@ LECTURE :
 
 CHIFFRE OFFICIEL (2026-09-11) : **91.0%** sous PGD-20 eps=0.30, pire cas sur
 3 restarts, 500 images de test, modele de l'epoch 95.
+
+### 2026-09-11 (soir) - LA SUITE D'ATTAQUES CASSE LE 91% : le pire cas est 42%
+
+Le modele durci (run B, 120 epochs) etait documente a **91.0% sous PGD-20**
+eps=0.30. Cette valeur est mesuree contre l'attaque sur laquelle le modele a ete
+ENTRAINE. La suite complete (`eval_suite.py`) montre que c'etait une
+surestimation massive.
+
+Run : 500 images de test, eps=0.30, precision propre 99.8%.
+
+| Attaque | Famille | Accuracy | Cout |
+|---|---|---|---|
+| FGSM (1 pas) | gradient | 96.0% | 1 gradient |
+| PGD-20 (3 restarts) | gradient | 91.0% | 60 gradients |
+| PGD-50 (10 restarts, pas eps/10) | gradient | 92.0%* | 500 gradients |
+| APGD-CE (100 puis 200 pas) | gradient | 90.0% / 89.5%* | adaptatif |
+| **APGD-DLR (200 pas)** | gradient | **79.0%*** | adaptatif |
+| Square (500 pas) | sans gradient | 70.0% | 500 requetes |
+| **Square (3000 pas, 2 restarts)** | sans gradient | **42.0%** | 6000 requetes |
+| NES (20x10 puis 50x20) | sans gradient | 93.8% / 94.5%* | 2000 requetes |
+
+(*) mesures sur 200 images (granularite 0.5%), les autres sur 500 images.
+
+LECTURE :
+1. **Le 91.0% etait une illusion d'attaque faible.** Donnee a l'attaque l'attaque
+   la plus forte trouvee (Square, sans gradient), le modele tombe a **42.0%**,
+   soit -49 points. C'est un budget de requetes parfaitement realiste pour un
+   attaquant reel.
+2. **Le gradient renseigne mal l'attaquant.** Toutes les attaques a gradient
+   plafonnent entre 79% et 92%, alors qu'une recherche guidee par les SCORES
+   descend a 42%. C'est la signature d'un modele ou la surface de perte est
+   devenue tres plate -- caracteristique des modeles entraines adversairement.
+   L'attaquant qui ne voit pas le gradient fait donc MIEUX que celui qui le voit.
+3. **L'attaque d'entrainement etait trop grossiere.** Le modele a ete entraine
+   avec PGD-5 et un pas de eps/4 = 0.075 (5 pas). Il a appris a resister a CETTE
+   trajectoire, pas a la boule eps entiere. Piste principale : renforcer
+   l'attaque interne (PGD-20, pas eps/10).
+
+Verification : la borne de perturbation a ete controlee directement
+(|delta|inf = 0.300000 exactement, jamais depassee). Ce n'est pas un bug de
+l'attaque. Tendance monotone avec le budget : 500 pas -> 70.0%, 3000 pas ->
+42.0%. Resultat reproduit a 200 images (39.0%) et 500 images (42.0%).
+
+CONSEQUENCE : le chiffre a retenir pour ce modele est **42.0%**, pas 91.0%.
+La prochaine etape est un entrainement v4 avec une attaque interne plus forte,
+puis une reevaluation avec la meme suite.

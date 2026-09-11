@@ -6,7 +6,7 @@
 > - Pas de TensorFlow, pas de PyTorch, pas de Keras : Python et NumPy seulement. Chaque couche est écrite à la main (forward im2col, backward, update).
 > - MNIST propre : **98.6%** d'accuracy test ; les optimiseurs (SGD, Momentum, Adam) sont faits main eux aussi.
 > - Attaques adversariales, faites main aussi : FGSM fait tomber le modèle full à **1.8%**, PGD à **0.0%** à eps=0.30.
-> - Modèle durci (PyTorch, 60000 images, PGD-5, **120 epochs avec augmentation**) : **99.6% propre**, **91.0% sous PGD-20** à eps=0.30.
+> - Modèle durci (PyTorch, 60000 images, 120 epochs, augmentation) : **99.8% propre**, et **42.0% sous la pire attaque trouvée** (Square, sans gradient) — le chiffre mesuré contre l'attaque d'entraînement (PGD) était de 91%, donc trompeur.
 > - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.0%** à 120) ; TRADES (C) reste à reprendre.
 > - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
 > - La suite : attaques adaptatives (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
@@ -311,14 +311,21 @@ python3 adversarial/scripts/bpda_eot.py
 | campagne B (A + augmentation) | clean 99.5%, 29.8% sous PGD eps=0.30 |
 | campagne C (B + TRADES) | clean 96.9%, 2.2% sous PGD eps=0.30 |
 | **campagne B, 120 epochs (augmentation)** | **clean 99.6%, 91.0% sous PGD eps=0.30** |
+| **suite d'attaques sur ce même modèle** | **pire cas 42.0%** (Square, sans gradient) contre 91.0% sous PGD-20 |
 | Attaques adaptatives BPDA+EOT (défense v1) | gradient masking : l'attaquant naïf laisse 62.5%, BPDA la casse à 1.5% (eps=0.30) |
 
 > **Résultat de référence (2026-09-11).** Le modèle durci entraîné en PyTorch sur
-> 60000 images (**120 epochs**, PGD-5, **avec augmentation**) atteint **99.6% de
-> précision propre et 91.0% sous PGD-20 à eps=0.30** (pire cas sur 3 restarts)
-> — contre 65.4% pour la version à 10 epochs, et 1.2% pour la première version
-> durcie. La leçon : le facteur limitant était le **budget d'epochs**, pas la
-> recette.
+> 60000 images (**120 epochs**, PGD-5, **avec augmentation**) atteint **99.8% de
+> précision propre**. Sa robustesse dépend fortement de l'attaque employée :
+> **91.0% sous PGD-20**, mais **42.0% sous Square Attack** (sans gradient,
+> 3000 requêtes). C'est donc **42.0% qui est le chiffre à retenir**.
+>
+> **Leçon centrale : le chiffre d'entraînement n'est pas le chiffre de
+> robustesse.** Le modèle avait été entraîné contre PGD et évalué contre PGD :
+> 91%. Donné à une attaque d'une autre famille, il tombe à 42%. Un modèle se
+> juge contre **l'attaque la plus forte qu'on sait construire**, pas contre
+> celle qu'on a utilisée pour l'entraîner. Le facteur limitant était le **budget
+> d'epochs** pour la précision, et le **budget d'attaque** pour la robustesse.
 
 ### La campagne durcie : 3 recettes, une seule variable qui change
 

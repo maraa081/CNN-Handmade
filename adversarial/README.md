@@ -604,6 +604,40 @@ egal (c'est le prix de la boite noire) ; Boundary "reussit" mais a une grande
 distance, ce qui est normal pour une attaque decision-based sur une petite
 boule.
 
+### Resultat sur le modele de reference (120 epochs, 500 images, eps=0.30)
+
+| Attaque | Famille | Accuracy |
+|---|---|---|
+| (propre) | - | **99.8%** |
+| FGSM (1 pas) | gradient | 96.0% |
+| PGD-20 (3 restarts) | gradient | 91.0% |
+| PGD-50 (10 restarts, pas eps/10) | gradient | 92.0% |
+| APGD-CE | gradient | 90.0% |
+| **APGD-DLR** | gradient | **79.0%** |
+| Square (500 pas) | sans gradient | 70.0% |
+| **Square (3000 pas, 2 restarts)** | sans gradient | **42.0%** |
+| NES | sans gradient | 93.8% |
+
+> **Resultat : le pire cas est 42.0%, pas 91.0%.** Le modele etait annonce a 91%
+sous PGD-20 -- c'est-a-dire mesure contre l'attaque de son propre entrainement.
+Une attaque **sans gradient**, avec 3000 requetes, le fait tomber a **42.0%**.
+L'ecart de 49 points est le resultat le plus important du dossier.
+>
+> **Pourquoi une attaque sans gradient fait-elle mieux que le gradient ?**
+> L'entrainement adversarial a aplati la surface de perte : le gradient renseigne
+> mal l'attaquant, tandis qu'une recherche guidee par les seuls scores trouve le
+> chemin. C'est la signature d'un modele ou l'attaquant aveugle fait mieux que
+> l'attaquant voyant.
+>
+> **Verification** : la borne de perturbation a ete controlee directement
+> (|delta|inf = 0.300000, jamais depassee), le resultat est monotone avec le
+> budget (500 pas -> 70.0%, 3000 pas -> 42.0%) et reproduit (39.0% sur 200
+> images, 42.0% sur 500).
+>
+> **Piste principale** : l'attaque d'entrainement etait trop grossiere (PGD-5,
+pas de eps/4). Renforcer l'attaque interne (PGD-20, pas de eps/10, option
+`--pgd-alpha`) est la prochaine etape.
+
 ## Robustesse CERTIFIEE : randomized smoothing
 
 Toutes les defenses precedentes sont **empiriques** : on attaque, on regarde ce
