@@ -1,5 +1,7 @@
 # Adversarial Attacks — Attaquer (et défendre) mon CNN from scratch
 
+**Français** | [English](README.en.md)
+
 > **Objectif :** apprendre la sécurité des modèles en attaquant mon propre CNN.
 > Je contrôle le gradient de A à Z (aucun framework) -> je peux implémenter les attaques moi-même.
 >
@@ -25,6 +27,7 @@ adversarial/
 |   |-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
 |   |-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
 |   |-- augment.py     <- augmentation de données (rotation, zoom, bruit, cutout)  OK opérationnel
+|   |-- bpda_eot.py    <- attaques ADAPTATIVES : BPDA + EOT (casser une défense à gradient obfusqué)  OK opérationnel
 |   `-- campagne.sh    <- lance les 3 recettes durcies en série (reprise auto)  OK opérationnel
 |-- torch/             <- piste PyTorch : mêmes maths, autograd, ~9x plus rapide, GPU
 |   |-- modele.py      <- même architecture en nn.Module + conversion .npz
@@ -133,8 +136,8 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ### PGD vs FGSM — EMNIST full (models/emnist_letters_weights_full.npz, 500 images)
 
-> **Modèle full** (124 800 images, **92.0% test** — entraîné sur la machine de
-> Maraa le 2026-08-25, ~37 min). Attaques lancées le 2026-08-26.
+> **Modèle full** (124 800 images, **92.0% test** — entraîné sur une autre machine
+> le 2026-08-25, ~37 min). Attaques lancées le 2026-08-26.
 
 | ε | PGD (acc) | FGSM (acc) | Observation |
 |---|---|---|---|
@@ -391,7 +394,7 @@ Reproduire : `python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3`
 > [warn] Ces deux courbes ne sont pas encore versionnées dans le dépôt : le
 > script les écrit lui-même dans `adversarial/results/harden_curve_pgd.png` et
 > `adversarial/results/harden_history_pgd.png` au moment du run (elles ont été
-> générées sur la machine de Maraa, pas poussées).
+> générées sur une autre machine, pas poussées).
 
 ---
 
@@ -468,7 +471,7 @@ Résultat du test de parité (200 images, mêmes poids) : accuracy propre
 PGD ε=0.2 **0.00 %** dans les deux.
 
 La campagne complète a été lancée avec ce moteur (60000 images, 10 epochs,
-PGD-5, ~1 min par epoch sur la machine de Maraa). C'est le run A du tableau
+PGD-5, ~1 min par epoch sur une autre machine). C'est le run A du tableau
 ci-dessus qui a produit le résultat de référence (98.8% / 65.4%).
 
 > [warn] **Python 3.10 à 3.12** uniquement — PyTorch ne supporte pas 3.14. Sur

@@ -1,5 +1,16 @@
 # CNN Handmade
 
+**Français** | [English](README.en.md)
+
+> **En bref**
+> - Pas de TensorFlow, pas de PyTorch, pas de Keras : Python et NumPy seulement. Chaque couche est écrite à la main (forward im2col, backward, update).
+> - MNIST propre : **98.6%** d'accuracy test ; les optimiseurs (SGD, Momentum, Adam) sont faits main eux aussi.
+> - Attaques adversariales, faites main aussi : FGSM fait tomber le modèle full à **1.8%**, PGD à **0.0%** à eps=0.30.
+> - Modèle durci (PyTorch, 60000 images, PGD-5) : **98.8% propre**, **65.4% sous PGD-20** à eps=0.30.
+> - Campagne A/B/C : le run A est la référence, l'augmentation (B) nuit à budget d'epochs égal, TRADES (C) reste à reprendre.
+> - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
+> - La suite : attaques adaptatives (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
+
 **Un réseau de neurones convolutionnel pour reconnaître les chiffres manuscrits (MNIST), fait à la main, de A à Z.**
 
 Pas de TensorFlow, pas de PyTorch, pas de Keras. Juste Python, NumPy, et moi. 
@@ -92,6 +103,7 @@ CNN-Handmade/
 |   |   |-- defend.py / harden.py / harden2.py - défenses
 |   |   |-- augment.py                         - augmentation de données
 |   |   |-- eval_defended.py                   - évaluation sans ré-entraîner
+|   |   |-- bpda_eot.py                        - attaques adaptatives (BPDA + EOT)
 |   |   `-- campagne.sh                        - les 3 recettes durcies en série
 |   `-- torch/                        - piste PyTorch (autograd, GPU)
 |       |-- modele.py / attaques.py / entrainement.py  - mêmes maths, autre moteur
