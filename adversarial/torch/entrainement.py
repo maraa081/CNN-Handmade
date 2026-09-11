@@ -207,8 +207,12 @@ def entrainer(modele, opt, train, val, args, device):
     x_tr, y_tr = train
     x_val, y_val = val
     n = len(x_tr)
-    meilleur = -1.0
+    meilleur = float(getattr(args, "meilleur_init", -1.0) or -1.0)
     lr = args.lr
+    # Reprise eventuelle : on redemarre la boucle a l'epoch demandee.
+    # Les paliers de lr sont calcules sur la duree TOTALE : reprendre a
+    # l'epoch 61 d'un run de 120 garde donc le palier de l'epoch 96.
+    start = max(1, int(getattr(args, "start_epoch", 1) or 1))
     gen = torch.Generator(device="cpu").manual_seed(args.seed)
     paliers = _paliers_lr(args.lr_drop, args.epochs)
     if args.lr_drop and not paliers:
@@ -216,7 +220,14 @@ def entrainer(modele, opt, train, val, args, device):
     elif paliers:
         print(f"  [LR] paliers aux epochs {paliers}")
 
-    for epoch in range(1, args.epochs + 1):
+    if start > 1:
+        hist = f"{meilleur:.2%}" if meilleur >= 0 else "aucun (reprise d'un ancien checkpoint)"
+        print(f"  [REPRISE] debut a l'epoch {start} (lr {lr:.5f}, meilleur val PGD {hist})")
+    if start > args.epochs:
+        print(f"  [REPRISE] rien a faire : {start} > {args.epochs} epochs")
+        return meilleur
+
+    for epoch in range(start, args.epochs + 1):
         t0 = time.time()
 
         if paliers and epoch in paliers:
@@ -295,7 +306,11 @@ def entrainer(modele, opt, train, val, args, device):
               f"val clean {acc_clean:6.2%} | val PGD{args.val_steps} {acc_rob:6.2%} | "
               f"{dt / 60:5.1f} min | reste ~{reste:4.0f} min")
 
-        torch.save(modele.state_dict(), args.out + "_last.pt")
+        # Checkpoint complet : permet de REPRENDRE apres une coupure (veille du
+        # PC, arret manuel...) sans repartir de zero. Le fichier "best" reste au
+        # format state_dict simple (compatible --report et --npz).
+        torch.save({"format": 2, "model": modele.state_dict(), "opt": opt.state_dict(),
+                    "epoch": epoch, "lr": lr, "meilleur": meilleur}, args.out + "_last.pt")
         if acc_rob > meilleur:
             meilleur = acc_rob
             torch.save(modele.state_dict(), args.out)

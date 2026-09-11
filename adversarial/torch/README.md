@@ -152,12 +152,24 @@ utilisable.
     ./adversarial/scripts/campagne.sh --torch --liste
     ./adversarial/scripts/campagne.sh --torch
 
+    # 8. Reprendre un run interrompu (veille du PC, arret manuel...)
+    #    Un checkpoint COMPLET (poids + optimiseur + epoch + lr) est ecrit a
+    #    chaque epoch dans <out>_last.pt : rien n'est perdu en cas de coupure.
+    python3 adversarial/torch/harden_torch.py ... \
+        --resume models/harden_torch_best.pt_last.pt
+
+    #    Ancien format (state_dict seul) : preciser l'epoch et le lr
+    python3 adversarial/torch/harden_torch.py ... \
+        --resume ancien_modele.pt --start-epoch 61 --lr 0.005
+
 Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,
 `--augment`, `--aug-fort`, `--aug-config`, `--lr`, `--lr-drop`, `--clip`,
 `--warm-start`, `--restarts`...), plus :
 
     --device auto|cpu|cuda|dml      choix du peripherique (auto par defaut)
     --batch 256                     conseille sur GPU
+    --resume FICHIER                reprendre un run interrompu (<out>_last.pt)
+    --start-epoch N                 epoch de depart (0 = deduit du checkpoint)
     --parite                        test d'equivalence avec NumPy
     --npz FICHIER                   exporter les poids au format NumPy
 
@@ -210,6 +222,10 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
    garde-fou contre une divergence silencieuse entre les deux implementations.
 4. Les poids restent **interchangeables au format `.npz`** : c'est ce qui garde
    les deux pistes comparables.
+5. **Un run long doit pouvoir reprendre.** Un checkpoint complet est ecrit a
+   chaque epoch, et `--resume` repart de la sans perdre le planning du learning
+   rate. Un run de 120 epochs interrompu a l'epoch 60 reprend a l'epoch 61, avec
+   le lr de l'epoque et les paliers restants.
 
 ---
 

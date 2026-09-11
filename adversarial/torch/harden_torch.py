@@ -165,6 +165,10 @@ def main():
     p.add_argument("--out", default="models/harden_torch_best.pt")
     p.add_argument("--npz", default=None,
                    help="sauvegarder AUSSI les poids au format .npz (compatible NumPy)")
+    p.add_argument("--resume", default=None,
+                   help="reprendre un run interrompu depuis <out>_last.pt")
+    p.add_argument("--start-epoch", type=int, default=0,
+                   help="epoch de depart (0 = deduit du checkpoint)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--report", default=None)
     p.add_argument("--parite", action="store_true")
@@ -174,6 +178,7 @@ def main():
     p.add_argument("--eval-n", type=int, default=500)
     p.add_argument("--quick", action="store_true")
     args = p.parse_args()
+    lr_donne = args.lr          # None si l'utilisateur n'a pas force --lr
 
     if args.quick:
         args.n_train, args.epochs, args.val = 800, 1, 100
@@ -248,12 +253,43 @@ def main():
     modele = CNN().to(device)
     print(f"[MODEL] {nb_parametres(modele):,} parametres".replace(",", " "))
 
-    if args.warm_start == "auto":
+    # -- Reprise d'un run interrompu (veille du PC, arret manuel...) --
+    # Le checkpoint complet est ecrit a chaque epoch dans <out>_last.pt.
+    if args.resume:
+        chemin_resume = (args.resume if os.path.isabs(args.resume)
+                         else join(ROOT_DIR, args.resume))
+        if not os.path.exists(chemin_resume):
+            print(f"[ERREUR] checkpoint introuvable : {chemin_resume}")
+            return 1
+        ck = torch.load(chemin_resume, map_location="cpu", weights_only=False)
+        if isinstance(ck, dict) and "model" in ck:
+            modele.load_state_dict(ck["model"])
+            print(f"[RESUME] {chemin_resume} (epoch {ck.get('epoch', '?')}, "
+                  f"lr {ck.get('lr', '?')})")
+            if lr_donne is None and ck.get("lr") is not None:
+                args.lr = float(ck["lr"])
+                print(f"[RESUME] lr repris du checkpoint -> {args.lr:.5f}")
+            if args.start_epoch <= 0:
+                args.start_epoch = int(ck.get("epoch", 0)) + 1
+            args.meilleur_init = float(ck.get("meilleur", -1.0))
+        else:
+            # Ancien format : state_dict seul. On reprend les poids, et l'epoch
+            # de depart doit alors etre donnee a la main (--start-epoch).
+            modele.load_state_dict(ck)
+            print(f"[RESUME] {chemin_resume} (ancien format : poids seuls)")
+            print("[RESUME] [warn] epoch et lr inconnus : preciser --start-epoch et --lr")
+        if args.start_epoch <= 0:
+            args.start_epoch = 1
+        print(f"[RESUME] reprise a l'epoch {args.start_epoch} / {args.epochs}")
+
+    if args.resume:
+        pass
+    elif args.warm_start == "auto":
         auto = {"mnist": "models/model_weights_full.npz",
                 "emnist": "models/emnist_letters_weights_full.npz"}[args.dataset]
         args.warm_start = auto if os.path.exists(join(ROOT_DIR, auto)) else "none"
         print(f"[WARM] auto -> {args.warm_start}")
-    if args.warm_start not in (None, "none", ""):
+    if not args.resume and args.warm_start not in (None, "none", ""):
         charger_npz(modele, join(ROOT_DIR, args.warm_start))
         from attaques import accuracy as acc_torch
         modele.eval()
