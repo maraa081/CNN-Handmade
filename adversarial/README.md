@@ -1,4 +1,4 @@
-#  Adversarial Attacks — Attaquer (et défendre) mon CNN from scratch
+# Adversarial Attacks — Attaquer (et défendre) mon CNN from scratch
 
 > **Objectif :** apprendre la sécurité des modèles en attaquant mon propre CNN.
 > Je contrôle le gradient de A à Z (aucun framework) -> je peux implémenter les attaques moi-même.
@@ -8,7 +8,7 @@
 
 ---
 
-##  Organisation
+## Organisation
 
 ```
 adversarial/
@@ -24,8 +24,13 @@ adversarial/
 |   |-- eval_defended.py <- éval défendu sans ré-entraîner (FGSM+PGD) OK opérationnel
 |   |-- harden.py      <- VERSION DURCIE : défenses combinées       OK opérationnel
 |   |-- harden2.py     <- v2 : warm start, 60k images, TRADES, clipping, sélection robuste  OK opérationnel
-|   `-- augment.py     <- augmentation de données (rotation, zoom, bruit, cutout)  OK opérationnel
+|   |-- augment.py     <- augmentation de données (rotation, zoom, bruit, cutout)  OK opérationnel
+|   `-- campagne.sh    <- lance les 3 recettes durcies en série (reprise auto)  OK opérationnel
 |-- torch/             <- piste PyTorch : mêmes maths, autograd, ~9x plus rapide, GPU
+|   |-- modele.py      <- même architecture en nn.Module + conversion .npz
+|   |-- attaques.py    <- FGSM et PGD (mêmes formules)
+|   |-- entrainement.py<- pgdat / trades, augmentation, validation robuste
+|   `-- harden_torch.py<- point d'entrée (mêmes options que harden2.py) + --parite
 `-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
 
@@ -34,7 +39,7 @@ modèle de menace, algorithmes pas à pas) et **`defenses.md`** (le min-max de
 Madry, pourquoi FGSM training échoue face à PGD, feature squeezing, la
 méthodologie de preuve, le compromis robustesse/accuracy).
 
-##  Les concepts (à maîtriser)
+## Les concepts (à maîtriser)
 
 ### Évasion adversarial (adversarial examples)
 
@@ -88,7 +93,7 @@ C'est le pendant défensif — indispensable pour raconter les deux côtés.
 
 ---
 
-##  Lancer une attaque
+## Lancer une attaque
 
 ```bash
 # Attaque FGSM sur le modèle MNIST complet
@@ -113,7 +118,7 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ---
 
-##  Résultats clés (mis à jour à chaque expérience)
+## Résultats clés (mis à jour à chaque expérience)
 
 ### FGSM — MNIST (models/model_weights_full.npz, 1000 images)
 
@@ -244,7 +249,7 @@ défense de l'effet de la quantité de données :
 
 ---
 
-##  La version durcie — se défendre contre TOUTES les attaques
+## La version durcie — se défendre contre TOUTES les attaques
 
 Les attaques précédentes (FGSM, PGD, ciblées, transfert) exploitent toutes la
 même faiblesse : le modèle est trop linéaire dans les petites directions du
@@ -390,7 +395,47 @@ Reproduire : `python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3`
 
 ---
 
-##  La piste PyTorch — quand le modèle grossit
+## La campagne complète : 3 recettes, une seule variable (2026-09-10)
+
+`campagne.sh` répond à une question précise : **est-ce le dataset ou la méthode
+qui compte ?** Trois runs identiques, sauf un point chacun.
+
+| | Recette | Propre | FGSM ε=0.30 | PGD ε=0.30 |
+|---|---|---|---|---|
+| **A** | référence (60000 img, PGD-5, sans augmentation) | **98.8%** | **88.2%** | **65.4%** |
+| **B** | A + augmentation de données | 99.5% | 54.8% | 29.8% |
+| **C** | B + TRADES (β=2) | 96.9% | 23.4% | 2.2% |
+
+```bash
+./campagne.sh              # NumPy (harden2.py)
+./campagne.sh --torch      # PyTorch (harden_torch.py)
+./campagne.sh --rapide     # version courte, pour vérifier la chaîne
+./campagne.sh --liste      # affiche seulement les runs prévus
+```
+
+**Le run A gagne partout, et de loin.** Contre la v1 : **+31.6 pts de précision
+propre** et de +64.4 pts (FGSM) à +76.2 pts (PGD) à ε=0.30.
+
+**L'augmentation a NUI (run B).** Contre-intuitif, mais expliqué par la loss :
+elle reste bloquée à **~0.82** alors que celle du run A descend à **0.24**. Le
+modèle augmenté est **sous-entraîné** — chaque epoch est plus difficile (images
+déjà déformées), donc à budget d'epochs égal il prend du retard. Il gagne en
+précision propre (99.5% contre 98.8%) mais perd **35 pts** de robustesse à
+ε=0.3. Conclusion : l'augmentation paie seulement avec **2-3x plus d'epochs**,
+et elle **ne remplace pas** l'adversarial training.
+
+**TRADES reste à reprendre (run C)** : `--lr 0.002` était beaucoup trop bas (la
+loss reste figée à ~1.68) et la décroissance du lr aux epochs 5 et 8 achevait de
+figer le modèle. À reprendre avec `--lr 0.01` et sans décroissance agressive.
+
+**Un plafond identifié** : la robustesse de validation du run A plafonne à ~70%
+dès l'epoch 5 (26.3 -> 36.7 -> 55.3 -> 64.5 -> 68.5 -> 69.2 -> 70.1 -> 70.1 ->
+70.7 -> 70.3). Le facteur limitant n'est plus la recette, c'est le **budget
+d'épochs**.
+
+---
+
+## La piste PyTorch — quand le modèle grossit
 
 Le dossier `adversarial/scripts/` contient l'implémentation **faite main** :
 chaque gradient est écrit à la main (`Conv2D.backward`, `col2im`, le routage du
@@ -422,13 +467,54 @@ Résultat du test de parité (200 images, mêmes poids) : accuracy propre
 **98.50 %** dans les deux implémentations, FGSM ε=0.3 **1.50 %** dans les deux,
 PGD ε=0.2 **0.00 %** dans les deux.
 
+La campagne complète a été lancée avec ce moteur (60000 images, 10 epochs,
+PGD-5, ~1 min par epoch sur la machine de Maraa). C'est le run A du tableau
+ci-dessus qui a produit le résultat de référence (98.8% / 65.4%).
+
+> [warn] **Python 3.10 à 3.12** uniquement — PyTorch ne supporte pas 3.14. Sur
+> une machine récente, créer un venv dédié :
+>
+> ```bash
+> py install 3.12                  # Windows ; sinon : voir la doc de ta distro
+> py -3.12 -m venv .venv
+> source .venv/Scripts/activate    # Linux/macOS : source .venv/bin/activate
+> pip install torch --index-url https://download.pytorch.org/whl/cpu numpy
+> ```
+
 Tout le détail (correspondance terme à terme, ce qu'on perd, setup ROCm pour
 cartes AMD, réglage du batch) : [`torch/README.md`](torch/README.md).
 
 ---
 
-##  Références
+## La suite prévue
+
+Le modèle durci tient 65.4% sous PGD-20 — mais PGD est exactement l'attaque
+contre laquelle il a été entraîné. Tant qu'on n'a pas testé plus fort, on ne
+sait pas si c'est une **vraie défense** ou du **gradient masking** (une défense
+qui ne fait que déplacer la vulnérabilité vers des directions non visitées).
+
+| Étape | Contenu | Référence |
+|---|---|---|
+| 1 | **Attaques adaptatives** : BPDA + EOT sur le modèle durci (casser la défense) | Athalye et al. 2018 ; Tramèr et al. 2020 |
+| 2 | **Carlini-Wagner (CW)** : l'attaque white-box de référence qui manque | Carlini & Wagner 2017 |
+| 3 | **Black-box** : score-based (ZOO/NES) puis decision-based (Boundary/HSJA) | Chen et al. 2017 ; Brendel & Bethge 2019 |
+| 4 | **Robustesse certifiée** : randomized smoothing (borne L2 garantie) | Cohen et al. 2019 |
+
+Pistes complémentaires notées : transfert avec PGD en source, transfert
+cross-dataset MNIST -> EMNIST, attaque d'ensemble, AutoAttack / RobustBench,
+patches physiques, cartographie MITRE ATLAS.
+
+---
+
+## Références
 
 - Goodfellow et al., *Explaining and Harnessing Adversarial Examples* (2014)
 - Madry et al., *Towards Deep Learning Models Resistant to Adversarial Attacks* (2018)
+- Zhang et al., *Theoretically Principled Trade-off between Robustness and Accuracy* (TRADES, 2019)
+- Wong et al., *Fast is better than free: revisiting adversarial training* (2020)
+- Carlini & Wagner, *Towards Evaluating the Robustness of Neural Networks* (2017)
+- Athalye et al., *Obfuscated Gradients Give a False Sense of Security* (2018)
+- Chen et al., *ZOO: Zeroth Order Optimization based Black-box Attacks* (2017)
+- Brendel & Bethge, *Decision-Based Adversarial Attacks* (2019)
+- Cohen et al., *Certified Adversarial Robustness via Randomized Smoothing* (2019)
 - MITRE ATLAS : atlas.mitre.org (les attaques IA côté défenseur)

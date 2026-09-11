@@ -1,14 +1,14 @@
-#  CNN Handmade
+# CNN Handmade
 
 **Un réseau de neurones convolutionnel pour reconnaître les chiffres manuscrits (MNIST), fait à la main, de A à Z.**
 
 Pas de TensorFlow, pas de PyTorch, pas de Keras. Juste Python, NumPy, et moi. 
 
-##  Pourquoi ?
+## Pourquoi ?
 
 Comprendre chaque brique du deep learning en la codant soi-même — im2col, rétropropagation, descente de gradient… plutôt que d'appeler une API magique.
 
-## OK Ce qui est implémenté
+## Ce qui est implémenté
 
 | Module | Statut |
 |---|---|
@@ -34,7 +34,7 @@ Comprendre chaque brique du deep learning en la codant soi-même — im2col, ré
 | **Attaques adversariales** (FGSM, PGD, ciblées, transfert) | OK |
 | **Défenses** (adversarial training FGSM, version durcie PGD, feature squeezing) | OK |
 
-##  Architecture
+## Architecture
 
 ```
 Entrée : (N, 1, 28, 28)
@@ -55,7 +55,7 @@ Entrée : (N, 1, 28, 28)
     `-- Softmax                                  ->  (N, 10)
 ```
 
-##  Structure du projet
+## Structure du projet
 
 ```
 CNN-Handmade/
@@ -86,9 +86,16 @@ CNN-Handmade/
 |   |-- memoire.md                    - carnet de bord des expériences
 |   |-- attacks.md                    - théorie des attaques (FGSM, PGD, transfert)
 |   |-- defenses.md                   - théorie des défenses + méthodologie
-|   |-- results/                      - courbes et images (PNG)
-|   |-- scripts/ (fgsm.py, pgd.py, transfer.py, defend.py, harden.py, harden2.py, augment.py, eval_defended.py)
-|   `-- torch/                        - piste PyTorch (autograd, GPU) : harden_torch.py
+|   |-- results/                      - courbes et images (PNG) + logs/ (gitignoré)
+|   |-- scripts/                      - implémentation faite main (NumPy)
+|   |   |-- fgsm.py / pgd.py / transfer.py     - attaques
+|   |   |-- defend.py / harden.py / harden2.py - défenses
+|   |   |-- augment.py                         - augmentation de données
+|   |   |-- eval_defended.py                   - évaluation sans ré-entraîner
+|   |   `-- campagne.sh                        - les 3 recettes durcies en série
+|   `-- torch/                        - piste PyTorch (autograd, GPU)
+|       |-- modele.py / attaques.py / entrainement.py  - mêmes maths, autre moteur
+|       `-- harden_torch.py                            - point d'entrée (mêmes options)
 |-- docs/
 |   |-- data-flow.md
 |   `-- memoire-projet.md          <- carnet de bord du projet
@@ -102,7 +109,7 @@ CNN-Handmade/
     `-- compare_all.py         — lancer tous les optimiseurs d'un coup
 ```
 
-##  Utilisation
+## Utilisation
 
 ### 1. Installer les dépendances
 
@@ -118,7 +125,16 @@ pip install torch          # CPU
 ```
 
 > [warn] PyTorch ne supporte pas toutes les versions de Python. Python 3.10 à
-> 3.12 est le plus sûr.
+> 3.12 est le plus sûr (3.14 n'est pas supporté).
+
+Recette complète si ton `python3` est trop récent (exemple Windows/Git Bash) :
+
+```bash
+py install 3.12
+py -3.12 -m venv .venv
+source .venv/Scripts/activate        # Linux/macOS : source .venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu numpy
+```
 
 ### 2. Lancer les tests + entraînement rapide
 
@@ -156,7 +172,7 @@ python scripts/predict.py --weights models/model_weights_full.npz   # choisir le
 python scripts/predict.py --interactive            # mode pas à pas avec affichage
 ```
 
-##  Tuning interactif
+## Tuning interactif
 
 ```bash
 python src/tune_cnn.py
@@ -171,7 +187,7 @@ Paramètres réglables :
 
 Résultat sauvegardé dans `tune_result.png`.
 
-##  EMNIST — Les lettres (26 classes)
+## EMNIST — Les lettres (26 classes)
 
 Le même CNN from-scratch, mais pour reconnaître les **lettres manuscrites a-z** au lieu des chiffres.
 
@@ -203,7 +219,7 @@ Si le zip local n'est pas là, il télécharge automatiquement depuis le site NI
 
 > [warn] **Piège** : le test set EMNIST est trié par classe — échantillonner aléatoirement pour évaluer, jamais `x_test[:N]`.
 
-##  Sécurité IA — attaques et défense (adversarial)
+## Sécurité IA — attaques et défense (adversarial)
 
 Un modèle à 98.6% peut tomber à 0% à cause d'un bruit invisible à l'oeil.
 C'est la partie "sécurité IA" du projet : attaquer mon propre CNN, puis
@@ -232,13 +248,47 @@ python3 adversarial/scripts/harden.py --n-train 5000 --epochs 3
 | PGD, EMNIST full (92.0% propre) | 0.0% dès eps=0.20 |
 | Transfert full -> classic | 72.3% de transfert à eps=0.30 |
 | v1 durcie (`harden.py`, 5000 img) | clean 67.2%, 23.8% sous FGSM eps=0.30 |
-| **v3 durcie (piste torch, 60000 img, PGD-5)** | **clean 98.8%, 65.4% sous PGD eps=0.30** |
+| **campagne A (torch, 60k img, PGD-5)** | **clean 98.8%, 65.4% sous PGD eps=0.30** |
+| campagne B (A + augmentation) | clean 99.5%, 29.8% sous PGD eps=0.30 |
+| campagne C (B + TRADES) | clean 96.9%, 2.2% sous PGD eps=0.30 |
 
 > **Résultat de référence (2026-09-10).** Le modèle durci entraîné en PyTorch
 > sur 60000 images (10 epochs, PGD-5, sans augmentation) atteint **98.8% de
 > précision propre et 65.4% sous PGD-20 à eps=0.30** — contre 67.2% et 1.2%
-> pour la première version durcie. Détail complet et comparaison des 3 recettes
-> (référence / augmentation / TRADES) dans [`memoire.md`](memoire.md).
+> pour la première version durcie.
+
+### La campagne durcie : 3 recettes, une seule variable qui change
+
+`adversarial/scripts/campagne.sh` enchaîne 3 runs identiques sauf sur un point,
+pour répondre à une question précise : *est-ce le dataset ou la méthode qui
+compte ?*
+
+| | Recette | Propre | FGSM eps=0.30 | PGD eps=0.30 |
+|---|---|---|---|---|
+| **A** | référence (60000 img, PGD-5, sans augmentation) | **98.8%** | **88.2%** | **65.4%** |
+| **B** | A + augmentation de données | 99.5% | 54.8% | 29.8% |
+| **C** | B + TRADES (beta=2) | 96.9% | 23.4% | 2.2% |
+
+```bash
+# La campagne complète (3 runs, reprise automatique), en NumPy ou en PyTorch
+./adversarial/scripts/campagne.sh
+./adversarial/scripts/campagne.sh --torch
+
+# Version courte pour vérifier la chaîne avant un long run
+./adversarial/scripts/campagne.sh --rapide
+```
+
+> **L'augmentation a NUI (run B)** — résultat contre-intuitif, mais expliqué :
+> la loss d'entraînement reste bloquée à ~0.82 alors que celle du run A descend
+> à 0.24. Le modèle augmenté est **sous-entraîné** : chaque epoch est plus
+> difficile, donc à budget d'epochs égal il prend du retard. Il gagne en
+> précision propre (99.5%) mais perd 35 pts de robustesse. Conclusion :
+> l'augmentation paie seulement avec 2-3x plus d'epochs, et elle ne remplace
+> pas l'adversarial training.
+>
+> **TRADES reste à reprendre (run C)** : learning rate trop bas (loss figée à
+> ~1.68) et décroissance trop agressive. C'est un problème de réglage, pas de
+> méthode.
 
 > **Leçon centrale** : FGSM sous-estime la vulnérabilité réelle. Un modèle se
 > juge contre l'attaque la plus forte (PGD), pas contre la plus simple.
@@ -253,12 +303,28 @@ que les deux donnent le même résultat.
 
 Détail et setup GPU : [`adversarial/torch/README.md`](adversarial/torch/README.md).
 
+### La suite prévue
+
+Le modèle durci tient 65.4% sous PGD — mais PGD est justement l'attaque contre
+laquelle il a été entraîné. La prochaine étape est de vérifier que ce n'est pas
+du *gradient masking* (une défense qui ne fait que déplacer la vulnérabilité).
+
+| Étape | Contenu | Référence |
+|---|---|---|
+| 1 | **Attaques adaptatives** : BPDA + EOT sur le modèle durci | Athalye et al. 2018 ; Tramèr et al. 2020 |
+| 2 | **Carlini-Wagner (CW)** : l'attaque white-box de référence | Carlini & Wagner 2017 |
+| 3 | **Black-box** : score-based (ZOO/NES) puis decision-based (Boundary/HSJA) | Chen et al. 2017 ; Brendel & Bethge 2019 |
+| 4 | **Robustesse certifiée** : randomized smoothing (borne L2 garantie) | Cohen et al. 2019 |
+
+Pistes complémentaires déjà notées : transfert avec PGD en source, transfert
+cross-dataset (MNIST -> EMNIST), attaque d'ensemble, AutoAttack/RobustBench.
+
 Le détail complet est dans [`adversarial/README.md`](adversarial/README.md) :
 théorie et algorithmes dans [`attacks.md`](adversarial/attacks.md) et
 [`defenses.md`](adversarial/defenses.md), historique des runs dans
 [`adversarial/memoire.md`](adversarial/memoire.md).
 
-##  Expérimentations — Comparer les techniques
+## Expérimentations — Comparer les techniques
 
 Chaque dossier dans `experiments/` est un test indépendant. **Même architecture, mêmes données, seule la technique change.**
 
@@ -287,7 +353,7 @@ python experiments/l2/l2_sgd.py              # Weight decay L2(0.001)
 | Learning Rate Scheduler | [wait] |
 | Grid Search automatique | [wait] |
 | Max Config (Adam + Dropout + L2) | OK |
-| Data Augmentation | [wait] |
+| Data Augmentation | OK (dans `adversarial/scripts/augment.py`) |
 
 ### Ajouter une nouvelle expérience
 
@@ -297,7 +363,7 @@ python experiments/l2/l2_sgd.py              # Weight decay L2(0.001)
 4. Passe l'optimiseur au modèle : `model = CNN(optimizer=MonOpti(lr=...))`
 5. Lance et compare les graphiques !
 
-##  Les optimiseurs — explications
+## Les optimiseurs — explications
 
 Les optimiseurs sont dans `src/optimizers.py`. Chacun implémente une méthode `update(layers, lr=None)`.
 
@@ -340,7 +406,7 @@ v <- β2 · v + (1 - β2) · g²        (variance des gradients)
 ```
 Combine le momentum avec un learning rate adaptatif par paramètre. Le plus robuste — moins besoin de tuner le lr. Supporte aussi le weight_decay.
 
-##  Exemple rapide
+## Exemple rapide
 
 ```python
 from scripts.predict import load_model
@@ -350,7 +416,7 @@ pred = model.predict(mon_image)   # mon_image: (1, 28, 28) normalisée
 print(f"Prédiction : {pred}")
 ```
 
-##  Ce qu'on a appris (pour la suite)
+## Ce qu'on a appris (pour la suite)
 
 ### Résultats clés (5 epochs, 2000 images)
 
@@ -374,7 +440,8 @@ print(f"Prédiction : {pred}")
 
 - **LR Scheduler** — réduire le lr en cours d'entraînement (step decay, cosine annealing)
 - **Grid Search** — trouver automatiquement les meilleurs hyperparamètres
-- **Data Augmentation** — rotations, décalages pour généraliser
+- **Data Augmentation** — implémentée côté adversarial : `adversarial/scripts/augment.py`
+  (rotation, zoom, translation, bruit impulsionnel, cutout, épaisseur du trait)
 - **Entraînement complet** (60000 images, 20 epochs) -> viser 99%+
 
 ---
