@@ -408,6 +408,7 @@ qui compte ?** Trois runs identiques, sauf un point chacun.
 | **A** | référence (60000 img, PGD-5, sans augmentation) | **98.8%** | **88.2%** | **65.4%** |
 | **B** | A + augmentation de données | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (β=2) | 96.9% | 23.4% | 2.2% |
+| **B (120 epochs)** | B poussé à 120 epochs | **99.6%** | **96.0%** | **91.4%** |
 
 ```bash
 ./campagne.sh              # NumPy (harden2.py)
@@ -419,13 +420,16 @@ qui compte ?** Trois runs identiques, sauf un point chacun.
 **Le run A gagne partout, et de loin.** Contre la v1 : **+31.6 pts de précision
 propre** et de +64.4 pts (FGSM) à +76.2 pts (PGD) à ε=0.30.
 
-**L'augmentation a NUI (run B).** Contre-intuitif, mais expliqué par la loss :
-elle reste bloquée à **~0.82** alors que celle du run A descend à **0.24**. Le
-modèle augmenté est **sous-entraîné** — chaque epoch est plus difficile (images
-déjà déformées), donc à budget d'epochs égal il prend du retard. Il gagne en
-précision propre (99.5% contre 98.8%) mais perd **35 pts** de robustesse à
-ε=0.3. Conclusion : l'augmentation paie seulement avec **2-3x plus d'epochs**,
-et elle **ne remplace pas** l'adversarial training.
+**L'augmentation a NUI à 10 epochs — et GAGNE à 120.** C'est le résultat le plus
+instructif du dossier. À budget égal, la loss du run B reste bloquée à **~0.82**
+quand celle du run A descend à **0.24** : le modèle augmenté est
+**sous-entraîné**, parce que chaque epoch est plus difficile (images déjà
+déformées). C'était donc une leçon de **budget**, pas de méthode.
+
+Vérifié en poussant le run B à **120 epochs** : la loss descend à **0.31** et la
+robustesse passe à **91.4%** sous PGD ε=0.30, soit **+26 pts devant le run A**.
+Autrement dit : l'augmentation paie — mais seulement avec 2-3x plus d'epochs —
+et elle ne remplace pas l'adversarial training.
 
 **TRADES reste à reprendre (run C)** : `--lr 0.002` était beaucoup trop bas (la
 loss reste figée à ~1.68) et la décroissance du lr aux epochs 5 et 8 achevait de

@@ -408,6 +408,7 @@ that matters?** Three identical runs, except on one point each.
 | **A** | reference (60000 img, PGD-5, no augmentation) | **98.8%** | **88.2%** | **65.4%** |
 | **B** | A + data augmentation | 99.5% | 54.8% | 29.8% |
 | **C** | B + TRADES (β=2) | 96.9% | 23.4% | 2.2% |
+| **B (120 epochs)** | B pushed to 120 epochs | **99.6%** | **96.0%** | **91.4%** |
 
 ```bash
 ./campagne.sh              # NumPy (harden2.py)
@@ -419,13 +420,16 @@ that matters?** Three identical runs, except on one point each.
 **Run A wins everywhere, by a wide margin.** Against v1: **+31.6 pts of clean
 accuracy** and from +64.4 pts (FGSM) to +76.2 pts (PGD) at ε=0.30.
 
-**Augmentation HURT (run B).** Counter-intuitive, but explained by the loss:
-it stays stuck at **~0.82** while that of run A goes down to **0.24**. The
-augmented model is **under-trained** — each epoch is harder (images already
-distorted), so at equal epoch budget it falls behind. It gains in
-clean accuracy (99.5% against 98.8%) but loses **35 pts** of robustness at
-ε=0.3. Conclusion: augmentation only pays off with **2-3x more epochs**,
-and it **does not replace** adversarial training.
+**Augmentation HURT at 10 epochs — and WINS at 120.** This is the most
+instructive result in the folder. At equal budget, the run B loss stays stuck at
+**~0.82** while run A goes down to **0.24**: the augmented model is
+**under-trained**, because each epoch is harder (images already distorted). It
+was therefore a lesson about the **budget**, not the method.
+
+Verified by pushing run B to **120 epochs**: the loss drops to **0.31** and
+robustness jumps to **91.4%** under PGD ε=0.30, i.e. **+26 pts ahead of run A**.
+In other words: augmentation pays off — but only with 2-3x more epochs — and it
+does not replace adversarial training.
 
 **TRADES still needs another go (run C)**: `--lr 0.002` was far too low (the
 loss stays frozen at ~1.68) and the lr decay at epochs 5 and 8 finished

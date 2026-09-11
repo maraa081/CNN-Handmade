@@ -499,3 +499,44 @@ Le fichier livre dans le depot avait ete ECRASE par erreur le 2026-09-10
 il donnait 28.8% propre au lieu des 67.2% documentes. Restaure depuis b8e573f
 (verifie : 67.2% de nouveau). Lecon : apres chaque session, verifier que les
 poids versionnes reproduisent bien les chiffres du README.
+
+### 2026-09-11 (soir) - RUN B LONG : 91.4% sous PGD eps=0.30
+
+Suite de la campagne. Le run B (augmentation) avait ete juge mauvais a 10
+epochs (29.8% sous PGD). Hypothese : ce n'etait pas l'augmentation, c'etait le
+BUDGET. Test : le meme run B, pousse a 120 epochs (60000 images, PGD-5,
+augmentation, warm start, lr-drop 0.5/0.8).
+
+Run lance en PyTorch CPU (~0.9 min par epoch), interrompu a l'epoch 60 par une
+mise en veille du PC, puis REPRIS a l'epoch 61 via `--resume` (checkpoint
+complet + planning du lr conserve).
+
+| Config | epochs | Loss finale | Propre | PGD eps=0.30 |
+|---|---|---|---|---|
+| v1 (`harden.py`) | 3 | - | 67.2% | 1.2% |
+| Run A (sans augment) | 10 | 0.24 | 98.8% | 65.4% |
+| Run B (augment) | 10 | 0.82 (bloquee) | 99.5% | 29.8% |
+| **Run B (augment)** | **120** | **0.308** | **99.6%** | **91.4%** |
+
+Protocole d'evaluation : 500 images de test, PGD 20 pas, 1 restart.
+Detail : FGSM eps=0.30 -> 96.0% ; PGD eps=0.05 -> 94.6%, 0.1 -> 92.6%,
+0.2 -> 91.6%, 0.3 -> 91.4%. Entrainement : 57 min 33 s (apres reprise).
+
+LECTURE :
+1. **L'hypothese est validee.** Le run B passe de 29.8% a 91.4% en ne changeant
+   QUE le nombre d'epochs. La cause etait bien le sous-entrainement.
+2. **A budget suffisant, l'augmentation GAGNE.** 91.4% contre 65.4% pour le run
+   A (sans augmentation). A 10 epochs elle semblait nuire ; a 120 elle apporte
+   +26 pts de robustesse. La lecon du run B a 10 epochs etait donc une lecon de
+   budget, pas de methode.
+3. **La loss ne descend jamais au niveau du run A** (0.308 contre 0.24) : le
+   modele augmente est encore en train d'apprendre a la fin. Le budget reste le
+   facteur limitant.
+4. La robustesse de validation (PGD-10) plafonne autour de 91-93% a partir de
+   l'epoch 80 ; le meilleur modele est celui de l'epoch 95 (val PGD 93.2%).
+5. Ordre de grandeur : Madry et al. 2018 rapportent environ 93% sous PGD eps=0.3
+   sur MNIST avec un CNN plus gros et PGD-40. On est a 91.4% avec 421 642
+   parametres et PGD-20.
+
+A FAIRE : relancer l'evaluation avec `--restarts 3` (pire cas) pour figer le
+chiffre officiel.
