@@ -171,7 +171,7 @@ utilisable.
     python3 adversarial/torch/eval_suite.py --weights models/....pt --famille blackbox
 
     # 10. Robustesse CERTIFIEE (borne L2 garantie, pas une observation)
-    python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+    python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 90
     python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000
 
 Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,

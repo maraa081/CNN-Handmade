@@ -615,7 +615,7 @@ of norm <= R, the prediction cannot change.
 
 ```bash
 # 1. Train the base classifier (on noisy images)
-python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 90
 
 # 2. Certify: certified-accuracy / L2-radius curve
 python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000

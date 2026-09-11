@@ -168,7 +168,10 @@ def _votes(modele, x, sigma, n, chunk_images=25, chunk_bruit=250, gen=None):
                 k = min(chunk_bruit, reste)
                 reste -= k
                 bruit = torch.randn(k, *lot.shape, generator=gen, device=lot.device) * sigma
-                bruite = (lot.unsqueeze(0) + bruit).clamp(0.0, 1.0)
+                # Pas de clamp : meme raison qu'a l'entrainement (voir
+                # `entrainer_lisse`). Le modele est entraine sur des entrees
+                # bruitees non bornees, la certification doit faire pareil.
+                bruite = lot.unsqueeze(0) + bruit
                 preds = modele(bruite.reshape(k * n_img, *lot.shape[1:])).argmax(dim=1)
                 preds = preds.view(k, n_img)
                 for c in range(nb_classes):
@@ -227,21 +230,50 @@ def classifier_lisse(modele, x, sigma, n0=100, n=1000, alpha=0.001,
 #  Entrainement du classifieur de base (images bruitees)
 # --------------------------------------------------------------------------
 
-def entrainer_lisse(modele, x_tr, y_tr, sigma, epochs=30, batch=128,
-                    lr=0.01, optimizer="adam", seed=42, verbose=True):
+def entrainer_lisse(modele, x_tr, y_tr, sigma, epochs=90, batch=128,
+                    lr=None, optimizer="adam", clip=1.0, seed=42, verbose=True):
     """Entraine le classifieur de base SUR DES IMAGES BRUITEES.
 
     C'est le point cle : sans augmentation par bruit, le classifieur lisse n'a
     aucune raison d'etre robuste (il n'a jamais vu de bruit).
+
+    [PIEGE MESURE LE 2026-09-11] L'entrainement est BEAUCOUP plus sensible au
+    learning rate que l'entrainement propre. Constat sur 3000 images / 3 epochs,
+    sigma=0.5 (accuracy propre du classifieur de base apres le run) :
+
+        Adam lr=0.010  ->  13.3%   COLLAPSE
+        Adam lr=0.001  ->  66.0%
+        SGD  lr=0.100  ->   8.7%   COLLAPSE
+        SGD  lr=0.050  ->  81.7%
+
+    En cas de collapse, la loss se bloque a ln(10) = 2.3026 des l'epoch 2 : le
+    modele predit l'uniforme et n'apprend plus rien. La raison est que l'entree
+    bruitee a une magnitude bien plus grande que l'entree propre (ou la plupart
+    des pixels valent 0) : le meme learning rate est donc effectivement plus
+    grand. On utilise Adam (adaptatif, donc moins sensible a l'echelle) avec un
+    lr prudent, plus un ecrêtage des gradients.
+
+    `clip` : ecrêtage de la norme L2 globale des gradients (0 pour desactiver).
     """
+    if lr is None:
+        lr = 0.001 if optimizer == "adam" else 0.05
+
     gen = torch.Generator(device="cpu").manual_seed(seed)
     if optimizer == "adam":
         opt = torch.optim.Adam(modele.parameters(), lr=lr)
     else:
         opt = torch.optim.SGD(modele.parameters(), lr=lr, momentum=0.9)
 
+    paliers = sorted({max(1, int(round(p * epochs))) for p in (0.5, 0.8)}) if epochs >= 4 else []
+    lr_courant = lr
     n = len(x_tr)
     for epoch in range(1, epochs + 1):
+        if epoch in paliers:
+            lr_courant *= 0.1
+            for g in opt.param_groups:
+                g["lr"] = lr_courant
+            if verbose:
+                print(f"  [LR] epoch {epoch} : lr -> {lr_courant:.4f}")
         t0 = time.time()
         ordre = torch.randperm(n, generator=gen)
         modele.train()
@@ -249,10 +281,16 @@ def entrainer_lisse(modele, x_tr, y_tr, sigma, epochs=30, batch=128,
         for deb in range(0, n, batch):
             bi = ordre[deb:deb + batch]
             bx, by = x_tr[bi], y_tr[bi]
+            # [IMPORTANT] On n'ecrete PAS l'image bruitee : la grande majorite
+            # des pixels MNIST valent 0 (le fond), et un clamp(0, 1) rendrait le
+            # bruit unilateral au lieu de symetrique. L'implementation de
+            # reference n'ecrete pas non plus.
             bruit = torch.randn_like(bx) * sigma
-            perte = F.cross_entropy(modele((bx + bruit).clamp(0.0, 1.0)), by)
+            perte = F.cross_entropy(modele(bx + bruit), by)
             opt.zero_grad(set_to_none=True)
             perte.backward()
+            if clip:
+                torch.nn.utils.clip_grad_norm_(modele.parameters(), clip)
             opt.step()
             perte_tot += perte.item() * len(bx)
         if verbose:
@@ -295,10 +333,13 @@ def main():
     p.add_argument("--entrainer", action="store_true")
     p.add_argument("--certifier", action="store_true")
     p.add_argument("--sigma", type=float, default=0.5)
-    p.add_argument("--epochs", type=int, default=30)
+    p.add_argument("--epochs", type=int, default=90)
     p.add_argument("--n-train", type=int, default=60000)
     p.add_argument("--batch", type=int, default=128)
-    p.add_argument("--lr", type=float, default=0.01)
+    p.add_argument("--lr", type=float, default=None)
+    p.add_argument("--optimizer", choices=["sgd", "adam"], default="adam")
+    p.add_argument("--clip", type=float, default=1.0,
+                   help="ecrêtage de la norme des gradients (0 = desactive)")
     p.add_argument("--n-test", type=int, default=200, help="images certifiees")
     p.add_argument("--n0", type=int, default=100)
     p.add_argument("--n", type=int, default=1000)
@@ -323,11 +364,13 @@ def main():
     if args.entrainer:
         print("=" * 70)
         print(f"  RANDOMIZED SMOOTHING - entrainement du classifieur de base")
-        print(f"  sigma = {args.sigma} | {args.n_train} images | {args.epochs} epochs")
+        print(f"  sigma = {args.sigma} | {args.n_train} images | {args.epochs} epochs "
+              f"| {args.optimizer} lr={args.lr or 'defaut'} clip={args.clip}")
         print("=" * 70)
         modele = CNN()
         modele = entrainer_lisse(modele, x_tr, y_tr, args.sigma, args.epochs,
-                                 args.batch, args.lr, seed=args.seed)
+                                 args.batch, args.lr, args.optimizer, args.clip,
+                                 seed=args.seed)
         torch.save(modele.state_dict(), chemin)
         print(f"[SAVE] {chemin}")
     elif not os.path.exists(chemin):

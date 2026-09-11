@@ -387,7 +387,7 @@ python3 adversarial/torch/eval_suite.py --weights models/....pt
 python3 adversarial/torch/eval_suite.py --weights models/....pt --quick
 
 # Certified robustness (a guarantee, not an observation)
-python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 90
 python3 adversarial/torch/smoothing.py --certifier --sigma 0.5
 ```
 

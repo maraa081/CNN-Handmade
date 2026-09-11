@@ -618,7 +618,7 @@ prediction ne peut pas changer.
 
 ```bash
 # 1. Entrainer le classifieur de base (sur images bruitees)
-python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 90
 
 # 2. Certifier : courbe precision certifiee / rayon L2
 python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000
