@@ -95,9 +95,13 @@ def main():
     # budgets (surchargeables)
     p.add_argument("--pgd-steps", type=int, default=20)
     p.add_argument("--pgd-restarts", type=int, default=3)
+    p.add_argument("--pgd-alpha", type=float, default=None,
+                   help="taille du pas de PGD (defaut : eps/4). Un pas plus petit\n"
+                        "(eps/10) avec plus de pas donne une attaque plus fine")
     p.add_argument("--apgd-steps", type=int, default=100)
     p.add_argument("--apgd-restarts", type=int, default=2)
     p.add_argument("--square-steps", type=int, default=500)
+    p.add_argument("--square-restarts", type=int, default=1)
     p.add_argument("--nes-steps", type=int, default=20)
     p.add_argument("--nes-samples", type=int, default=10)
     p.add_argument("--cw-steps", type=int, default=100)
@@ -149,7 +153,8 @@ def main():
             pires = []
             for r in range(args.pgd_restarts):
                 torch.manual_seed(1000 + r)
-                pires.append(accuracy(modele, pgd(modele, x, y, eps, args.pgd_steps), y))
+                pires.append(accuracy(modele, pgd(modele, x, y, eps, args.pgd_steps,
+                                                  alpha=args.pgd_alpha), y))
             resultats[("grad", f"PGD-{args.pgd_steps} ({args.pgd_restarts} rest.)", eps)] = min(pires)
 
             xa = apgd(modele, x, y, eps, loss="ce", steps=args.apgd_steps,
@@ -171,7 +176,8 @@ def main():
 
         for eps in args.eps:
             t0 = time.time()
-            xa = square(modele, x, y, eps, steps=args.square_steps, restarts=1, seed=4000)
+            xa = square(modele, x, y, eps, steps=args.square_steps,
+                        restarts=args.square_restarts, seed=4000)
             resultats[("bb", f"Square ({args.square_steps})", eps)] = accuracy(modele, xa, y)
 
             xa = nes(modele, x, y, eps, steps=args.nes_steps, samples=args.nes_samples, seed=5000)
