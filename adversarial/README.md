@@ -33,7 +33,11 @@ adversarial/
 |   |-- modele.py      <- même architecture en nn.Module + conversion .npz
 |   |-- attaques.py    <- FGSM et PGD (mêmes formules)
 |   |-- entrainement.py<- pgdat / trades, augmentation, validation robuste
-|   `-- harden_torch.py<- point d'entrée (mêmes options que harden2.py) + --parite
+|   |-- attaques_avancees.py <- CW, APGD (CE/DLR), Square, NES, Boundary
+|   |-- eval_suite.py  <- suite d'attaques multi-familles (le juge)
+|   |-- smoothing.py   <- robustesse CERTIFIEE : randomized smoothing (rayon L2)
+|   |-- lire-le-code.md<- visite guidee du code (pour le modifier)
+|   `-- harden_torch.py<- point d'entree (memes options que harden2.py) + --parite
 `-- results/           <- images + chiffres générés par les scripts (versionnés)
 ```
 
@@ -547,6 +551,86 @@ ci-dessus qui a produit le résultat de référence (98.8% / 65.4%).
 
 Tout le détail (correspondance terme à terme, ce qu'on perd, setup ROCm pour
 cartes AMD, réglage du batch) : [`torch/README.md`](torch/README.md).
+
+---
+
+## La suite d'attaques : juger une défense sur plusieurs familles (2026-09-11)
+
+Un modèle entraîné contre PGD paraît robuste... contre PGD. `eval_suite.py`
+passe **trois familles d'attaques** et reporte le **pire cas**.
+
+| Famille | Attaques | Ce que l'attaquant voit |
+|---|---|---|
+| À gradient (white-box) | FGSM, PGD multi-restarts, **APGD-CE**, **APGD-DLR** | le modèle et son gradient |
+| Sans gradient (score-based) | **Square**, **NES** | seulement les scores de sortie |
+| Decision-based | **Boundary** | seulement la classe prédite |
+
+- **APGD** (Croce & Hein 2020) : la version moderne de PGD — pas adaptatif,
+momentum Nesterov, restarts. Ses deux pertes (CE et DLR) sont le cœur de
+l'**AutoAttack**. La DLR reste informative quand la CE sature, ce qui la rend
+meilleure sur les modèles vraiment robustes.
+- **Square** (Andriushchenko et al. 2020) : modifie de petits carrés à positions
+aléatoires, **sans jamais regarder le gradient**. Contrôle indépendant : si une
+défense ne tient que face aux attaques à gradient, Square la casse.
+- **NES** : estime le gradient par différences finies sur des directions
+aléatoires (estimateur antithétique). Coût : 2 appels au modèle par direction.
+- **CW-L2** (Carlini & Wagner 2017) : minimise une **distance**, pas une perte.
+- **Boundary** (Brendel & Bethge 2018, version simplifiée) : marche aléatoire sur
+la frontière de décision, avec pour seule information la classe prédite.
+
+```bash
+python3 adversarial/torch/eval_suite.py --weights models/harden2_aug_pgdat_120ep.pt
+python3 adversarial/torch/eval_suite.py --weights ... --quick       # verification
+python3 adversarial/torch/eval_suite.py --weights ... --famille blackbox
+```
+
+Validation de la chaine sur le modele durci v1 (100 images, eps=0.30) :
+
+| Attaque | Accuracy | Famille |
+|---|---|---|
+| (propre) | 71.0% | - |
+| FGSM | 27.0% | gradient |
+| PGD-20 (3 restarts) | **1.0%** | gradient |
+| APGD-CE (100 pas) | 1.0% | gradient |
+| APGD-DLR (100 pas) | 2.0% | gradient |
+| Square (1000 pas) | 11.0% | sans gradient |
+| NES (40x20) | 28.0% | sans gradient |
+| CW-L2 | 51% de succes, distance L2 0.156 | L2 |
+| Boundary | 89% de succes, distance L2 4.8 | decision |
+
+Ordre attendu et retrouve : les attaques a gradient detruisent un modele non
+robuste ; les attaques sans gradient sont plus faibles a budget de requetes
+egal (c'est le prix de la boite noire) ; Boundary "reussit" mais a une grande
+distance, ce qui est normal pour une attaque decision-based sur une petite
+boule.
+
+## Robustesse CERTIFIEE : randomized smoothing
+
+Toutes les defenses precedentes sont **empiriques** : on attaque, on regarde ce
+qui reste. Le jour ou une attaque plus forte arrive, le chiffre tombe.
+`randomized smoothing` (Cohen, Rosenfeld & Kolter 2019) donne une **garantie**.
+
+Principe : on entraine un classifieur de base sur des images bruitees
+(N(0, sigma^2 I)), puis on construit un classifieur **lisse**
+`g(x) = argmax_c P(f(x + bruit) = c)`, estime par Monte-Carlo. Un theoreme
+donne alors un rayon L2 garanti : pour toute perturbation de norme <= R, la
+prediction ne peut pas changer.
+
+```bash
+# 1. Entrainer le classifieur de base (sur images bruitees)
+python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+
+# 2. Certifier : courbe precision certifiee / rayon L2
+python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000
+```
+
+Les bornes de confiance binomiales sont **exactes** (Clopper-Pearson) et
+implementees sans dependance externe : pas besoin de scipy.
+
+[ATTENTION] La borne est en norme **L2**, pas L-infini : elle n'est pas
+comparable directement aux 91% sous PGD eps=0.30. C'est une autre forme de
+preuve : au lieu de "je n'ai pas trouve d'attaque qui passe", on affirme "aucune
+attaque de rayon <= R ne peut passer".
 
 ---
 

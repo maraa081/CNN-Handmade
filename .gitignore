@@ -7,6 +7,9 @@ data/mnist.npz
 # EMNIST (données brutes, ~570 Mo avec le zip — à télécharger soi-même)
 data/emnist/
 
+# KMNIST (données brutes, ~21 Mo — à télécharger soi-même)
+data/kmnist/
+
 # Python caching
 __pycache__/
 *.pyc
@@ -25,6 +28,11 @@ predictions.png
 emnist_samples.png
 emnist_training_result.png
 models/emnist_letters_weights*.npz
+
+# Résultats KMNIST (générés)
+kmnist_samples.png
+kmnist_training_result.png
+models/kmnist_weights*.npz
 
 # Resultats adversarial (versionnes dans le repo depuis 2026-08-26)
 # (les PNG sont generes par fgsm.py / pgd.py / transfer.py / defend.py)

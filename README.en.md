@@ -87,6 +87,8 @@ CNN-Handmade/
 |   |-- train_emnist.py   — train on EMNIST letters
 |   |-- download_emnist.py— install the EMNIST data
 |   `-- voir_emnist.py    — visualise the letters (Spyder/IPython)
+|   |-- train_kmnist.py   — train on KMNIST (Japanese kana)
+|   `-- download_kmnist.py— install the KMNIST data
 |-- models/                      <- trained weights (.npz)
 |   |-- model_weights.npz          — quick (2000 img, 3 epochs)
 |   |-- model_weights_full.npz     — full (60000 img)
@@ -107,6 +109,9 @@ CNN-Handmade/
 |   |   `-- campagne.sh                        - the 3 hardened recipes in series
 |   `-- torch/                        - PyTorch path (autograd, GPU)
 |       |-- modele.py / attaques.py / entrainement.py  - same maths, another engine
+|       |-- attaques_avancees.py                       - CW, APGD, Square, NES, Boundary
+|       |-- eval_suite.py                              - multi-family attack suite
+|       |-- smoothing.py                               - certified robustness (L2 radius)
 |       |-- lire-le-code.md                            - guided tour of the code
 |       `-- harden_torch.py                            - entry point (same options)
 |-- docs/
@@ -237,6 +242,38 @@ If the local zip is not there, it downloads automatically from the NIST site (~5
 
 > [warn] **Pitfall**: the EMNIST test set is sorted by class — sample randomly to evaluate, never `x_test[:N]`.
 
+## KMNIST — Japanese kana (10 classes)
+
+The same CNN, this time on **KMNIST (Kuzushiji-MNIST)**: 70000 images of
+**handwritten Japanese kana** (hiragana), 28x28, 10 classes.
+
+```bash
+# Download the data (~21 MB)
+python3 scripts/download_kmnist.py
+
+# Sample sheet
+python3 scripts/train_kmnist.py --samples
+
+# Quick training (5000 images, 3 epochs)
+python3 scripts/train_kmnist.py
+
+# Full training (60000 images)
+python3 scripts/train_kmnist.py --full
+```
+
+**Data:** [KMNIST](https://codh.rois.ac.jp/kmnist/) — published by CODH
+(Tohoku University). The official distribution ships as 4 `.npz` files
+(not IDX files like MNIST/EMNIST).
+
+**What changes vs MNIST:**
+- `KMNISTLoader` in `src/data.py` reads the `.npz` directly
+- no orientation fix and no label shift (unlike EMNIST)
+- `num_classes=10`, like MNIST
+
+**Quick result** (5000 images, 3 epochs): **70.1% test**.
+
+**Classes (official label order):** o, ki, su, tsu, na, ha, ma, ya, re, wo.
+
 ## AI security — attacks and defence (adversarial)
 
 A model at 98.6% can drop to 0% because of noise invisible to the eye.
@@ -333,21 +370,35 @@ Details and GPU setup: [`adversarial/torch/README.md`](adversarial/torch/README.
 ### What's next
 
 The hardened model holds 91.0% under PGD — but PGD is precisely the attack
-against which it was trained. First step done on **2026-09-11**: the adaptive
-attacks BPDA + EOT show that the v1 defence (feature squeezing) was only
-**gradient masking** (the naive attacker leaves 62.5% to the model at eps=0.30,
-BPDA brings it down to 1.5%). Detail in `adversarial/scripts/bpda_eot.py` and
-the "Adaptive attacks" section of [`adversarial/README.md`](adversarial/README.md).
+against which it was trained. To avoid fooling ourselves, the approach is to
+run **several families of attacks** and keep the worst case.
 
-| Step | Content | Reference |
+| Step | Content | State |
 |---|---|---|
-| 1 | **Adaptive attacks**: BPDA + EOT (**done on 2026-09-11**) | Athalye et al. 2018; Tramèr et al. 2020 |
-| 2 | **Carlini-Wagner (CW)**: the reference white-box attack | Carlini & Wagner 2017 |
-| 3 | **Black-box**: score-based (ZOO/NES) then decision-based (Boundary/HSJA) | Chen et al. 2017; Brendel & Bethge 2019 |
-| 4 | **Certified robustness**: randomized smoothing (guaranteed L2 bound) | Cohen et al. 2019 |
+| 1 | **Adaptive attacks**: BPDA + EOT (breaking a defence with obfuscated gradients) | done on 2026-09-11 |
+| 2 | **Carlini-Wagner (CW)**: the reference white-box L2 attack | done on 2026-09-11 |
+| 3 | **Black-box**: score-based (Square, NES) then decision-based (Boundary) | done on 2026-09-11 |
+| 4 | **Certified robustness**: randomized smoothing (guaranteed L2 bound) | done on 2026-09-11 |
+| 5 | **APGD-CE / APGD-DLR**: the core of AutoAttack (Croce & Hein 2020) | done on 2026-09-11 |
+
+```bash
+# Full suite: gradient attacks, gradient-free attacks, and L2 metrics
+python3 adversarial/torch/eval_suite.py --weights models/....pt
+python3 adversarial/torch/eval_suite.py --weights models/....pt --quick
+
+# Certified robustness (a guarantee, not an observation)
+python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+python3 adversarial/torch/smoothing.py --certifier --sigma 0.5
+```
+
+> **Why several families?** A defence that only holds against the attack it was
+> trained on is not a defence. The BPDA/EOT test showed it for v1: the feature
+> squeezing layer was **gradient masking**, useless as soon as the attacker
+> changes. The full scan (gradient, gradient-free, label-only) is the only
+> honest answer.
 
 Additional leads already noted: transfer with PGD as source, cross-dataset
-transfer (MNIST -> EMNIST), ensemble attack, AutoAttack/RobustBench.
+transfer (MNIST -> EMNIST), ensemble attack, FAB, RobustBench.
 
 The full detail is in [`adversarial/README.md`](adversarial/README.md):
 theory and algorithms in [`attacks.md`](adversarial/attacks.md) and

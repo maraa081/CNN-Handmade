@@ -156,8 +156,7 @@ utilisable.
     ./adversarial/scripts/campagne.sh --torch --liste
     ./adversarial/scripts/campagne.sh --torch
 
-    # 8. Reprendre un run interrompu (veille du PC, arret manuel...)
-    #    Un checkpoint COMPLET (poids + optimiseur + epoch + lr) est ecrit a
+    # 8. Reprendre un run interrompu (veille du PC, arret manuel...)    #    Un checkpoint COMPLET (poids + optimiseur + epoch + lr) est ecrit a
     #    chaque epoch dans <out>_last.pt : rien n'est perdu en cas de coupure.
     python3 adversarial/torch/harden_torch.py ... \
         --resume models/harden_torch_best.pt_last.pt
@@ -165,6 +164,15 @@ utilisable.
     #    Ancien format (state_dict seul) : preciser l'epoch et le lr
     python3 adversarial/torch/harden_torch.py ... \
         --resume ancien_modele.pt --start-epoch 61 --lr 0.005
+
+    # 9. JUGER une defense : suite d'attaques multi-familles (le juge)
+    python3 adversarial/torch/eval_suite.py --weights models/....pt
+    python3 adversarial/torch/eval_suite.py --weights models/....pt --quick
+    python3 adversarial/torch/eval_suite.py --weights models/....pt --famille blackbox
+
+    # 10. Robustesse CERTIFIEE (borne L2 garantie, pas une observation)
+    python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 30
+    python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000
 
 Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,
 `--augment`, `--aug-fort`, `--aug-config`, `--lr`, `--lr-drop`, `--clip`,
@@ -240,5 +248,8 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
     |-- lire-le-code.md    <- visite guidee du code (pour MODIFIER, pas juste lire)
     |-- modele.py          <- meme architecture en nn.Module + conversion .npz
     |-- attaques.py        <- FGSM et PGD (memes formules)
+    |-- attaques_avancees.py <- CW, APGD (CE/DLR), Square, NES, Boundary
     |-- entrainement.py    <- pgdat / trades, augmentation, validation robuste
+    |-- eval_suite.py      <- suite d'attaques multi-familles (le juge)
+    |-- smoothing.py       <- robustesse certifiee (randomized smoothing)
     `-- harden_torch.py    <- point d'entree (memes options que harden2.py)

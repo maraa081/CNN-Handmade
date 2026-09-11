@@ -114,6 +114,86 @@ class EMNISTLoader(MNISTLoader):
         return (x_train, y_train), (x_test, y_test)
 
 
+class KMNISTLoader:
+    """
+    Lit le dataset KMNIST (Kuzushiji-MNIST) : 70000 images de kana japonais
+    manuscrits (hiragana), 28x28, 10 classes.
+
+    Source : CODH, universite de Tohoku
+        https://codh.rois.ac.jp/kmnist/dataset/kmnist/
+
+    Difference avec MNIST / EMNIST : la distribution officielle est en
+    4 fichiers .npz (archive numpy, un seul tableau 'arr_0' par fichier)
+    et non en fichiers IDX binaires. On herite donc directement de object,
+    mais l'interface reste identique :
+        (x_train, y_train), (x_test, y_test) = KMNISTLoader().load(dir)
+
+    Particularites a garder en tete :
+      - les images sont deja dans le bon sens (pas de rotation 90 degres
+        comme EMNIST) et deja en (N, 28, 28) uint8 dans [0, 255] ;
+      - les labels vont directement de 0 a 9 (pas de decalage de -1
+        comme pour EMNIST letters).
+
+    Classes (ordre officiel des labels 0-9) :
+        o, ki, su, tsu, na, ha, ma, ya, re, wo
+    """
+
+    # Noms des fichiers officiels : (images, labels)
+    TRAIN_FILES = ("kmnist-train-imgs.npz", "kmnist-train-labels.npz")
+    TEST_FILES = ("kmnist-test-imgs.npz", "kmnist-test-labels.npz")
+
+    # Formes attendues, pour refuser un fichier tronque ou corrompu
+    EXPECTED_SHAPES = {
+        "kmnist-train-imgs.npz": (60000, 28, 28),
+        "kmnist-train-labels.npz": (60000,),
+        "kmnist-test-imgs.npz": (10000, 28, 28),
+        "kmnist-test-labels.npz": (10000,),
+    }
+
+    @staticmethod
+    def _read_npz(filepath, expected_shape):
+        """
+        Lit un fichier .npz KMNIST et retourne son unique tableau.
+
+        Les 4 fichiers officiels contiennent chacun un seul tableau stocke
+        sous la cle 'arr_0'. Verifier la forme ici evite de propager une
+        erreur silencieuse (fichier partiellement telecharge, mauvais jeu
+        de donnees) jusqu'a l'entrainement.
+        """
+        with np.load(filepath) as data:
+            keys = list(data.keys())
+            if len(keys) != 1:
+                raise ValueError(
+                    f"Fichier KMNIST inattendu {filepath} : {len(keys)} tableaux (attendu 1)"
+                )
+            array = data[keys[0]]
+
+        if array.shape != expected_shape:
+            raise ValueError(
+                f"Forme invalide pour {filepath} : {array.shape} (attendu {expected_shape})"
+            )
+        return array
+
+    def load(self, data_dir="."):
+        """
+        Charge les 4 fichiers KMNIST depuis un dossier.
+
+        Retourne :
+            (x_train, y_train), (x_test, y_test)
+            avec x en (N, 28, 28) uint8 dans [0, 255]
+            et y en (N,) uint8 dans [0, 9]
+        """
+        train_imgs, train_labels = self.TRAIN_FILES
+        test_imgs, test_labels = self.TEST_FILES
+
+        x_train = self._read_npz(join(data_dir, train_imgs), self.EXPECTED_SHAPES[train_imgs])
+        y_train = self._read_npz(join(data_dir, train_labels), self.EXPECTED_SHAPES[train_labels])
+        x_test = self._read_npz(join(data_dir, test_imgs), self.EXPECTED_SHAPES[test_imgs])
+        y_test = self._read_npz(join(data_dir, test_labels), self.EXPECTED_SHAPES[test_labels])
+
+        return (x_train, y_train), (x_test, y_test)
+
+
 def normalize(images):
     """
     Normalise les pixels de [0, 255] -> [0.0, 1.0].

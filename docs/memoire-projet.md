@@ -148,6 +148,43 @@ Ce qui reste : le moteur est desormais proche de la limite du BLAS de cette
 machine. Au-dela, il faut passer a autre chose qu'un tableau NumPy sur CPU
 (PyTorch / GPU), pas micro-optimiser.
 
+### 2026-09-11 — Suite d'attaques, robustesse certifiee, KMNIST
+
+**Resultat de reference du projet : 99.6% propre / 91.0% sous PGD-20 eps=0.30**
+(pire cas, 3 restarts), obtenu en poussant le run B (augmentation) a 120 epochs.
+La lecon : le facteur limitant a toujours ete le BUDGET D'EPOCHS, pas la recette.
+
+Outillage ajoute le meme jour (piste PyTorch) :
+
+- `attaques_avancees.py` : **CW-L2** (Carlini & Wagner 2017), **APGD** en deux
+  variantes de perte (CE et DLR, le coeur de l'AutoAttack de Croce & Hein),
+  **Square Attack** (boite noire sans gradient), **NES** (gradient estime par
+  differences finies) et **Boundary** (decision-based, label seul).
+- `eval_suite.py` : passe les trois familles et reporte le PIRE CAS. Valide sur
+  le modele durci v1 (100 images, eps=0.30) : propre 71.0%, FGSM 27.0%,
+  PGD-20 1.0%, APGD-CE 1.0%, APGD-DLR 2.0%, Square 11.0%, NES 28.0%.
+- `smoothing.py` : **robustesse certifiee** (Cohen et al. 2019). Entraine un
+  classifieur sur images bruitees, puis certifie un rayon L2 garanti via des
+  bornes binomiales exactes (Clopper-Pearson, beta incomplete implementee sans
+  scipy). Chaine validee de bout en bout.
+- `--resume` / `--start-epoch` sur `harden_torch.py` : checkpoint complet a
+  chaque epoch, planning du learning rate conserve. Ajoute apres qu'une mise en
+  veille du PC a tue un run de 120 epochs a l'epoch 60.
+- `bpda_eot.py` (moteur fait main) : attaques adaptatives BPDA + EOT. Resultat
+  cle : la defense de la v1 (feature squeezing) etait du **gradient masking**
+  (l'attaquant naif laisse 62.5%, BPDA la casse a 1.5%).
+
+**KMNIST (kana japonais)** : nouveau jeu de donnees, meme CNN. `KMNISTLoader`
+dans `src/data.py` (lecture directe des `.npz` officiels du CODH, universite de
+Tohoku), `scripts/download_kmnist.py` et `scripts/train_kmnist.py`. Resultat
+rapide (5000 images, 3 epochs) : **70.1% test**. Meme architecture, meme
+pipeline d'attaques que MNIST.
+
+**Regression corrigee** : `models/defend_pgd_mnist_weights.npz` avait ete
+ecrase par erreur le 2026-09-10 (28.8% propre au lieu des 67.2% documentes).
+Restaure depuis b8e573f. Lecon : verifier que les poids versionnes reproduisent
+les chiffres du README.
+
 ### 2026-08-26 — Docs adversariales + résultats EMNIST full
 
 - `adversarial/attacks.md` (théorie FGSM / PGD / ciblées / transfert, threat model)
