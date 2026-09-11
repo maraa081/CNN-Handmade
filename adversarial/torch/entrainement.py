@@ -261,7 +261,8 @@ def entrainer(modele, opt, train, val, args, device):
             #     comporte a l'inference (dropout desactive), puis on revient
             #     en train().
             modele.eval()
-            bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps)
+            bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps,
+                             getattr(args, "pgd_alpha", None))
             modele.train()
 
             # [4] perte : pgdat (propre + adverse) ou trades (CE + beta*KL)

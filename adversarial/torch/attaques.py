@@ -73,14 +73,20 @@ def pgd(modele, x, y, eps, steps=20, alpha=None, random_start=True):
     return x_adv.detach()
 
 
-def attaque(modele, x, y, eps, type_attaque="pgd", steps=20):
+def attaque(modele, x, y, eps, type_attaque="pgd", steps=20, alpha=None):
     """Selecteur d'attaque. C'EST ICI qu'on branche une nouvelle attaque
-    (par exemple un `cw()` ecrit sur le modele de `pgd()`)."""
+    (par exemple un `cw()` ecrit sur le modele de `pgd()`).
+
+    `alpha` : taille du pas de PGD (defaut : eps/4). Pour un entrainement
+    robuste on prefere un pas plus fin (eps/10) avec plus de pas : l'attaque
+    d'entrainement est alors plus precise, et la robustesse apprise moins
+    "specifique" a une trajectoire grossiere.
+    """
     if type_attaque == "fgsm":
         return fgsm(modele, x, y, eps)
     if type_attaque == "fgsm-rs":
         return fgsm(modele, x, y, eps, random_start=True)
-    return pgd(modele, x, y, eps, steps=steps)
+    return pgd(modele, x, y, eps, steps=steps, alpha=alpha)
 
 
 @torch.no_grad()

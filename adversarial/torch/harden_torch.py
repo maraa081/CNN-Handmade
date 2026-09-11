@@ -143,6 +143,10 @@ def main():
     p.add_argument("--eps", type=float, default=0.3)
     p.add_argument("--attack", choices=["pgd", "fgsm", "fgsm-rs"], default="pgd")
     p.add_argument("--pgd-steps", type=int, default=5)
+    p.add_argument("--pgd-alpha", type=float, default=None,
+                   help="taille du pas de PGD a l'ENTRAINEMENT (defaut : eps/4).\n"
+                        "eps/10 avec 10-20 pas donne une attaque d'entrainement\n"
+                        "plus fine, donc une robustesse moins specifique")
     p.add_argument("--val-steps", type=int, default=10)
     p.add_argument("--loss", choices=["pgdat", "trades"], default="pgdat")
     p.add_argument("--beta", type=float, default=6.0)
