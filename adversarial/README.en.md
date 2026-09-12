@@ -143,10 +143,12 @@ distinction that matters:
 | **FGSM** (Goodfellow 2014) | A single step: `x_adv = clip(x + eps * sign(grad_x L))`. We read the loss gradient with respect to the IMAGE, keep only its sign (+1/-1 per pixel) and move by eps. The crudest of the three. | `--attack fgsm` | NumPy + torch |
 | **FGSM-RS** (random start) | FGSM, but starting from a RANDOM point inside the eps ball instead of x: avoids reading the gradient at a spot where the sign no longer varies, which makes the attack stronger. | `--attack fgsm-rs` | torch |
 | **PGD** (Madry 2018) | Iterated FGSM: N small steps of size alpha, and after each step the result is re-projected into the L-inf ball around x, then into [0,1]. Random start by default. It is THE reference for adversarial training, and it is differentiable, hence usable inside the loop. | `--attack pgd --pgd-steps N --pgd-alpha a` | NumPy + torch |
+| **APGD** (Croce & Hein 2020) | PGD with an **adaptive step** (the step is halved when the objective stalls) and a **DLR** objective (normalised, so it stays informative once the model is confident). More expensive, but it is the strongest gradient attack we have -- hence the one we want to train against. | `--attack apgd-dlr` (or `apgd-ce`) `--pgd-steps N` | torch |
 
 alpha defaults to eps/4. Run v4 uses a finer step (eps/10) with more steps (20):
 the training attack is more precise, and the learned robustness less specific
-to a coarse attack trajectory.
+to a coarse attack trajectory. For APGD, `alpha` is ignored: the step is
+adaptive, and the schedule is internal.
 
 > **TRADES is NOT a fourth attack.** Classic trap: the attack stays PGD, what
 > changes is the **loss**. Full detail in `defenses.md` (section 6.5).
@@ -186,10 +188,12 @@ announcing 91.0% while the worst case was 42.0%.
 | A | PGD | 5 | eps/4 | no | pgdat | 98.8% / 65.4% |
 | B | PGD | 5 | eps/4 | yes | pgdat | 99.6% / 91.0% (120 epochs) |
 | C | PGD | 5 | eps/4 | yes | trades (beta=2) | 96.9% / 2.2% |
-| v4 | PGD | 20 | eps/10 | yes | pgdat | to be measured |
+| v4 | PGD | 20 | eps/10 | yes | pgdat | 99.4% / **61.8%** (Square 3000) |
+| v5 (upcoming) | APGD-DLR | 100 | adaptive | yes | pgdat | - |
 
 eps = 0.30 everywhere. The only change in v4: a finer inner attack (more steps,
-smaller step) - that is the direct answer to the 42.0% worst case.
+smaller step) - the direct answer to the 42.0% worst case. And it paid off:
+**+19.8 points** of worst case (42.0% -> 61.8%). Details in `memoire.md`.
 
 ---
 
@@ -702,6 +706,42 @@ is the signature of a model where the blind attacker beats the seeing one.
 > **Main lead**: the training attack was too coarse (PGD-5, step eps/4).
 Strengthening the inner attack (PGD-20, step eps/10, `--pgd-alpha`) is the next
 step.
+
+### Run v4 followed that lead (2026-09-12): worst case 42.0% -> 61.8%
+
+Same architecture, same attack budget, same sample (500 images). The only
+difference is the TRAINING attack (PGD-20 at step eps/10, instead of PGD-5 at
+step eps/4).
+
+| Attack | 120 epochs (PGD-5) | **v4 (PGD-20, eps/10)** |
+|---|---|---|
+| (clean) | 99.8% | 99.4% |
+| FGSM (1 step) | 96.0% | 94.2% |
+| PGD-20 (3 restarts) | 91.0% | 90.4% |
+| PGD-50 (10 restarts) | 92.0%* | 89.6% |
+| APGD-CE | 90.0%* | 88.2% |
+| **APGD-DLR** | 79.0%* | **81.0%** |
+| Square (500 steps) | 70.0% | 83.6% |
+| **Square (3000 steps)** | **42.0%** | **61.8%** |
+| NES | 93.8% | 93.0% |
+| **WORST CASE** | **42.0%** | **61.8%** |
+
+(*) measured on 200 images.
+
+Three lessons:
+
+1. **The diagnosis holds**: +19.8 points of worst case at identical
+   architecture. The over-coarse training attack was a major cause, not a
+   guess.
+2. **The PGD <-> Square gap collapses**: 21 points (91.0 vs 70.0) at 500 steps,
+   against **6.8 points** (90.4 vs 83.6). The loss surface is less flat, and
+   the gradient informs the attacker again.
+3. **A gap remains at 3000 steps**: APGD-DLR 81.0% vs Square 61.8%. A
+   score-only search is still more effective than the gradient. Next logical
+   step: train AGAINST the strongest known attack, hence the `--attack
+   apgd-dlr` option (added on 2026-09-12).
+
+Versioned weights: `models/harden_v4_pgd20.pt` (1.6 MB).
 
 ## CERTIFIED robustness: randomized smoothing
 

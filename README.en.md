@@ -6,7 +6,7 @@
 > - No TensorFlow, no PyTorch, no Keras: Python and NumPy only. Every layer is written by hand (im2col forward, backward, update).
 > - Clean MNIST: **98.6%** test accuracy; the optimizers (SGD, Momentum, Adam) are hand-made too.
 > - Adversarial attacks, hand-made as well: FGSM drops the full model to **1.8%**, PGD to **0.0%** at eps=0.30.
-> - Hardened model (PyTorch, 60000 images, 120 epochs, augmentation): **99.8% clean**, and **42.0% under the strongest attack found** (Square, gradient-free) -- the number measured against the training attack (PGD) was 91%, hence misleading.
+> - Hardened model (PyTorch, augmentation): **99.4% clean** and **61.8% under the strongest attack found** (Square, gradient-free) -- the previous version, trained with a coarser inner attack (PGD-5), fell to 42.0%: strengthening the training attack (PGD-20 at step eps/10) brought **+19.8 points** of worst case.
 > - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.0%** at 120); TRADES (C) still needs another go.
 > - Two engines, same maths: hand-made NumPy and PyTorch, ~9x faster on CPU, interchangeable `.npz` weights.
 > - Next: cross-check our numbers with `autoattack`, train KMNIST, then publish (model card + demo) -- details in `adversarial/README.md`.

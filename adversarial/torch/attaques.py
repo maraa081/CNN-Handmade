@@ -81,11 +81,26 @@ def attaque(modele, x, y, eps, type_attaque="pgd", steps=20, alpha=None):
     robuste on prefere un pas plus fin (eps/10) avec plus de pas : l'attaque
     d'entrainement est alors plus precise, et la robustesse apprise moins
     "specifique" a une trajectoire grossiere.
+
+    `apgd` / `apgd-ce` / `apgd-dlr` : variante a pas adaptatif, utilisee comme
+    attaque d'ENTRAINEMENT (toujours avec un demarrage aleatoire). `steps` joue
+    alors le role du nombre de pas, et `alpha` est ignore (le pas est adaptatif).
     """
     if type_attaque == "fgsm":
         return fgsm(modele, x, y, eps)
     if type_attaque == "fgsm-rs":
         return fgsm(modele, x, y, eps, random_start=True)
+    if type_attaque in ("apgd", "apgd-ce", "apgd-dlr"):
+        # Attaque d'ENTRAINEMENT plus fine que PGD : APGD (Croce & Hein 2020),
+        # pas adaptatif + objectif DLR. Motivation : sur nos modeles durcis,
+        # c'est APGD-DLR qui resiste le moins bien (81.0% contre 90.4% pour
+        # PGD-20 sur le modele v4), donc c'est contre elle qu'il faut
+        # s'entrainer. Import local : attaques_avancees importe ce module
+        # (cycle sinon).
+        from adversarial.torch.attaques_avancees import apgd
+        loss = "dlr" if type_attaque == "apgd-dlr" else "ce"
+        return apgd(modele, x, y, eps, loss=loss, steps=steps, restarts=1,
+                    random_start=True).detach()
     return pgd(modele, x, y, eps, steps=steps, alpha=alpha)
 
 

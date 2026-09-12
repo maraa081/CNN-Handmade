@@ -88,7 +88,8 @@ def _obj(modele, z, y, loss="ce"):
 #  APGD : PGD avec pas adaptatif, momentum et restarts (Croce & Hein 2020)
 # --------------------------------------------------------------------------
 
-def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0):
+def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0,
+         random_start=False):
     """APGD (Auto-PGD) : la version moderne de PGD.
 
     Trois ameliorations par rapport a PGD classique :
@@ -113,7 +114,7 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0):
     obj_global = torch.full((n,), float("-inf"), device=dev)
 
     for r in range(restarts):
-        if r == 0:
+        if r == 0 and not random_start:
             x_r = x.clone()
         else:
             # generateur CPU + tenseur cree sur CPU : la sequence aleatoire est

@@ -6,7 +6,7 @@
 > - Pas de TensorFlow, pas de PyTorch, pas de Keras : Python et NumPy seulement. Chaque couche est écrite à la main (forward im2col, backward, update).
 > - MNIST propre : **98.6%** d'accuracy test ; les optimiseurs (SGD, Momentum, Adam) sont faits main eux aussi.
 > - Attaques adversariales, faites main aussi : FGSM fait tomber le modèle full à **1.8%**, PGD à **0.0%** à eps=0.30.
-> - Modèle durci (PyTorch, 60000 images, 120 epochs, augmentation) : **99.8% propre**, et **42.0% sous la pire attaque trouvée** (Square, sans gradient) — le chiffre mesuré contre l'attaque d'entraînement (PGD) était de 91%, donc trompeur.
+> - Modèle durci (PyTorch, augmentation) : **99.4% propre** et **61.8% sous la pire attaque trouvée** (Square, sans gradient) — la version précédente, entraînée avec une attaque interne plus grossière (PGD-5), tombait à 42.0% : renforcer l'attaque d'entraînement (PGD-20 au pas eps/10) a rapporté **+19.8 points** de pire cas.
 > - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.0%** à 120) ; TRADES (C) reste à reprendre.
 > - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
 > - La suite : croiser nos chiffres avec `autoattack`, entraîner KMNIST, puis publier (model card + démo) — le détail est dans `adversarial/README.md`.

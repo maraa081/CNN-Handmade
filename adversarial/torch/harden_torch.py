@@ -141,7 +141,12 @@ def main():
                    help="256 conseille sur GPU (64 sous-utilise la carte)")
     p.add_argument("--epochs", type=int, default=5)
     p.add_argument("--eps", type=float, default=0.3)
-    p.add_argument("--attack", choices=["pgd", "fgsm", "fgsm-rs"], default="pgd")
+    p.add_argument("--attack", choices=["pgd", "fgsm", "fgsm-rs", "apgd-ce", "apgd-dlr"],
+                   default="pgd",
+                   help="attaque a l'ENTRAINEMENT : pgd (defaut), fgsm, fgsm-rs,\n"
+                        "ou apgd-ce / apgd-dlr (pas adaptatif, demarrage aleatoire ;\n"
+                        "plus couteux, mais c'est APGD-DLR qui resiste le moins\n"
+                        "bien a l'evaluation)")
     p.add_argument("--pgd-steps", type=int, default=5)
     p.add_argument("--pgd-alpha", type=float, default=None,
                    help="taille du pas de PGD a l'ENTRAINEMENT (defaut : eps/4).\n"

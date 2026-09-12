@@ -143,10 +143,12 @@ chose. La distinction qui compte :
 | **FGSM** (Goodfellow 2014) | Un seul pas : `x_adv = clip(x + eps * sign(grad_x L))`. On lit le gradient de la perte par rapport a l'IMAGE, on ne garde que son signe (+1/-1 par pixel) et on avance de eps. La plus grossiere des trois. | `--attack fgsm` | NumPy + torch |
 | **FGSM-RS** (random start) | FGSM, mais on part d'un point ALEATOIRE dans la boule eps au lieu de x : evite de lire le gradient a un endroit ou le signe ne varie plus, ce qui produit une attaque plus forte. | `--attack fgsm-rs` | torch |
 | **PGD** (Madry 2018) | FGSM itere : N petits pas de taille alpha, et apres chaque pas on reprojette dans la boule L-inf autour de x, puis dans [0,1]. Depart aleatoire par defaut. C'est LA reference de l'adversarial training, et elle est differentiable, donc utilisable dans la boucle. | `--attack pgd --pgd-steps N --pgd-alpha a` | NumPy + torch |
+| **APGD** (Croce & Hein 2020) | PGD a **pas adaptatif** (le pas est divise quand l'objectif stagne) et objectif **DLR** (normalise, reste informatif quand le modele est deja confiant). Plus couteux, mais c'est l'attaque a gradient la plus forte qu'on ait -- donc celle contre laquelle on veut s'entrainer. | `--attack apgd-dlr` (ou `apgd-ce`) `--pgd-steps N` | torch |
 
 alpha vaut eps/4 par defaut. Le run v4 utilise un pas plus fin (eps/10) avec
 plus de pas (20) : l'attaque d'entrainement est plus precise, et la robustesse
-apprise moins specifique a une trajectoire d'attaque grossiere.
+apprise moins specifique a une trajectoire d'attaque grossiere. Pour APGD,
+`alpha` est ignore : le pas est adaptatif, les paliers sont internes.
 
 > **TRADES n'est PAS une 4e attaque.** Piege classique : l'attaque reste PGD,
 ce qui change c'est la **perte**. Detail complet dans `defenses.md` (section 6.5).
@@ -186,10 +188,13 @@ sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annonce
 | A | PGD | 5 | eps/4 | non | pgdat | 98.8% / 65.4% |
 | B | PGD | 5 | eps/4 | oui | pgdat | 99.6% / 91.0% (120 epochs) |
 | C | PGD | 5 | eps/4 | oui | trades (beta=2) | 96.9% / 2.2% |
-| v4 | PGD | 20 | eps/10 | oui | pgdat | a mesurer |
+| v4 | PGD | 20 | eps/10 | oui | pgdat | 99.4% / **61.8%** (Square 3000) |
+| v5 (a venir) | APGD-DLR | 100 | adaptatif | oui | pgdat | - |
 
 eps = 0.30 partout. Le seul changement de v4 : une attaque interne plus fine
-(plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%.
+(plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%,
+et elle a paye : **+19.8 points** de pire cas (42.0% -> 61.8%). Detail dans
+`memoire.md`.
 
 ---
 
@@ -705,6 +710,42 @@ L'ecart de 49 points est le resultat le plus important du dossier.
 > **Piste principale** : l'attaque d'entrainement etait trop grossiere (PGD-5,
 pas de eps/4). Renforcer l'attaque interne (PGD-20, pas de eps/10, option
 `--pgd-alpha`) est la prochaine etape.
+
+### Le run v4 a suivi la piste (2026-09-12) : pire cas 42.0% -> 61.8%
+
+Meme architecture, meme budget d'attaque, meme echantillon (500 images). Seule
+difference : l'attaque d'ENTRAINEMENT (PGD-20 au pas eps/10, au lieu de PGD-5
+au pas eps/4).
+
+| Attaque | 120 epochs (PGD-5) | **v4 (PGD-20, eps/10)** |
+|---|---|---|
+| (propre) | 99.8% | 99.4% |
+| FGSM (1 pas) | 96.0% | 94.2% |
+| PGD-20 (3 restarts) | 91.0% | 90.4% |
+| PGD-50 (10 restarts) | 92.0%* | 89.6% |
+| APGD-CE | 90.0%* | 88.2% |
+| **APGD-DLR** | 79.0%* | **81.0%** |
+| Square (500 pas) | 70.0% | 83.6% |
+| **Square (3000 pas)** | **42.0%** | **61.8%** |
+| NES | 93.8% | 93.0% |
+| **PIRE CAS** | **42.0%** | **61.8%** |
+
+(*) mesures sur 200 images.
+
+Trois enseignements :
+
+1. **Le diagnostic est valide** : +19.8 points de pire cas, a architecture
+   identique. L'attaque d'entrainement trop grossiere etait bien une cause
+   majeure, pas une hypothese.
+2. **L'ecart PGD <-> Square s'effondre** : 21 points (91.0 contre 70.0) a
+   500 pas, contre **6.8 points** (90.4 contre 83.6). La surface de perte est
+   moins plate, le gradient renseigne a nouveau l'attaquant.
+3. **Il reste un ecart a 3000 pas** : APGD-DLR 81.0% contre Square 61.8%. Une
+   recherche guidee par les seuls scores reste plus efficace que le gradient.
+   Prochaine etape logique : s'entrainer CONTRE l'attaque la plus forte connu,
+   d'ou l'option `--attack apgd-dlr` (ajoutee le 2026-09-12).
+
+Poids versionnes : `models/harden_v4_pgd20.pt` (1,6 Mo).
 
 ## Robustesse CERTIFIEE : randomized smoothing
 

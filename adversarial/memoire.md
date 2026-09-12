@@ -590,3 +590,51 @@ l'attaque. Tendance monotone avec le budget : 500 pas -> 70.0%, 3000 pas ->
 CONSEQUENCE : le chiffre a retenir pour ce modele est **42.0%**, pas 91.0%.
 La prochaine etape est un entrainement v4 avec une attaque interne plus forte,
 puis une reevaluation avec la meme suite.
+
+---
+
+## 2026-09-12 - Run v4 (PGD-20, pas eps/10) : le pire cas remonte de 42.0% a 61.8%
+
+Le run annonce ci-dessus a ete lance et evalue (torch, 60000 images, PGD-20 avec
+`--pgd-alpha 0.03` = eps/10, augmentation, batch 256, GPU AMD RX 7800 XT apres
+la mise en place de ROCm sous WSL). Meme suite, meme budget, 500 images :
+
+| Attaque | Modele 120 ep (PGD-5) | **v4 (PGD-20, eps/10)** |
+|---|---|---|
+| Precision propre | 99.8% | 99.4% |
+| FGSM | 96.0% | 94.2% |
+| PGD-20 (3 restarts) | 91.0% | 90.4% |
+| PGD-50 (10 restarts) | 92.0%* | 89.6% |
+| APGD-CE | 90.0%* | 88.2% |
+| **APGD-DLR** | 79.0%* | **81.0%** |
+| Square (500 pas) | 70.0% | 83.6% |
+| **Square (3000 pas, 2 restarts)** | **42.0%** | **61.8%** |
+| NES | 93.8% | 93.0% |
+| **PIRE CAS** | **42.0%** | **61.8%** |
+
+(*) mesures sur 200 images.
+
+LECTURE :
+
+1. **Le diagnostic est valide.** +19.8 points de pire cas, a architecture
+   identique et a budget d'attaque egal. Renforcer l'attaque INTERNE a donc bien
+   reduit la specificite du modele a une trajectoire d'attaque donnee.
+2. **L'ecart PGD <-> Square s'effondre** : 21 points (91.0 vs 70.0) a 500 pas
+   deviennent **6.8 points** (90.4 vs 83.6). La surface de perte est moins
+   plate : le gradient renseigne de nouveau l'attaquant.
+3. **Mais l'ecart existe encore a 3000 pas** : APGD-DLR 81.0% contre Square
+   61.8%, soit 19 points. Une recherche par scores reste plus efficace que le
+   gradient. L'attaque d'entrainement n'etait donc pas la seule cause.
+4. **APGD-DLR est desormais la meilleure attaque a gradient** (81.0% contre
+   90.4% pour PGD-20). C'est logique : c'est l'attaque la plus forte connue, et
+   c'est celle a laquelle le modele resiste le moins. Prochaine etape :
+   s'entrainer CONTRE elle.
+
+Suite : option `--attack apgd-dlr` (attaques d'entrainement APGD, ajoutee le
+2026-09-12) pour un run v5, puis test de capacite (`--large`, 1,7M parametres,
+deja implemente). Poids versionnes : `models/harden_v4_pgd20.pt` (1,6 Mo).
+
+Note technique du jour : le bug de peripherique corrige dans
+`attaques_avancees.py` (restarts d'APGD et de Square qui creaient un tenseur
+GPU avec un generateur CPU) etait invisible sur CPU - voir le piege "tester sur
+le peripherique cible" ci-dessus.
