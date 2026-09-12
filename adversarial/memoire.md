@@ -966,6 +966,8 @@ LECTURE (le resultat de la soiree, publiable tel quel) :
    la recette adversarial ne coute quasi rien en propre tant qu'on ne depasse
    pas le budget ~5 eps ; la falaise est purement du cote robustesse.
 
+Figure : `results/pire_cas_vs_budget_deplacement.png`.
+
 A FAIRE (suite) : comparer les colonnes CE adv des logs abl_a et abl_c (attendu :
 ~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin (eps/20, 1 eps) pour
 savoir si le sommet est plus haut a gauche de 2 eps ; tracer la figure "pire cas

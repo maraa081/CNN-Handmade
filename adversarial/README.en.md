@@ -221,6 +221,8 @@ Measured over the whole attack suite (not just PGD-20), the WORST-CASE curve is
 |---|---|---|---|---|
 | worst case eps=0.30 | 42.0% | **63.2%** | 38.8% | 1.6% |
 
+Figure: `results/pire_cas_vs_budget_deplacement.png`.
+
 Both extremes are worth showing: at 1.25 eps we get a **masked robustness** (91%
 under PGD-20 but only 42% worst case), at 20 eps a model that looks intact
 (98.4% clean) but is **unusable** (1.6% worst case). And on abl_c the gradient <->

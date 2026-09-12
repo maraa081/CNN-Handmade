@@ -216,6 +216,8 @@ CAS est **en cloche avec un sommet a 2 eps** :
 |---|---|---|---|---|
 | pire cas eps=0.30 | 42.0% | **63.2%** | 38.8% | 1.6% |
 
+Figure : `results/pire_cas_vs_budget_deplacement.png`.
+
 **La robustesse apprise est donc maximale pour un budget intermediaire (2 eps),
 pas pour le maximum. C'est la LISIBILITE de la perturbation qui compte, pas la
 force de l'attaque.** Un pas >= eps saute au coin de la boule et y reste : le
