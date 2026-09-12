@@ -62,6 +62,7 @@ sys.path.insert(0, join(ROOT_DIR, "src"))
 sys.path.insert(0, join(ROOT_DIR, "adversarial", "torch"))
 
 from adversarial.torch.attaques import fgsm, pgd, accuracy          # noqa: E402
+from adversarial.torch.attaques_avancees import square              # noqa: E402
 from adversarial.torch.entrainement import charger_test             # noqa: E402
 from adversarial.torch.eval_suite import charger_modele             # noqa: E402
 
@@ -100,6 +101,10 @@ def main():
     p.add_argument("--n", type=int, default=500)
     p.add_argument("--eps", type=float, default=0.3)
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "dml"])
+    p.add_argument("--rayon-square", type=int, default=500,
+                   help="pas de Square pour le rayon robuste de [3b] (0 = ignorer). "
+                        "Indispensable sur les modeles a surface rugueuse : le rayon"
+                        " mesure au PGD y est faux (voir 2026-09-12 23h00).")
     args = p.parse_args()
 
     device = args.device
@@ -235,20 +240,55 @@ def main():
     # ---------------------------------------------------------------- [3b]
     # Le vrai chiffre a comparer entre modeles n'est pas le pire cas a un eps
     # arbitraire, c'est le RAYON ROBUSTE : le eps ou le modele passe sous 50%.
+    #
+    # CORRECTIF du 2026-09-12 (23h00) : le rayon mesure au SEUL PGD est faux sur
+    # les modeles a surface rugueuse. Mesure : abl_a et bande_cible50 avaient le
+    # meme rayon PGD (~0.40) alors qu'AutoAttack leur donne 50.7% et 91.25% au
+    # meme eps. Quand le gradient ne guide plus (rapport du test [2] proche de 1),
+    # PGD sous-estime la vulnerabilite et le rayon annonce est trop grand. On
+    # mesure donc AUSSI au Square (recherche par scores, insensible au gradient).
     print("\n[3b] Rayon robuste approche (eps ou la precision passe sous 50%)")
-    rayon = None
+    with_square = args.rayon_square > 0
+    entete = f"    {'eps':>6} | {'PGD fin':>8}"
+    if with_square:
+        entete += f" | {'Square':>8} | {'PIRE':>8}"
+    print(entete)
+    rayon = rayon_sq = None
     for eps_i in [0.30, 0.35, 0.40, 0.45, 0.50, 0.60]:
         torch.manual_seed(4)
         a_fin = accuracy(modele, pgd(modele, x, y, eps_i, 100, alpha=eps_i / 50.0), y)
-        print(f"    eps={eps_i:.2f} : {a_fin:>6.1%}")
+        if with_square:
+            a_sq = accuracy(modele, square(modele, x, y, eps_i,
+                                           steps=args.rayon_square,
+                                           restarts=1, seed=6000), y)
+            ligne_eps = (f"    {eps_i:>6.2f} | {a_fin:>8.1%} | {a_sq:>8.1%} | "
+                         f"{min(a_fin, a_sq):>8.1%}")
+            if rayon_sq is None and a_sq < 0.5:
+                rayon_sq = eps_i
+        else:
+            ligne_eps = f"    {eps_i:>6.2f} | {a_fin:>8.1%}"
+        print(ligne_eps)
         if rayon is None and a_fin < 0.5:
             rayon = eps_i
     if rayon is None:
-        print("    rayon robuste > 0.60 (a comparer au budget d'entrainement)")
+        print("    rayon robuste (PGD) > 0.60")
     else:
-        print(f"    rayon robuste ~ {rayon:.2f} (borne sup. ; pas de 0.05)")
-    print("    A comparer entre candidats : un rayon plus grand = un modele plus"
-          " robuste, a precision propre comparable.")
+        print(f"    rayon robuste (PGD)    ~ {rayon:.2f} (borne sup. ; pas de 0.05)")
+    if with_square:
+        if rayon_sq is None:
+            print("    rayon robuste (Square) > 0.60")
+        else:
+            print(f"    rayon robuste (Square) ~ {rayon_sq:.2f}")
+        if rayon_sq is not None and rayon is not None and rayon - rayon_sq >= 0.10:
+            drapeau("3b", "le rayon mesure au PGD surestime la robustesse : la marche de "
+                           f"{rayon - rayon_sq:.2f} entre PGD ({rayon:.2f}) et Square "
+                           f"({rayon_sq:.2f}) dit que le gradient ne guide plus. "
+                           "Le rayon PGD n'est PAS publiable sur ce modele ; c'est le "
+                           "pire cas sous l'attaque la plus forte qui compte",
+                    f"rayon PGD {rayon:.2f} contre rayon Square {rayon_sq:.2f}")
+        elif rayon is not None and rayon_sq is not None:
+            ok("3b", f"les deux attaques donnent le meme rayon (~{rayon:.2f}) : la "
+                      "mesure est fiable dans les deux familles")
 
     # ---------------------------------------------------------------- [4]
     print("\n[4] Pas fin contre pas grossier (notre loi du budget de deplacement)")

@@ -1224,3 +1224,88 @@ PROCHAINES ETAPES (dans l'ordre) :
    ecart APGD-Square) pour tester la prediction du point 2 ;
 4. experience 2x2 (A4 sans arret anticipe a pas fin et 5 pas ; A5 arret anticipe
    a pas grossier) pour expliquer la platitude.
+
+### 2026-09-12 (23h00) - AUTOATTACK : LE VERDICT OFFICIEL (+40.5 points d'ecart)
+
+Item n°1 du perimetre "avant de publier" : FAIT, sur les deux modeles de tete.
+AutoAttack `standard` (APGD-CE, APGD-targeted, FAB-targeted, Square), 10 000
+images, eps=0.30.
+
+| Modele | propre | APGD-CE | APGD-T | FAB-T | Square | **PIRE CAS OFFICIEL** | avertissement Square |
+|---|---|---|---|---|---|---|---|
+| **bande_cible50 (A1)** | 98.85% | 93.34% | 92.84% | 92.79% | **91.25%** | **91.25%** | 1.54% (fiable) |
+| abl_a | 99.53% | 88.43% | 85.43% | 81.61% | **50.71%** | **50.71%** | 30.90% (fiable ? NON : le chiffre est encore optimiste) |
+
+Trois consequences.
+
+1. **L'ecart officiel entre A1 et abl_a est de 40.5 points**, pas 30. Et il est
+   valide par le paquet de reference : nos chiffres maison n'etaient pas
+   seulement incomplets, ils etaient OPTIMISTES de 12 points sur abl_a
+   (63.2% annonce -> **50.71%** officiel ; l'avertissement d'AutoAttack dit meme
+   que Square n'a pas fini de chercher).
+2. **A1 est valide** : les quatre attaques d'AutoAttack s'accordent a 2 points
+   pres (93.34 -> 91.25) et l'avertissement est de 1.54%. Un modele qui masque
+   son gradient ne produit jamais ca.
+3. Sur abl_a, c'est AutoAttack LUI-MEME qui signale le probleme : "Square Attack
+   has decreased the robust accuracy of 30.90% ... evaluation unreliable". Autrement
+   dit : sur ce modele, les trois attaques a gradient d'AutoAttack sont
+   aveugles, et seule la recherche par scores trouve la vulnerabilite.
+
+**CORRECTION DE MON PROPRE DIAGNOSTIC (une heure plus tot).** J'avais conclu :
+"meme rayon robuste (~0.40), donc le +30 points est un effet de fenetre".
+FAUX, et voici pourquoi : le rayon etait mesure au PGD seul, or le rayon au PGD
+n'est PAS valide quand le gradient ne guide plus. Deux modeles peuvent avoir la
+meme courbe PGD et des pires cas officiels separes de 40 points. La mesure
+correcte du rayon doit inclure une attaque par scores : ajoute au test [3b]
+(`--rayon-square`, 500 pas par defaut desormais).
+
+**REFORMULATION PROPRE DU PHENOMENE.** Les marges de abl_a sont
+**ANISOTROPES** : ~0.40 dans la direction du gradient mais < 0.30 dans certaines
+directions "aleatoires" -- c'est pour ca que PGD (qui suit le gradient) annonce
+91% alors que Square met le modele a 50.7%. Chez A1 les marges sont
+**ISOTROPES** : PGD et Square donnent le meme rayon (~0.39), donc les deux
+familles d'attaques s'accordent (ecart 1.8 point).
+
+### 2026-09-12 (23h00) - LE DIAGNOSTIC QUI CLASSE LES MODELES (tableau complet)
+
+Les audits des cinq modeles, meme protocole (500 images, eps=0.30) :
+
+| Modele | CE propre | dCE le long du gradient | dCE en direction ALEATOIRE | rapport grad/aléa | rayon PGD | rayon Square | pire cas (mesure) |
+|---|---|---|---|---|---|---|---|
+| **bande_cible50 (A1)** | 0.045 | **+0.038** | **+0.005** | **x8.52** | ~0.39 | a mesurer | **91.25%** (AutoAttack) |
+| abl_a | 0.012 | +0.268 | +0.209 | x1.28 | ~0.41 | a mesurer | **50.71%** (AutoAttack) |
+| v4 | 0.018 | +0.261 | +0.200 | x1.30 | ~0.40 | a mesurer | 61.8% (maison) |
+| abl_b | 0.006 | +0.859 | +0.817 | x1.05 | ~0.44 | a mesurer | 38.8% (maison) |
+| abl_c | 0.047 | +1.813 | +1.565 | x1.16 | ~0.30 | a mesurer | 1.6% (maison) |
+
+**Le classement par SENSIBILITE (dCE sous perturbation dans la boule) est le
+meme que le classement par pire cas** : A1 (0.038) > v4 (0.261) ~= abl_a (0.268)
+> abl_b (0.859) > abl_c (1.813), et 91.25% > 61.8 ~= 50.7 > 38.8 > 1.6. Une
+mesure qui prend DEUX SECONDES (un passage avant) classe les modeles dans le
+bon ordre.
+
+ATTENTION : ce n'est PAS une preuve de robustesse. Un modele qui masque son
+gradient a aussi une surface plate par construction (c'est la definition du
+masquage). Donc : la sensibilite sert a TRIER et a expliquer, AutoAttack reste
+l'ARBITRE. La combinaison des deux (plate + valide par AutoAttack) est ce qu'on
+peut defendre.
+
+**SECONDE CORRECTION.** J'avais annonce que le rapport gradient/aleatoire predit
+la TAILLE de l'ecart gradient <-> scores. FAUX : abl_c a un rapport de 1.16 et un
+ecart NEGATIF (-9.6 points, l'attaque a gradient est la plus forte). Ce que le
+rapport predit vraiment : **si les attaques a gradient sont utilisables ou non**,
+donc si une courbe de robustesse mesuree au PGD a un sens sur ce modele. La
+taille de l'ecart, elle, depend du modele.
+
+A retenir pour l'article : **une courbe de robustesse au PGD ne mesure rien de
+fiable sur un modele a surface rugueuse.** Il faut l'attaque la plus forte
+disponible, et AutoAttack le dit lui-meme ("evaluation unreliable").
+
+PROCHAINES ETAPES :
+1. **AutoAttack a eps=0.40 sur les deux modeles** : la comparaison de RAYONS
+   honnete, avec un instrument valide (c'est la question qui reste ouverte) ;
+2. relancer `--rayon-square` sur abl_a pour documenter la marche PGD/Square ;
+3. experience 2x2 (A4 : eps/10, 5 pas fixes, sans arret anticipe ; A5 : arret
+   anticipe a pas grossier) avec la SENSIBILITE comme lecture principale ;
+4. puis A2 (cible CE-relative) : la cible "tromperie" a fait le job, mais la
+   cible lisse est peut-etre encore mieux.
