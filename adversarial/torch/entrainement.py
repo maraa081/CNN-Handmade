@@ -275,8 +275,13 @@ def entrainer(modele, opt, train, val, args, device):
                 # pousse alors la prediction PROPRE vers la prediction ADVERSE
                 # (qui est fausse), donc le modele apprend a se tromper.
                 # Mesure : val clean 99.6% -> 8.0% en un seul epoch.
-                # Formulation identique a l'implementation de reference de
-                # TRADES : KL(p_adverse || p_propre), les deux derivees.
+                # Variante de TRADES (Zhang 2019) : KL(p_adverse || p_propre),
+                # les deux branches restant dans le graphe (voir le [fix] plus
+                # haut). [a trancher] l'implementation de reference
+                # (yaodongyu/TRADES) utilise le sens INVERSE,
+                # KL(p_propre || p_adverse), et genere la perturbation en
+                # maximisant cette KL ; ici la perturbation vient d'un PGD sur
+                # la CE (selecteur `attaque`). Detail : defenses.md, 6.5.
                 logits = modele(bx)
                 logits_adv = modele(bx_adv)
                 ce = F.cross_entropy(logits, by)

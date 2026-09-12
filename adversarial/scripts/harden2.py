@@ -223,7 +223,7 @@ def entrainer(model, x_tr, y_tr, x_val, y_val, args):
                 # ADVERSE (qui est fausse). Le modele apprenait a se tromper.
                 # Mesure en PyTorch : val clean 99.6% -> 8.0% en un epoch.
                 #
-                # Perte de reference : CE(z, y) + beta * KL(p_adv || p_clean)
+                # Perte (variante de TRADES) : CE(z, y) + beta * KL(p_adv || p_clean)
                 #   d KL / d z_clean = p_clean - p_adv
                 #   d KL / d z_adv   = p_adv * (log(p_adv/p_clean) - KL)
                 # On retropropage la branche adverse d'abord, on met ses

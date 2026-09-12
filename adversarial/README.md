@@ -125,6 +125,74 @@ Résultats dans `adversarial/results/` : images comparatives + résumé chiffré
 
 ---
 
+## Les attaques du repo, en deux familles (2026-09-12)
+
+Le repo contient beaucoup d'attaques, et elles ne servent pas toutes a la meme
+chose. La distinction qui compte :
+
+- **attaques d'ENTRAINEMENT** : differentiables, utilisees dans la boucle pour
+  fabriquer des exemples adverses a la volee. Il n'y en a que **trois**.
+- **attaques d'EVALUATION** : le juge. Elles mesurent la robustesse d'un modele
+  deja entraine. Elles ne servent JAMAIS a entrainer (non differentiables, ou
+  trop couteuses : Square va jusqu'a 3000 requetes par image).
+
+### Attaques d'entrainement (3)
+
+| Attaque | Principe | Option | Moteur |
+|---|---|---|---|
+| **FGSM** (Goodfellow 2014) | Un seul pas : `x_adv = clip(x + eps * sign(grad_x L))`. On lit le gradient de la perte par rapport a l'IMAGE, on ne garde que son signe (+1/-1 par pixel) et on avance de eps. La plus grossiere des trois. | `--attack fgsm` | NumPy + torch |
+| **FGSM-RS** (random start) | FGSM, mais on part d'un point ALEATOIRE dans la boule eps au lieu de x : evite de lire le gradient a un endroit ou le signe ne varie plus, ce qui produit une attaque plus forte. | `--attack fgsm-rs` | torch |
+| **PGD** (Madry 2018) | FGSM itere : N petits pas de taille alpha, et apres chaque pas on reprojette dans la boule L-inf autour de x, puis dans [0,1]. Depart aleatoire par defaut. C'est LA reference de l'adversarial training, et elle est differentiable, donc utilisable dans la boucle. | `--attack pgd --pgd-steps N --pgd-alpha a` | NumPy + torch |
+
+alpha vaut eps/4 par defaut. Le run v4 utilise un pas plus fin (eps/10) avec
+plus de pas (20) : l'attaque d'entrainement est plus precise, et la robustesse
+apprise moins specifique a une trajectoire d'attaque grossiere.
+
+> **TRADES n'est PAS une 4e attaque.** Piege classique : l'attaque reste PGD,
+ce qui change c'est la **perte**. Detail complet dans `defenses.md` (section 6.5).
+
+| Perte | Formule | Effet |
+|---|---|---|
+| `pgdat` (Madry) | `CE(propre + adverse)` | "sois juste sur les exemples adverses" |
+| `trades` (Zhang 2019) | `CE(propre) + beta * KL(p_adverse \|\| p_propre)` | "garde la MEME prediction dans un voisinage" (robustesse locale, pas seulement justesse) |
+
+L'**augmentation** (rotation, zoom, translation, sel-poivre, cutout) n'est pas
+une attaque : c'est de la diversite de donnees. Elle apparait dans la meme
+boucle, d'ou la confusion frequente.
+
+### Attaques d'evaluation (le juge)
+
+| Attaque | Famille | Principe |
+|---|---|---|
+| FGSM, PGD (+ restarts) | gradient | le socle ; PGD-20 avec 3 restarts donne le chiffre "officiel" |
+| APGD-CE, APGD-DLR | gradient | le coeur d'AutoAttack : pas adaptatifs, deux pertes (CE et DLR) |
+| CW-L2 (Carlini & Wagner 2017) | gradient | minimise la distance de perturbation : trouve l'exemple adverse le plus PROCHE |
+| Square (Andriushchenko 2020) | SANS gradient | cherche par scores ; c'est elle qui a casse le 91% (42.0% a 3000 pas) |
+| NES | SANS gradient | gradient estime par differences finies (estimateur antithetique) |
+| Boundary (Brendel 2019) | decision | n'utilise QUE l'etiquette predite : le cas le plus pauvre pour l'attaquant |
+| BPDA, EOT (Athalye 2018) | adaptatif | attaquer une defense non differentiable (feature squeezing) |
+| Transfert | black-box | exemple genere sur un modele, teste sur un autre |
+
+Trois familles, du plus fort au plus faible pour l'attaquant : **gradient > sans
+gradient > decision**. Un modele se juge sur le PIRE CAS (`eval_suite.py`), pas
+sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annoncer
+91.0% alors que le pire cas etait 42.0%.
+
+### Une seule variable a la fois : ce qui a change entre nos runs
+
+| Run | Attaque interne | Pas | alpha | Augmentation | Perte | Resultat eps=0.30 |
+|---|---|---|---|---|---|---|
+| v1 (NumPy) | PGD | 7 | eps/4 | non | pgdat | 67.2% propre / 1.2% PGD |
+| A | PGD | 5 | eps/4 | non | pgdat | 98.8% / 65.4% |
+| B | PGD | 5 | eps/4 | oui | pgdat | 99.6% / 91.0% (120 epochs) |
+| C | PGD | 5 | eps/4 | oui | trades (beta=2) | 96.9% / 2.2% |
+| v4 | PGD | 20 | eps/10 | oui | pgdat | a mesurer |
+
+eps = 0.30 partout. Le seul changement de v4 : une attaque interne plus fine
+(plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%.
+
+---
+
 ## Résultats clés (mis à jour à chaque expérience)
 
 ### FGSM — MNIST (models/model_weights_full.npz, 1000 images)

@@ -240,9 +240,21 @@ image de l'échantillon.
 
 ## 8. Ce qu'on n'a PAS fait (scope honnête)
 
-- Pas d'attaques L2 ou L0 (on s'est limité à L∞, la plus utilisée)
-- Pas d'attaques basées sur la confiance seule (boîte noire sans substitut)
-- Pas de Carlini-Wagner (optimisation directe, très lente sur un CNN NumPy)
-- Le random start PGD n'est testé qu'avec 1 restart (pas d'ensemble complet)
+Etat au **2026-09-12** (la liste a fondu depuis la premiere redaction de ce
+document) :
+
+- **Fait depuis** : CW-L2, APGD-CE/DLR, Square (sans gradient), NES, Boundary
+  (decision), BPDA/EOT, robustesse certifiee (randomized smoothing). Voir
+  `defenses.md` et la section "La suite d'attaques" de `README.md`.
+- Pas d'attaques L0 ni de patchs physiques (le cas "attaque dans le monde reel").
+- Pas de chiffres croises avec le paquet officiel `autoattack` : notre APGD est
+  une reimplementation maison, a croiser avant toute revendication de niveau
+  publication.
+- Le pire cas est mesure sur 3 restarts (`--restarts 3`) : suffisant pour
+  comparer nos runs entre eux, pas pour un classement public.
+- Boite noire : nos attaques sans gradient utilisent les scores. La variante
+  decision seule (Boundary) est une version simplifiee de Brendel et al. 2019.
+- Tout est mesure sur nos propres modeles : pas d'attaque sur le systeme d'un
+  tiers.
 
 Voir `defenses.md` pour le pendant défensif.

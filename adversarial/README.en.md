@@ -125,6 +125,74 @@ Results in `adversarial/results/`: comparison images + numerical summary.
 
 ---
 
+## The repo's attacks, in two families (2026-09-12)
+
+The repo holds many attacks, and they do not all serve the same purpose. The
+distinction that matters:
+
+- **TRAINING attacks**: differentiable, used inside the loop to build
+  adversarial examples on the fly. There are only **three** of them.
+- **EVALUATION attacks**: the judge. They measure the robustness of an
+  already-trained model. They are NEVER used for training (not differentiable,
+  or too expensive: Square goes up to 3000 queries per image).
+
+### Training attacks (3)
+
+| Attack | Principle | Option | Engine |
+|---|---|---|---|
+| **FGSM** (Goodfellow 2014) | A single step: `x_adv = clip(x + eps * sign(grad_x L))`. We read the loss gradient with respect to the IMAGE, keep only its sign (+1/-1 per pixel) and move by eps. The crudest of the three. | `--attack fgsm` | NumPy + torch |
+| **FGSM-RS** (random start) | FGSM, but starting from a RANDOM point inside the eps ball instead of x: avoids reading the gradient at a spot where the sign no longer varies, which makes the attack stronger. | `--attack fgsm-rs` | torch |
+| **PGD** (Madry 2018) | Iterated FGSM: N small steps of size alpha, and after each step the result is re-projected into the L-inf ball around x, then into [0,1]. Random start by default. It is THE reference for adversarial training, and it is differentiable, hence usable inside the loop. | `--attack pgd --pgd-steps N --pgd-alpha a` | NumPy + torch |
+
+alpha defaults to eps/4. Run v4 uses a finer step (eps/10) with more steps (20):
+the training attack is more precise, and the learned robustness less specific
+to a coarse attack trajectory.
+
+> **TRADES is NOT a fourth attack.** Classic trap: the attack stays PGD, what
+> changes is the **loss**. Full detail in `defenses.md` (section 6.5).
+
+| Loss | Formula | Effect |
+|---|---|---|
+| `pgdat` (Madry) | `CE(clean + adversarial)` | "be correct on the adversarial examples" |
+| `trades` (Zhang 2019) | `CE(clean) + beta * KL(p_adversarial \|\| p_clean)` | "keep the SAME prediction in a neighbourhood" (local robustness, not just correctness) |
+
+**Augmentation** (rotation, zoom, translation, salt-and-pepper, cutout) is not an
+attack: it is data diversity. It appears in the same loop, hence the frequent
+confusion.
+
+### Evaluation attacks (the judge)
+
+| Attack | Family | Principle |
+|---|---|---|
+| FGSM, PGD (+ restarts) | gradient | the baseline; PGD-20 with 3 restarts gives the "official" number |
+| APGD-CE, APGD-DLR | gradient | the core of AutoAttack: adaptive steps, two losses (CE and DLR) |
+| CW-L2 (Carlini & Wagner 2017) | gradient | minimises the perturbation distance: finds the CLOSEST adversarial example |
+| Square (Andriushchenko 2020) | NO gradient | score-based search; it is the one that broke the 91% (42.0% at 3000 steps) |
+| NES | NO gradient | gradient estimated by finite differences (antithetic estimator) |
+| Boundary (Brendel 2019) | decision | uses ONLY the predicted label: the poorest case for the attacker |
+| BPDA, EOT (Athalye 2018) | adaptive | attacking a non-differentiable defence (feature squeezing) |
+| Transfer | black-box | example generated on one model, tested on another |
+
+Three families, from strongest to weakest for the attacker: **gradient > no
+gradient > decision**. A model is judged on the WORST CASE (`eval_suite.py`), not
+on the single attack that flatters it. That is exactly the mistake that led to
+announcing 91.0% while the worst case was 42.0%.
+
+### One variable at a time: what changed between our runs
+
+| Run | Inner attack | Steps | alpha | Augmentation | Loss | Result at eps=0.30 |
+|---|---|---|---|---|---|---|
+| v1 (NumPy) | PGD | 7 | eps/4 | no | pgdat | 67.2% clean / 1.2% PGD |
+| A | PGD | 5 | eps/4 | no | pgdat | 98.8% / 65.4% |
+| B | PGD | 5 | eps/4 | yes | pgdat | 99.6% / 91.0% (120 epochs) |
+| C | PGD | 5 | eps/4 | yes | trades (beta=2) | 96.9% / 2.2% |
+| v4 | PGD | 20 | eps/10 | yes | pgdat | to be measured |
+
+eps = 0.30 everywhere. The only change in v4: a finer inner attack (more steps,
+smaller step) - that is the direct answer to the 42.0% worst case.
+
+---
+
 ## Key results (updated after each experiment)
 
 ### FGSM — MNIST (models/model_weights_full.npz, 1000 images)

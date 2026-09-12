@@ -291,6 +291,40 @@ Deux facons d'utiliser les exemples adverses :
 
     --loss trades --beta 2
 
+Objectif complet (Zhang et al. 2019) :
+
+    min_theta  E[ CE(f(x), y) + beta * max_{||d||_inf <= eps} KL( p(y|x) || p(y|x+d) ) ]
+
+Deux termes, deux roles :
+
+- **CE(propre)** : garde la precision sur les images normales (c'est ce que
+  Madry sacrifie).
+- **KL** : l'adversaire ne cherche plus a faire TROMPER le modele, mais a le
+  faire **CHANGER D'AVIS**. Le modele apprend alors une frontiere de decision
+  *lisse*. C'est toute la difference avec PGD-AT, qui ne contraint que les
+  etiquettes sur les points attaques.
+- La distribution de reference est la prediction PROPRE : on exige que la
+  prediction de l'image perturbee lui ressemble.
+- **beta est le curseur de la frontiere** precision/robustesse : beta petit
+  donne plus de precision propre, beta grand plus de robustesse, beta infini
+  rejoint la limite "Madry pur". L'article utilise beta = 6 depuis zero.
+
+> [warn] **Ecart connu avec l'implementation de reference (a trancher, 2026-09-12).**
+> La comparaison avec `trades.py` du depot officiel `yaodongyu/TRADES` montre
+> deux differences dans notre moteur :
+>
+> | | Reference officielle | Notre code |
+> |---|---|---|
+> | Sens de la KL | `KL(p_propre \|\| p_adverse)` | `KL(p_adverse \|\| p_propre)` (inverse) |
+> | Attaque interne | PGD qui MAXIMISE la KL | PGD qui maximise la CE (`attaque()`) |
+>
+> La KL etant asymetrique, en inverser le sens n'est pas neutre : la ponderation
+> classe par classe dans le gradient change. Notre version reste coherente entre
+> les deux moteurs (NumPy et torch font la meme chose), donc les chiffres du run
+> C sont valides POUR CETTE VARIANTE. Mais l'etiquette "TRADES" est abusive en
+> l'etat : soit on aligne le code sur la reference, soit on documente une
+> variante assumee. A trancher avant toute publication.
+
 > [warn] **TRADES est delicat avec un warm start.** Sur un modele deja
 > converge, la CE vaut ~0.01 alors que la KL vaut ~1.3 : le terme KL ecrase
 > tout, et le modele minimise la KL en devenant constant (il perd toute
