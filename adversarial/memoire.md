@@ -16,7 +16,7 @@
 
 ##  Journal
 
-## ETAT AU 2026-09-12 (20h40) - REPRENDRE ICI
+## ETAT AU 2026-09-12 (21h00) - REPRENDRE ICI
 
 - **Meilleur modele : `models/abl_a_eps10.pt`** (recette PGD-20 pas eps/10,
   augment, 120 epochs, 60k images, lr 0.05) -> propre 99.6%, PGD-20 (3 restarts)
@@ -34,13 +34,18 @@
 - **En attente** : push des poids `harden_v6_pgd20eps10.pt` (= abl_a) et
   `harden_v5_apgd_ce.pt` ; colonnes `CE adv` des logs abl_a / abl_c ; option
   `--pgd-alpha 0.05` (budget 1 eps) ; puis `--large` a budget 2 eps ; figure
-  "pire cas vs budget" pour l'article.
-- **Commits de la journee** : 7bb256c, e354b82, 3f46836, 6e2eaa8, 4471a10, 9a27947.
+  "pire cas vs budget" (faite) ; et l'**ATTAQUE A BUDGET ADAPTATIF de Maraa** :
+  formalisee et codee (`attaque_adaptative.md` + option `--bande`), aucun run
+  lance -> prochaine etape, tester le module puis les runs A1/A2/A3.
+- **Commits de la journee** : 7bb256c, e354b82, 3f46836, 6e2eaa8, 4471a10,
+  9a27947, 94c9177, 8d6fdb0, + le commit du module adaptatif.
 - **Commandes** : entrainer `python -u adversarial/torch/harden_torch.py ...`,
   evaluer `python -u adversarial/torch/eval_suite.py --weights ...`, diagnostiquer
-  `python -u adversarial/torch/diag_attaque_interne.py --weights ...`. Tout tourne
-  dans **WSL Ubuntu-24.04** (`~/.venv-rocm`, `HSA_ENABLE_DXG_DETECTION=1`), PAS
-  dans Git Bash.
+  `python -u adversarial/torch/diag_attaque_interne.py --weights ...`, tester le
+  module adaptatif `python -u adversarial/torch/test_attaque_adaptative.py`,
+  lancer un run adaptatif en ajoutant `--bande --cible 0.5` a la commande
+  d'entrainement. Tout tourne dans **WSL Ubuntu-24.04** (`~/.venv-rocm`,
+  `HSA_ENABLE_DXG_DETECTION=1`), PAS dans Git Bash.
 
 ### 2026-08-24 — Préparation du terrain
 
@@ -972,3 +977,49 @@ A FAIRE (suite) : comparer les colonnes CE adv des logs abl_a et abl_c (attendu 
 ~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin (eps/20, 1 eps) pour
 savoir si le sommet est plus haut a gauche de 2 eps ; tracer la figure "pire cas
 vs budget" ; puis `--large` (1.7M params) a budget 2 eps.
+
+### 2026-09-12 (21h00) - IDEE DE MARAA : l'attaque interne a budget ADAPTATIF
+
+Maraa propose de rendre la difficulte de l'attaque d'entrainement adaptative au
+lieu de la fixer une fois pour toutes : a chaque batch, choisir la configuration
+la plus utile POUR L'ETAT COURANT du modele. Resume (et formalisation complete)
+dans **`adversarial/attaque_adaptative.md`** (a lire avant de coder).
+
+- **Verdict** : idee pertinente, mais elle a des cousins directs dans la
+  litterature (FAT ICML 2020 = early stopping de PGD ; IAAT = par instance ;
+  SAAT arXiv 2210.01288 = budget pilote par la perte adverse ; Curriculum AT =
+  eps programme). Notre apport specifique decoule de la LOI DU BUDGET : on ne
+  maximise pas la difficulte, on l'ASSERVIT a une cible, sous une borne de
+  lisibilite (<= 2 eps). Quand le modele depasse la borne, on escalade la
+  DIVERSITE (EOT, departs multiples, attaque par scores), pas la force.
+- **Formalisation** : `min_theta E[CE_adv(c*)]` avec `c* = argmin_c |D(c) -
+  rho_t|` sous `beta(c) <= 2 eps`, ou `D` est le taux de tromperie (ou la CE
+  adverse, ou l'ecart CE_adv - CE_clean). Cible de difficulte = hyperparametre
+  unique qui interpole entre FAT (cible basse) et Madry (cible maximale).
+- **Le point qui rend l'idee utilisable : cout NUL.** Avec un pas FIXE
+  (alpha = eps/10), varier le nombre de pas revient a varier le budget : la
+  trajectoire de PGD contient donc deja tous les candidats. On lit la difficulte
+  a chaque pas sur les logits DEJA calcules pour le gradient, on memorise les
+  iterats, et on choisit k* a posteriori. Meme cout que pgd() (verifie par
+  compteur de passages avant dans le test).
+- **Code ecrit** : `torch/attaque_adaptative.py` (pgd_bande, cible_effective,
+  JournalBande), branchement dans `entrainement.py` (etape [3]) et options
+  `--bande --cible --cible-type --cible-depart --cible-rampe --plafond-tol`
+  dans `harden_torch.py` (desactivees par defaut : les runs A0 restent
+  comparables). Test : `python -u adversarial/torch/test_attaque_adaptative.py`
+  (quelques secondes, verifie selection / equivalence avec pgd / cout /
+  plafond). Troisieme alerte ajoutee : "cible non atteinte qu'au plafond sur N%
+  des batchs" -> escalader la diversite, pas la force.
+- **Protocole prevu (~1 h de calcul)** : A0 = abl_a (reference 63.2%), A1 =
+  adaptatif cible tromperie 0.5, A2 = adaptatif cible CE-relative, A3 =
+  adaptatif cible 0.9 (controle : doit degrader). Adoption si pire cas >= +
+  2 points, ou equivalent a <= 70% du cout.
+- **Risques notes** : bruit de la statistique par batch (-> cible relative +
+  moyenne glissante), biais min-min de FAT (a assumer dans l'article),
+  statistiques de BN (perturbations d'amplitude variable), robust overfitting
+  (warmup puis gel de la cible), et surtout : ne JAMAIS reutiliser la regle
+  d'arret comme juge (le pire cas reste Square-3000).
+
+STATUT : module ecrit et compile, **aucun run lance** (Maraa lance sur sa
+machine). Attendu honnete : +2 a +5 points de pire cas, et un entrainement moins
+cher ; le vrai gain est le recit (un seul hyperparametre de difficulte).

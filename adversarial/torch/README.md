@@ -286,5 +286,22 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
     |-- diag_attaque_interne.py <- l'attaque interne d'entrainement est-elle
     |                          informative ? (CE du depart aleatoire vs APGD retour
     |                          dernier/meilleur vs PGD) - 30 s, aucune epoch
+    |-- attaque_adaptative.py <- attaque interne a BUDGET ADAPTATIF : on s'arrete
+    |                          au pas k* ou la difficulte atteint la cible du batch
+    |                          (option --bande ; note : ../attaque_adaptative.md)
+    |-- test_attaque_adaptative.py <- verifie selection / equivalence pgd / cout
     |-- smoothing.py       <- robustesse certifiee (randomized smoothing)
     `-- harden_torch.py    <- point d'entree (memes options que harden2.py)
+
+### Utilisation de l'attaque adaptative (`--bande`)
+
+    # controles rapides du module (quelques secondes, CPU)
+    python -u adversarial/torch/test_attaque_adaptative.py
+
+    # run A1 : cible de tromperie 50% par batch
+    python -u adversarial/torch/harden_torch.py --n-train 60000 --epochs 120 \
+      --augment --pgd-steps 20 --pgd-alpha 0.03 --bande --cible 0.5 \
+      --device cuda --out models/bande_cible50.pt
+
+Cout identique a `--pgd-steps 20` sans `--bande` (la difficulte est lue sur
+les logits deja calcules). Detail et protocole : `../attaque_adaptative.md`.

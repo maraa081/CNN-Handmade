@@ -195,6 +195,23 @@ def main():
                    help="arreter le run quand la robustesse s'effondre et ne remonte "
                         "plus (le meilleur modele est deja sauvegarde)")
     p.add_argument("--eval-steps", type=int, default=20)
+    # --- Attaque interne a budget ADAPTATIF (voir attaque_adaptative.md) ---
+    p.add_argument("--bande", action="store_true",
+                   help="attaque interne a budget adaptatif : on s'arrete au pas k* ou "
+                        "la difficulte atteint --cible (au lieu d'un budget fixe)")
+    p.add_argument("--cible", type=float, default=0.5,
+                   help="difficulte visee par batch (cible_type=tromperie : 0-1 ; "
+                        "cible_type=ce : en nats, plafond ln(10)=2.303)")
+    p.add_argument("--cible-type", choices=["tromperie", "ce"], default="tromperie",
+                   help="indicateur de difficulte suivi par le regulateur")
+    p.add_argument("--cible-depart", type=float, default=0.2,
+                   help="cible au debut du warmup (le modele est encore faible)")
+    p.add_argument("--cible-rampe", type=float, default=0.5,
+                   help="fraction du run sur laquelle la cible monte de depart a "
+                        "cible (0 = desactive)")
+    p.add_argument("--plafond-tol", type=float, default=0.5,
+                   help="alerte quand la cible n'est atteinte qu'au plafond sur plus "
+                        "de N des batchs")
     p.add_argument("--eval-n", type=int, default=500)
     p.add_argument("--quick", action="store_true")
     args = p.parse_args()

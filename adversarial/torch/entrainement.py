@@ -26,6 +26,8 @@ sys.path.insert(0, join(ROOT_DIR, "src"))
 
 from data import MNISTLoader, normalize, add_channel_dim  # noqa: E402
 from adversarial.torch.attaques import attaque, accuracy  # noqa: E402
+from adversarial.torch.attaque_adaptative import (pgd_bande, cible_effective,  # noqa: E402
+                                                 JournalBande)
 
 
 CONFIG_AUG = {
@@ -254,6 +256,7 @@ def entrainer(modele, opt, train, val, args, device):
         n_propre_tot = 0
         n_adv_tot = 0
         n_adv_succ = 0.0
+        journal = JournalBande()
         modele.train()
 
         # ---- Un batch = les etapes [1] a [5] de la visite guidee ----
@@ -272,8 +275,20 @@ def entrainer(modele, opt, train, val, args, device):
             #     comporte a l'inference (dropout desactive), puis on revient
             #     en train().
             modele.eval()
-            bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps,
-                             getattr(args, "pgd_alpha", None))
+            if getattr(args, "bande", False):
+                # Attaque a budget ADAPTATIF : on s'arrete au pas k* ou la
+                # difficulte (tromperie ou CE) atteint la cible de l'epoch.
+                # Cout identique a pgd() : voir attaque_adaptative.py.
+                cible = cible_effective(args.cible, epoch, args.epochs,
+                                        getattr(args, "cible_rampe", 0.5),
+                                        getattr(args, "cible_depart", 0.2))
+                bx_adv, info = pgd_bande(modele, bx, by, args.eps, args.pgd_steps,
+                                         getattr(args, "pgd_alpha", None), cible,
+                                         getattr(args, "cible_type", "tromperie"))
+                journal.ajouter(info)
+            else:
+                bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps,
+                                 getattr(args, "pgd_alpha", None))
             modele.train()
 
             # [4] perte : pgdat (propre + adverse) ou trades (CE + beta*KL)
@@ -356,6 +371,10 @@ def entrainer(modele, opt, train, val, args, device):
             ce_p = (ce_propre_som / n_propre_tot) if n_propre_tot else float("nan")
             detail = (f" | CE propre {ce_p:5.3f} | CE adv {ce_adv_som / n_adv_tot:5.3f} "
                       f"| attaque {n_adv_succ / n_adv_tot:6.1%}")
+        if getattr(args, "bande", False):
+            resume = journal.resume()
+            if resume:
+                detail += f" | {resume}"
         print(f"  Epoch {epoch:>2}/{args.epochs} | loss {perte_tot / n:6.4f}{detail} | "
               f"val clean {acc_clean:6.2%} | val PGD{args.val_steps} {acc_rob:6.2%} | "
               f"{dt / 60:5.1f} min | reste ~{reste:4.0f} min")
@@ -375,6 +394,15 @@ def entrainer(modele, opt, train, val, args, device):
         # [ALERTE 2] Effondrement de la robustesse de validation : "s'effondre et
         # ne remonte plus" -> inutile de bruler le GPU, le meilleur modele est
         # deja sauvegarde.
+        # [ALERTE 3] Attaque adaptative au plafond : le modele a depasse le
+        # budget disponible. Ne PAS augmenter la force (la loi du budget de
+        # deplacement dit que c'est contre-productif au-dela de ~2 eps) :
+        # augmenter la diversite (EOT, departs multiples, attaque par scores).
+        if getattr(args, "bande", False):
+            msg = journal.alerte(getattr(args, "plafond_tol", 0.5))
+            if msg:
+                print(f"           {msg}")
+
         if args.collapse_tol and meilleur >= 0 and acc_rob < meilleur - args.collapse_tol:
             epochs_sous += 1
             print(f"           [ALERTE] val PGD{args.val_steps} {acc_rob:.1%} : "

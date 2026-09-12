@@ -842,7 +842,19 @@ remains, in order of importance:
 **Done since (2026-09-12)**: run v4 (worst case 61.8%) then its reproduction
 `abl_a` (worst case **63.2%**, the new reference model); the **controlled ablation
 of the inner attack's step size** (budget 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps
--> 6.8%); the `diag_attaque_interne.py` diagnostic.
+-> 6.8%) and its **bell-shaped worst-case curve** (peak at 2 eps); the
+`diag_attaque_interne.py` diagnostic.
+
+### Open lead: the ADAPTIVE-BUDGET inner attack (Maraa's idea, 12/09)
+
+Instead of a budget fixed once and for all, we aim per batch at a **target
+difficulty** and stop the attack at the step `k*` that reaches it (`--bande`).
+The formalisation, the positioning against FAT / IAAT / SAAT and the ablation
+protocol are in **`attaque_adaptative.md`**; the code is in
+`torch/attaque_adaptative.py` (+ `torch/test_attaque_adaptative.py`).
+Key point: with a fixed step (`eps/10`), varying the number of steps is the same
+as varying the budget, so the PGD trajectory already contains all candidates --
+the overhead over PGD-20 is **zero**.
 
 Further leads (non-blocking): larger model (`--large`, ~1.7M parameters) to
 test the "capacity" hypothesis; Free-AT (Wong 2020, much cheaper); ROCm to move
@@ -862,4 +874,8 @@ MITRE ATLAS mapping; physical patches.
 - Chen et al., *ZOO: Zeroth Order Optimization based Black-box Attacks* (2017)
 - Brendel & Bethge, *Decision-Based Adversarial Attacks* (2019)
 - Cohen et al., *Certified Adversarial Robustness via Randomized Smoothing* (2019)
+- Zhang et al., *Attacks Which Do Not Kill Training Make Adversarial Learning
+  Stronger* (FAT, ICML 2020)
+- Cai et al., *Curriculum Adversarial Training* (IJCAI 2018)
+- Yu et al., *Strength-Adaptive Adversarial Training* (SAAT, arXiv 2210.01288)
 - MITRE ATLAS: atlas.mitre.org (AI attacks from the defender's side)
