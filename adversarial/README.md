@@ -921,6 +921,31 @@ existait.
   model card), puis KMNIST, smoothing, TRADES.
 - **Phase rédaction** : write-up, model card, Space.
 
+### Le catalogue des runs (arrêté au 2026-09-13, 01h20)
+
+Rappel : notre suite maison (500 images) est optimiste d'environ 3 points ; le
+chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
+
+| Run | Recette de l'attaque interne | Coût | propre | pire cas (maison) | pire cas (officiel) | marqueur rayons |
+|---|---|---|---|---|---|---|
+| v1 (NumPy) | PGD-7, eps/4 | - | 67.2% | 1.2% | - | - |
+| run B | PGD-5, eps/4, 120 ep | 20 min | 99.6% | 42.0% | - | - |
+| abl_b | PGD-20, eps/4 (5 eps) | 20 min | 99.8% | 38.8% | - | - |
+| abl_c | PGD-20, eps (20 eps) | 20 min | 98.4% | 1.6% | - | - |
+| v4 | PGD-20, eps/10 (2 eps) | 20 min | 99.4% | 61.8% | - | - |
+| abl_a | PGD-20, eps/10 (2 eps) | 20 min | 99.6% | 63.2% | **50.71%** | désaccord |
+| A4 | PGD-5, eps/10 (0.5 eps) | 8 min | 99.4% | 49.2% | - | accord |
+| A7 | plan `1 -> 2 eps` | 14 min | 99.6% | 62.0% | - | désaccord |
+| **A6** | plan `0.2 -> 2 eps` | 11 min | 99.0% | 85.8% | **82.40%** | accord |
+| **A8** | plan `0.2 -> 1 eps` | 8 min | 99.0% | **84.4%** | à mesurer | accord |
+| **A1** | budget adaptatif (cible 0.5) | 20 min | 98.85% | 93.6% | **91.25%** | accord |
+| v5 (essai APGD) | APGD-CE, pas 2 eps | 20 min | 99.2% | 14% | - | - |
+| a6_gradient_doux | deux phases `--resume` | - | - | INVALIDE (lr restauré à 0.0005) | - | - |
+
+Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
+valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un
+départ à bas budget (2 pas) et une croissance.
+
 Hors périmètre (décision explicite, pas en passant) : ensemble de modèles,
 entraînement contre Square, au-delà de 1.7M de paramètres, transfert
 cross-dataset.
