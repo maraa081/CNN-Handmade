@@ -8,7 +8,7 @@ utilisable sur GPU quand le modele grossit.
 
     python3 adversarial/torch/harden_torch.py --quick              # deja que tout tourne
     python3 adversarial/torch/harden_torch.py --parite             # verifie l'equivalence avec NumPy
-    python3 adversarial/torch/harden_torch.py --n-train 60000 --epochs 15 --pgd-steps 5
+    python3 adversarial/torch/harden_torch.py --n-train 60000 --epochs 15 --pgd-steps 20
     python3 adversarial/torch/harden_torch.py --report models/harden2_aug_pgdat.npz --restarts 3
 
 Le mode `--parite` est le plus important a lancer en premier : il charge le
