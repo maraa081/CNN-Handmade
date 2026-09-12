@@ -675,8 +675,57 @@ ci-dessus qui a produit le résultat de référence (98.8% / 65.4%).
 > pip install torch --index-url https://download.pytorch.org/whl/cpu numpy
 > ```
 
+> [info] **Données à télécharger une fois.** `data/kmnist/` (21 Mo) et
+> `data/emnist/` (570 Mo) ne sont **pas** dans le dépôt : ce sont des données
+> brutes, ignorées par git. Depuis le 2026-09-13, `charger_train` /
+> `charger_test` les récupèrent **automatiquement** au premier lancement (via
+> `scripts/download_kmnist.py` et `scripts/download_emnist.py`), avec un message
+> clair si le réseau manque. Pour les préparer à la main :
+>
+> ```bash
+> python3 scripts/download_kmnist.py     # KMNIST (~21 Mo, CODH Tohoku)
+> python3 scripts/download_emnist.py    # EMNIST (~570 Mo)
+> ```
+
 Tout le détail (correspondance terme à terme, ce qu'on perd, setup ROCm pour
 cartes AMD, réglage du batch) : [`torch/README.md`](torch/README.md).
+
+### Réplication KMNIST (l'ancre Japon) — série lancée le 2026-09-13
+
+Même CNN, mêmes recettes, jeu japonais : la question est de savoir si la **loi
+locale** du projet (le budget de déplacement de l'attaque interne, puis l'ordre
+des budgets) reproduit à l'identique sur un autre jeu. Deux options ont été
+ajoutées pour ça : `--sans-attaque` (entraînement propre = le modèle de
+référence) et `--warm-start` sur un `.npz` (les recettes repartent du même
+point).
+
+```bash
+# 0. Le modèle de référence (entraînement PROPRE, sans attaque)
+python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
+  --val 1000 --epochs 120 --augment --sans-attaque \
+  --out models/kmnist_standard.pt --npz models/kmnist_standard.npz
+
+# 1. Référence adverse EN DUR (budget constant, départ dur : comme abl_a)
+python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
+  --epochs 120 --augment --pgd-steps 20 --pgd-alpha 0.03 \
+  --warm-start models/kmnist_standard.npz --out models/kmnist_fixe_2eps.pt
+
+# 2. Recette douce (plan croissant 0.2 -> 1 eps : comme A8)
+python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
+  --epochs 120 --augment --pgd-alpha 0.03 --plan-budget "0.2,1" \
+  --warm-start models/kmnist_standard.npz --out models/kmnist_plan_doux.pt
+
+# 3. Le test de l'ORDRE : mêmes budgets, ordre inverse (1 -> 0.2 eps)
+python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
+  --epochs 120 --augment --pgd-alpha 0.03 --plan-budget "1,0.2" \
+  --warm-start models/kmnist_standard.npz --out models/kmnist_plan_inverse.pt
+```
+
+Extrapolation de la loi MNIST, écrite AVANT de lancer les runs : le départ dur
+(série 1) plafonne vers 60-65% de pire cas, la recette douce (série 2) monte
+vers ~84%, et l'ordre inverse (série 3) perd ~20 points. Si KMNIST ne se
+comporte pas comme MNIST, c'est que la loi n'est pas propre au jeu de données --
+et ça, c'est un résultat en soi, à écrire dans le write-up.
 
 ---
 

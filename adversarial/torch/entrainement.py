@@ -41,6 +41,33 @@ CONFIG_AUG = {
 #  Donnees (meme selection que harden2.py, pour une comparaison equitable)
 # --------------------------------------------------------------------------
 
+def _assurer_donnees(dataset):
+    """Telecharge le jeu de donnees s'il manque, sinon ne fait rien.
+
+    `data/kmnist/` et `data/emnist/` sont volontairement ignores par git (ce
+    sont des donnees brutes, 21 Mo et 570 Mo) : un clone frais ne les contient
+    pas. Sans cet appel, `harden_torch.py` mourrait sur un FileNotFoundError de
+    `src/data.py`, tres loin de la vraie cause. On reutilise les
+    telechargeurs deja ecrits pour la piste NumPy (`scripts/download_kmnist.py`,
+    `adversarial/scripts/download_emnist.py`) plutot que d'en ecrire un autre.
+
+    MNIST n'est pas concerne (deja present dans le depot).
+    """
+    if dataset == "kmnist":
+        from scripts.download_kmnist import ensure_data
+    elif dataset == "emnist":
+        from scripts.download_emnist import ensure_data
+    else:
+        return
+    if not ensure_data():
+        raise SystemExit(
+            f"Donnees {dataset.upper()} absentes et recuperation impossible "
+            "(pas de reseau ?).\n"
+            "  Telecharge-les a la main puis relance :\n"
+            f"    python3 scripts/download_{dataset}.py"
+        )
+
+
 def charger_train(n_train, n_val, dataset="mnist"):
     """Reproduit exactement la selection de donnees de harden2.py.
 
@@ -48,6 +75,7 @@ def charger_train(n_train, n_val, dataset="mnist"):
     10 classes) ou "emnist". Branche KMNIST ajoutee le 2026-09-13 pour la
     replication de l'etude sur le jeu japonais (ancre Japon du repo).
     """
+    _assurer_donnees(dataset)
     if dataset == "kmnist":
         from data import KMNISTLoader
         loader, dossier = KMNISTLoader(), join(ROOT_DIR, "data", "kmnist")
@@ -73,6 +101,7 @@ def charger_test(dataset="mnist", n=500):
     que de torch et numpy (les scripts NumPy importent matplotlib au chargement).
     La selection est identique : RandomState(42) sur l'ordre du test set.
     """
+    _assurer_donnees(dataset)
     if dataset == "kmnist":
         from data import KMNISTLoader
         (_, _), (x_test, y_test) = KMNISTLoader().load(join(ROOT_DIR, "data", "kmnist"))
@@ -81,8 +110,6 @@ def charger_test(dataset="mnist", n=500):
         (_, _), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
     else:
         from data import EMNISTLoader
-        from adversarial.scripts.fgsm import ensure_data
-        ensure_data()
         loader = EMNISTLoader("letters")
         (_, _), (x_test, y_test) = loader.load(join(ROOT_DIR, "data", "emnist"))
 
