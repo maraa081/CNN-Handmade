@@ -1432,7 +1432,7 @@ AutoAttack `standard`, 10 000 images, eps=0.30 :
 
 - Le CURRICULUM explique +31.7 points (50.71 -> 82.40) : c'est l'ingredient
   principal, et il coute un seul flag (`--plan-budget "0.2,2"`).
-- L'ASSERVISSEMENT par batch (idee Marla) ajoute +8.9 points (82.40 -> 91.25)
+- L'ASSERVISSEMENT par batch (idee Maraa) ajoute +8.9 points (82.40 -> 91.25)
   pour ~9 minutes de calcul en plus.
 - Notre suite maison est optimiste d'environ 3 points de facon coherente
   (A6 : 85.8% annonce -> 82.40% officiel ; A1 : 93.6% -> 91.25%).
