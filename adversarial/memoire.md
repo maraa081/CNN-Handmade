@@ -717,3 +717,59 @@ Pour l'ENTRAINEMENT, preferer `--attack apgd-ce` (ou rester sur
 Croce & Hein est concu pour EXPOSER une surface de perte deguisee a l'evaluation,
 le minimiser en boucle n'est pas le meme probleme. Le meilleur modele du run casse
 reste l'epoch 16 (val PGD10 46.5%), deja sauvegarde : rien n'est perdu.
+
+### 2026-09-12 (soir, suite) - Deuxieme defaut : la SEMANTIQUE DE RETOUR de l'attaque
+
+Le correctif de la graine ne suffisait pas. Relance du meme run avec l'attaque
+corrigee, et voila les premieres epochs :
+
+```
+  Epoch  6/120 | loss 0.8484 | CE propre 0.092 | CE adv 2.361 | attaque 89.0% | val clean 99.30% | val PGD10 11.40%
+  Epoch 12/120 | loss 0.8120 | CE propre 0.057 | CE adv 2.322 | attaque 88.9% | val clean 99.40% | val PGD10 11.60%
+  Epoch 17/120 | loss 0.8064 | CE propre 0.051 | CE adv 2.318 | attaque 89.0% | val clean 99.40% | val PGD10 11.60%
+```
+
+**CE adv = 2.32 = ln(10) = 2.303.** C'est la CE d'un modele qui repond
+uniformement (n'importe quoi) : le taux de tromperie de l'attaque est FIGE a 89%
+depuis 12 epochs et la val PGD10 est FIGEE a 11.6%. Le modele n'apprend rien de la
+moitie adverse : il optimise la moitie propre (CE 0.05) et repond "je ne sais
+pas" sur l'autre.
+
+Cause : l'APGD renvoyait **le depart aleatoire**, pas un point de sa marche. La
+semantique d'AutoAttack est "garde le PIRE point trouve, depart inclus" - correct
+pour EVALUER (on veut le pire cas), faux pour ENTRAINER. A eps=0.3 sur MNIST, le
+depart aleatoire (bruit uniforme sur toute l'image) est deja plus destructeur que
+tout ce que la marche trouve : l'attaque renvoyait donc du bruit. Un bruit FRAIS
+a chaque batch est non apprenable (label noise irresoluble, CE optimale = ln 10) :
+le modele apprend seulement a repondre uniformement dessus, n'apprend aucune
+robustesse, et le depart reste donc catastrophique - verrou auto-entretenu. Et
+c'est le meme defaut qui expliquait le PREMIER effondrement : avec une graine
+fixe, le bruit etait constant, donc MEMORISABLE (loss -> 0.08, val PGD10 -> 0.6%).
+Meme cause, deux visages.
+
+PGD, lui, renvoie le DERNIER point de sa marche (une perturbation guidee par le
+gradient, donc une fonction deterministe de l'image, apprenable) : c'est pourquoi
+les runs A/B/v4, tous en PGD, n'ont jamais eu ce probleme.
+
+Correction : nouveau parametre `retour` dans `apgd()`.
+
+- `retour="meilleur"` (defaut) : semantique d'AutoAttack, pour l'EVALUATION
+  (`eval_suite` ne change pas, les chiffres publies restent comparables) ;
+- `retour="dernier"` : renvoie le dernier point de la marche, comme PGD, et le
+  depart aleatoire n'est plus un candidat (premier point de controle apres k pas,
+  comme la reference). C'est ce que demande l'attaque d'ENTRAINEMENT
+  (`attaques.attaque`).
+
+Nouvel outil `diag_attaque_interne.py` : sur un lot d'images, il compare la CE et
+la precision sous (1) le depart aleatoire seul, (2) APGD retour=dernier,
+(3) APGD retour=meilleur, (4) PGD pas eps/10, (5) PGD-10 pas eps/4. Si les lignes
+1 et 3 sont au niveau de ln(10) alors que la 2 est nettement en dessous, c'est la
+preuve directe du mecanisme. A lancer en 30 s :
+
+    python3 adversarial/torch/diag_attaque_interne.py --weights models/harden_v5_apgd_ce.pt
+
+Lecon a ajouter : **une attaque d'evaluation et une attaque d'entrainement n'ont
+pas le meme contrat.** L'evaluation cherche le pire point (depart aleatoire inclus) ;
+l'entrainement doit fournir une perturbation que le modele PEUT apprendre a
+repousser, donc un point visite par la marche. Utiliser une attaque d'evaluation
+comme attaque interne, c'est entrainer sur du bruit.

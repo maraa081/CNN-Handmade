@@ -205,6 +205,17 @@ Deux choses a savoir avant de lancer un run long (ajoutees le 2026-09-12) :
   demarrage (donc le run est reproductible) et les attaques tirent leur depart sur
   le generateur global a chaque appel. Ne jamais figer la graine d'une attaque
   d'entrainement : un depart constant fait apprendre par coeur un motif fixe.
+- **Une attaque d'entrainement renvoie un point VISITE, jamais le depart.** `apgd()`
+  a un parametre `retour` : `"meilleur"` (defaut, EVALUATION - le pire point de la
+  trajectoire, depart inclus, semantique d'AutoAttack) et `"dernier"` (dernier
+  point de la marche, comme PGD - ce que demande l'entrainement). A eps eleve le
+  depart aleatoire est deja le pire point, donc l'entrainement qui garde le
+  "meilleur" s'entraine sur du bruit non apprenable (CE adv = ln(10) = 2.32,
+  val figee, constate le 2026-09-12).
+
+Pour verifier tout ca en 30 s sur un modele deja entraine :
+
+    python3 adversarial/torch/diag_attaque_interne.py --weights models/....pt
 
 ---
 
@@ -272,5 +283,8 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
     |-- attaques_avancees.py <- CW, APGD (CE/DLR), Square, NES, Boundary
     |-- entrainement.py    <- pgdat / trades, augmentation, validation robuste
     |-- eval_suite.py      <- suite d'attaques multi-familles (le juge)
+    |-- diag_attaque_interne.py <- l'attaque interne d'entrainement est-elle
+    |                          informative ? (CE du depart aleatoire vs APGD retour
+    |                          dernier/meilleur vs PGD) - 30 s, aucune epoch
     |-- smoothing.py       <- robustesse certifiee (randomized smoothing)
     `-- harden_torch.py    <- point d'entree (memes options que harden2.py)

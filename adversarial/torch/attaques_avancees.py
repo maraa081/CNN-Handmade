@@ -89,7 +89,7 @@ def _obj(modele, z, y, loss="ce"):
 # --------------------------------------------------------------------------
 
 def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=None,
-         random_start=False):
+         random_start=False, retour="meilleur"):
     """APGD (Auto-PGD) : la version moderne de PGD.
 
     Trois ameliorations par rapport a PGD classique :
@@ -116,6 +116,21 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=Non
     la robustesse reelle s'effondre (constate le 2026-09-12 : loss d'entrainement
     -> 0.08, val PGD10 -> 0.6%). A l'EVALUATION on passe une graine explicite
     (eval_suite : seed=2000/3000) pour rester reproductible.
+
+    `retour` : ce que l'attaque renvoie.
+      - "meilleur" (defaut, EVALUATION) : le pire point trouve sur toute la
+        trajectoire, depart aleatoire INCLUS. C'est la semantique d'AutoAttack :
+        on cherche le point qui fait le plus de degats, meme si c'est le point de
+        depart.
+      - "dernier" (ENTRAINEMENT) : le dernier point de la marche, comme PGD. Un
+        point VISITE (donc une perturbation guidee par le gradient, fonction
+        deterministe de l'image), pas le depart aleatoire.
+        Pourquoi c'est obligatoire a l'entrainement : a eps eleve (0.3 sur MNIST)
+        le depart aleatoire (bruit uniforme) est deja plus destructeur que tout
+        ce que la marche trouve, la CE y vaut ln(10) (le modele repond
+        uniformement) et il est NON APPRENABLE. Entraine sur du bruit frais a
+        chaque batch, le modele n'apprend aucune robustesse et reste bloque :
+        val PGD10 figee a 11.6% avec CE adv = 2.32 = ln(10) (run v5, 2026-09-12).
     """
     n = x.shape[0]
     dev = x.device
@@ -154,7 +169,18 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=Non
 
         x_prec = x_r.clone()
         x_best = x_r.clone()
-        f_best = _obj(modele, x_r, y, loss)
+        prochain = 0
+        if retour == "meilleur":
+            # EVALUATION : le point de depart est un candidat comme un autre.
+            f_best = _obj(modele, x_r, y, loss)
+        else:
+            # ENTRAINEMENT : le depart aleatoire n'est PAS un candidat (a eps
+            # eleve c'est le pire point, et c'est du bruit non apprenable). On ne
+            # garde que des points VISITES par la marche, et on fait le premier
+            # point de controle APRES k pas (comme la reference), pour que
+            # x_best ne puisse jamais valoir le depart aleatoire.
+            f_best = torch.full((n,), float("-inf"), device=dev)
+            prochain = k
         eta = torch.full((n,), 2.0 * eps, device=dev)
         prochain = 0
         k_courant = k
@@ -188,9 +214,10 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=Non
             x_r = z
 
         # -- Fin du restart : on compare au meilleur global --
-        f_fin = _obj(modele, x_best, y, loss)
+        sortie = x_best if retour == "meilleur" else x_r
+        f_fin = _obj(modele, sortie, y, loss)
         mieux = f_fin > obj_global
-        meilleur_global = torch.where(mieux.view(-1, 1, 1, 1), x_best, meilleur_global)
+        meilleur_global = torch.where(mieux.view(-1, 1, 1, 1), sortie, meilleur_global)
         obj_global = torch.where(mieux, f_fin, obj_global)
 
     return meilleur_global.detach()

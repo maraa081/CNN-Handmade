@@ -190,7 +190,8 @@ sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annonce
 | C | PGD | 5 | eps/4 | oui | trades (beta=2) | 96.9% / 2.2% |
 | v4 | PGD | 20 | eps/10 | oui | pgdat | 99.4% / **61.8%** (Square 3000) |
 | v5 (essai 1) | APGD-DLR | 10 | adaptatif | oui | pgdat | **casse** : val PGD10 46.5% -> 0.6% (attaque interne inoperante) |
-| v5 (a relancer) | APGD-CE | >= 20 | adaptatif | oui | pgdat | - |
+| v5 (essai 2) | APGD-CE | 20 | adaptatif | oui | pgdat | val PGD10 **figee a 11.6%** (attaque qui renvoyait le depart aleatoire) |
+| v5 (a relancer) | APGD-CE | 20 | adaptatif | oui | pgdat | - |
 
 eps = 0.30 partout. Le seul changement de v4 : une attaque interne plus fine
 (plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%,
