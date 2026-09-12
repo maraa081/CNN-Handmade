@@ -411,10 +411,14 @@ def main():
         print(f"[NPZ] poids aussi sauvegardes -> {args.npz} (chargeable en NumPy)")
 
     # -- Evaluation finale --
+    # Le libelle doit dire ce qu'on a REELLEMENT entraine : un run propre n'est
+    # pas un run "pgdat" (sinon on lit dans les logs une recette adversaire qui
+    # n'a jamais eu lieu, piege du 13/09).
     best = best.to(device)
+    libelle = (f"referentiel PROPRE ({args.dataset}, sans attaque)"
+               if args.sans_attaque else f"harden_torch ({args.loss}, eps={args.eps})")
     rapport(best, x_te.to(device), y_te.to(device), EPS_EVAL,
-            args.eval_steps, args.restarts, f"harden_torch ({args.loss}, eps={args.eps})",
-            device)
+            args.eval_steps, args.restarts, libelle, device)
 
 
 if __name__ == "__main__":
