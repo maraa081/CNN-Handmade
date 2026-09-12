@@ -1461,3 +1461,37 @@ toujours un bon pire cas (A6 0.40/0.40 -> 82.40% ; abl_a 0.41/<0.30 -> 50.71%).
 Si c'est confirme : **l'ingredient actif est la douceur du DEPART**, pas la
 puissance finale (A8 finit a 1 eps et parait sain ; A7 demarre a 1 eps et parait
 malade). Si c'est infirme, le marqueur tombe et il faut AutoAttack partout.
+
+### 2026-09-13 (01h15) - LOI v3 : l'ORDRE des budgets est l'ingredient actif
+
+Pires cas measures : A7 (`1 -> 2 eps`) = **62.0%** malgre un PGD-20 de 92.6% ;
+A8 (`0.2 -> 1 eps`) = **84.4%** avec un PGD-20 plus bas. Le marqueur "accord des
+rayons PGD/Square" a classe les deux dans le BON ordre (valide 5/5 : A1, A6, A8
+bons ; abl_a, A7 mauvais). Sur A8, l'attaque liante est APGD-CE et non Square :
+quand le modele est sain, les deux familles s'accordent, c'est le meme signal.
+
+| Recette | budget attaque interne | pire cas (notre suite, 500 img) |
+|---|---|---|
+| abl_c | 20 eps constant | 1.6% |
+| abl_b | 5 eps constant (pas eps/4) | 38.8% |
+| run B | 1.25 eps constant (pas eps/4) | 42.0% |
+| A4 | 0.5 eps constant | 49.2% |
+| A7 | 1 -> 2 eps | 62.0% |
+| v4 | 2 eps constant | 61.8% |
+| abl_a | 2 eps constant | 63.2% (50.71 officiel) |
+| **A8** | **0.2 -> 1 eps** (8 min) | **84.4%** |
+| **A6** | **0.2 -> 2 eps** (11 min) | **85.8%** (82.40 officiel) |
+| **A1** | adaptatif par cible (20 min) | **93.6%** (91.25 officiel) |
+
+**LOI v3 : la robustesse apprise est maximale quand le budget de l'attaque interne
+(a) DEMARRE BAS et (b) CROIT.** Un budget constant est mauvais quelle que soit sa
+valeur (0.5 a 20 eps : 49%, 42%, 63%, 39%, 1.6%) ; un budget croissant mais
+demarrant haut est mauvais aussi (A7, 1 eps : 62%) ; demarrer a 0.2 eps et croitre
+donne 84-86% et **la borne finale importe peu** (1 eps : 84.4%, 2 eps : 85.8%).
+
+Ce n'est ni le budget total ni la force de l'attaque : c'est l'ORDRE dans lequel
+la difficulte est presentee. C'est contre-intuitif, mesurable et pas cher.
+
+PROCHAIN TEST DECISIF : **A9 = plan inverse `"2,0.2"`** (meme ensemble de budgets,
+ordre inverse). ~50% -> c'est l'ordre qui fait tout ; ~85% -> autre chose, a
+chercher. 11 min.
