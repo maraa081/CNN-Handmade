@@ -193,8 +193,8 @@ announcing 91.0% while the worst case was 42.0%.
 | v5 (attempt 2) | APGD-CE | 20 | adaptive | yes | pgdat | val PGD10 **stuck at 11.6%** (attack returned the random start) |
 | v5 (to relaunch) | APGD-CE | 20 | adaptive | yes | pgdat | - |
 | abl_a | PGD | 20 | eps/10 (budget 2 eps) | yes | pgdat | **92.0%** PGD-20 / **worst case 63.2%** |
-| abl_b | PGD | 20 | eps/4 (budget 5 eps) | yes | pgdat | 75.6% under PGD-20 |
-| abl_c | PGD | 20 | eps (budget 20 eps) | yes | pgdat | 6.8% under PGD-20 (CE=ln10 lock-in) |
+| abl_b | PGD | 20 | eps/4 (budget 5 eps) | yes | pgdat | 75.6% under PGD-20 / worst case **38.8%** |
+| abl_c | PGD | 20 | eps (budget 20 eps) | yes | pgdat | 6.8% under PGD-20 / worst case **1.6%** (CE=ln10 lock-in) |
 
 eps = 0.30 everywhere. The only change in v4: a finer inner attack (more steps,
 smaller step) - the direct answer to the 42.0% worst case. And it paid off:
@@ -208,16 +208,28 @@ under PGD-20 eps=0.30. With our APGD's budget (40 eps, step of 2 eps): a plateau
 at ~11% with the adversarial CE locked at ln(10) = 2.30 (the model answers
 uniformly, it gives up on the adversarial half of the batch).
 
-**Learned robustness therefore decreases with the inner attack's travel budget,
-with a cliff between 2 eps and 20 eps. What matters is the READABILITY of the
-perturbation, not the strength of the attack.** A step >= eps jumps to the
-corner of the ball and stays there: the sign pattern becomes a chaotic mask,
-unlearnable. A fine step builds the perturbation progressively: it stays
-readable.
+**Learned robustness is therefore maximal for an intermediate budget (2 eps),
+not for the maximum. What matters is the READABILITY of the perturbation, not
+the strength of the attack.** A step >= eps jumps to the corner of the ball and
+stays there: the sign pattern becomes a chaotic mask, unlearnable. A fine step
+builds the perturbation progressively: it stays readable.
+
+Measured over the whole attack suite (not just PGD-20), the WORST-CASE curve is
+**bell-shaped with a peak at 2 eps**:
+
+| Inner attack budget | 1.25 eps (run B) | 2 eps (v4 / abl_a) | 5 eps (abl_b) | 20 eps (abl_c) |
+|---|---|---|---|---|
+| worst case eps=0.30 | 42.0% | **63.2%** | 38.8% | 1.6% |
+
+Both extremes are worth showing: at 1.25 eps we get a **masked robustness** (91%
+under PGD-20 but only 42% worst case), at 20 eps a model that looks intact
+(98.4% clean) but is **unusable** (1.6% worst case). And on abl_c the gradient <->
+Square gap inverts (APGD-DLR 1.6% vs Square-3000 11.2%): the 22-point gap is the
+symptom of a genuinely robust model, it disappears when the model is broken.
 
 And that is why APGD, excellent for JUDGING (it pushes its search to the limit),
 destroys training: **you don't train against the attack you use to judge.** The
-bottom of the curve is around 2 eps = PGD-20 with step eps/10 (v4, abl_a).
+peak of the curve is at 2 eps = PGD-20 with step eps/10 (v4, abl_a).
 
 ### The v5 misstep (attempt 1): an inner attack can look like it works and teach nothing
 

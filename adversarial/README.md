@@ -193,8 +193,8 @@ sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annonce
 | v5 (essai 2) | APGD-CE | 20 | adaptatif | oui | pgdat | val PGD10 **figee a 11.6%** (attaque qui renvoyait le depart aleatoire) |
 | v5 (a relancer) | APGD-CE | 20 | adaptatif | oui | pgdat | - |
 | abl_a | PGD | 20 | eps/10 (budget 2 eps) | oui | pgdat | **92.0%** PGD-20 / **pire cas 63.2%** |
-| abl_b | PGD | 20 | eps/4 (budget 5 eps) | oui | pgdat | 75.6% sous PGD-20 |
-| abl_c | PGD | 20 | eps (budget 20 eps) | oui | pgdat | 6.8% sous PGD-20 (verrou CE=ln10) |
+| abl_b | PGD | 20 | eps/4 (budget 5 eps) | oui | pgdat | 75.6% sous PGD-20 / pire cas **38.8%** |
+| abl_c | PGD | 20 | eps (budget 20 eps) | oui | pgdat | 6.8% sous PGD-20 / pire cas **1.6%** (verrou CE=ln10) |
 
 eps = 0.30 partout. Le seul changement de v4 : une attaque interne plus fine
 (plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%,
@@ -209,15 +209,29 @@ de precision sous PGD-20 eps=0.30. Avec le budget de notre APGD (40 eps, pas de
 2 eps) : plateau a ~11%, CE adverse bloquee a ln(10) = 2.30 (le modele repond
 uniformement, il abandonne la moitie adverse du batch).
 
-**La robustesse apprise decroit donc avec le budget de l'attaque interne, avec
-une falaise entre 2 eps et 20 eps. C'est la LISIBILITE de la perturbation qui
-compte, pas la force de l'attaque.** Un pas >= eps saute au coin de la boule et
-y reste : le motif de signe devient un masque chaotique, inapprenable. Un pas
-fin construit la perturbation progressivement : elle reste lisible.
+Mesuree sur toute la suite d'attaques (pas seulement PGD-20), la courbe du PIRE
+CAS est **en cloche avec un sommet a 2 eps** :
+
+| Budget de l'attaque interne | 1.25 eps (run B) | 2 eps (v4 / abl_a) | 5 eps (abl_b) | 20 eps (abl_c) |
+|---|---|---|---|---|
+| pire cas eps=0.30 | 42.0% | **63.2%** | 38.8% | 1.6% |
+
+**La robustesse apprise est donc maximale pour un budget intermediaire (2 eps),
+pas pour le maximum. C'est la LISIBILITE de la perturbation qui compte, pas la
+force de l'attaque.** Un pas >= eps saute au coin de la boule et y reste : le
+motif de signe devient un masque chaotique, inapprenable. Un pas fin construit
+la perturbation progressivement : elle reste lisible.
 
 Et c'est pourquoi APGD, excellent pour JUGER (il pousse sa recherche a fond),
 detruit l'apprentissage : **on n'entraine pas contre l'attaque qui sert a juger.**
-Le creux de la courbe est autours de 2 eps = PGD-20 avec pas eps/10 (v4, abl_a).
+Le sommet de la courbe est a 2 eps = PGD-20 avec pas eps/10 (v4, abl_a).
+
+Les deux extremes valent la peine d'etre montres : a 1.25 eps on obtient une
+**robustesse masquee** (91% sous PGD-20 mais 42% de pire cas), a 20 eps un modele
+qui a l'air intact (98.4% propre) mais qui est **inutilisable** (1.6% de pire
+cas). Et sur abl_c l'ecart gradient <-> Square s'inverse (APGD-DLR 1.6% contre
+Square-3000 11.2%) : l'ecart de 22 points est le symptome d'un modele vraiment
+robuste, il disparait quand le modele est casse.
 
 ### Le faux pas de v5 (essai 1) : une attaque interne peut "reussir" et ne rien apprendre
 

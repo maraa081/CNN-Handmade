@@ -28,10 +28,13 @@
   (pas de 2 eps = budget 40 eps) entraine un modele a ~11% : bon pour JUGER,
   mauvais pour ENTRAINER. Ne jamais utiliser `apgd-*` comme attaque interne.
 - **Probleme ouvert** : 22 points entre APGD-DLR (85.4%) et Square-3000 (63.2%).
-- **En attente** : eval_suite de abl_b (5 eps) et abl_c (20 eps) pour la courbe
-  "pire cas vs budget" ; push des poids `harden_v6_pgd20eps10.pt` (= abl_a) et
+- **COURBE COMPLETE (20h50)** : pire cas 42.0% (1.25 eps) -> **63.2% (2 eps,
+  MAXIMUM)** -> 38.8% (5 eps) -> 1.6% (20 eps). En cloche, sommet a 2 eps : le
+  sweet spot est confirme par le PIRE CAS, pas seulement par PGD-20.
+- **En attente** : push des poids `harden_v6_pgd20eps10.pt` (= abl_a) et
   `harden_v5_apgd_ce.pt` ; colonnes `CE adv` des logs abl_a / abl_c ; option
-  `--pgd-alpha 0.05` (budget 1 eps) ; puis `--large` a budget 2 eps.
+  `--pgd-alpha 0.05` (budget 1 eps) ; puis `--large` a budget 2 eps ; figure
+  "pire cas vs budget" pour l'article.
 - **Commits de la journee** : 7bb256c, e354b82, 3f46836, 6e2eaa8, 4471a10, 9a27947.
 - **Commandes** : entrainer `python -u adversarial/torch/harden_torch.py ...`,
   evaluer `python -u adversarial/torch/eval_suite.py --weights ...`, diagnostiquer
@@ -857,22 +860,25 @@ Evaluation finale (500 images, PGD-20, 1 restart) :
 | abl_c | 0.30 (eps) | 6.0 = 20 eps | 48.6% | **6.8%** |
 
 Et si on ajoute tous les runs precedents (meme recette, meme budget de 120
-epochs), la tendance est monotone :
+epochs), le pire cas trace une courbe **EN CLOCHE** (budget de deplacement en
+abscisse, pire cas en ordonnee), avec un sommet net a 2 eps :
 
 | Run | attaque interne | budget | PGD-20 eps=0.3 | pire cas |
 |---|---|---|---|---|
 | run B | PGD-5, eps/4 | 0.375 = 1.25 eps | 91.0% | 42.0% (Square 3000) |
 | v4 | PGD-20, eps/10 | 0.6 = 2 eps | 90.4% | **61.8%** |
 | abl_a | PGD-20, eps/10 | 0.6 = 2 eps | **92.0%** | **63.2%** (Square 3000) |
-| abl_b | PGD-20, eps/4 | 1.5 = 5 eps | 75.6% | a mesurer |
-| abl_c | PGD-20, eps | 6.0 = 20 eps | 6.8% | a mesurer |
+| abl_b | PGD-20, eps/4 | 1.5 = 5 eps | 75.6% | 38.8% (Square 3000) |
+| abl_c | PGD-20, eps | 6.0 = 20 eps | 6.8% | **1.6%** (APGD-DLR) |
 | v5 | APGD-CE-20, pas 2 eps | 12.0 = 40 eps | ~11% | - |
 
 LECTURE :
 
-1. **La robustesse apprise decroit avec le budget de deplacement de l'attaque
-   interne**, et il y a une FALAISE entre 2 eps et 20 eps : a budget 2 eps on
-   obtient 92%, a budget 6 eps on tombe a 6.8%. Ce n'est donc pas la "force" de
+1. **La robustesse apprise est maximale pour un budget intermediaire**, et la
+   courbe complete du pire cas (voir RESULTAT 20h50) est une CLOCHE avec un
+   sommet a 2 eps : a budget trop faible on obtient une robustesse masquee, a
+   budget trop fort (>= 5 eps) on tombe dans une FALAISE (5 eps -> 38.8%,
+   20 eps -> 6.8% / 1.6% de pire cas). Ce n'est donc pas la "force" de
    l'attaque interne qui compte (au sens du pire cas qu'elle atteint) : c'est la
    LISIBILITE de la perturbation qu'elle fabrique.
 2. **Mecanisme.** Avec un pas >= eps, chaque iteration saute au COIN de la boule
@@ -892,8 +898,8 @@ LECTURE :
 4. **Le bon reglage est un compromis, pas un maximum.** Trop mou, l'entrainement
    apprend une robustesse masquee (run B, budget 1.25 eps : 91% sous PGD-20 mais
    42% seulement de pire cas). Trop dur, il n'apprend plus rien (abl_c, v5).
-   Le creux de la courbe est autours de **2 eps** (PGD-20 pas eps/10) : 92% sous
-   PGD-20 ET le meilleur pire cas mesure (61.8% pour v4, meme recette).
+   Le SOMMET de la courbe est autour de **2 eps** (PGD-20 pas eps/10) : 92% sous
+   PGD-20 ET le meilleur pire cas mesure (61.8% pour v4, 63.2% pour abl_a).
 
 REGLE A RETENIR : **une attaque interne doit rester DOUCE (budget <= 2 eps, donc
 pas <= eps/10 avec 20 pas). On n'entraine pas contre la meme attaque qu'on
@@ -923,7 +929,44 @@ APGD-DLR (85.4%) et Square-3000 (63.2%). Une recherche par les seuls scores
 reste plus efficace que le gradient sur ce modele, comme en v4 (19 points).
 C'est le prochain chantier, et le vrai chiffre a publier.
 
-A FAIRE : pire cas de abl_b et abl_c (eval_suite, 2 min) pour tracer la courbe
-"pire cas vs budget de deplacement" ; comparer les colonnes CE adv des logs abl_a et
-abl_c (attendu : ~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin
-(eps/20) pour savoir si le creux est plus bas.
+### RESULTAT (20h50) - COURBE "PIRE CAS vs BUDGET DE DEPLACEMENT" COMPLETE
+
+Meme suite que v4 / abl_a (500 images, eps=0.30, blackbox pousse a Square-3000
+2 restarts), sur les deux runs qui manquaient :
+
+| Run | budget | propre | FGSM | PGD-20 | pire cas whitebox | pire cas global |
+|---|---|---|---|---|---|---|
+| run B | 1.25 eps | - | - | 91.0% | - | 42.0% (Square 3000) |
+| v4 | 2 eps | 99.4% | 94.2% | 90.4% | 81.0% (APGD-DLR) | 61.8% (Square 3000) |
+| **abl_a** | **2 eps** | **99.6%** | 94.0% | **91.6%** | **85.4%** (APGD-DLR) | **63.2%** (Square 3000) |
+| abl_b | 5 eps | 99.8% | 79.4% | 75.6% | 55.0% (Square 500) | 38.8% (Square 3000) |
+| abl_c | 20 eps | 98.4% | 48.6% | 6.8% | **1.6%** (APGD-DLR) | 1.6% |
+| v5 | 40 eps | 99.2% | - | ~11% | - | - |
+
+LECTURE (le resultat de la soiree, publiable tel quel) :
+
+1. **La courbe du pire cas est EN CLOCHE, sommet a 2 eps** (63.2%), et elle
+   redescend des deux cotes : 42.0% a 1.25 eps, 38.8% a 5 eps, 1.6% a 20 eps.
+   Le sweet spot n'est donc pas un artefact de l'attaque PGD-20 utilisee pour
+   le lire : la suite complete le confirme. C'est un **compromis a optimum
+   interieur**, pas un "plus c'est fort, mieux c'est".
+2. **abl_c (20 eps) est le contre-exemple parfait** : 98.4% de precision propre
+   (-1.2 pt seulement) mais **1.6% de pire cas**. Un modele qui a l'air intact
+   sur le banc de test propre et qui est en realite **inutilisable** des qu'on
+   bouge les pixels. C'est le piege a montrer en premier dans l'article : la
+   precision propre ne dit RIEN de la robustesse.
+3. **L'ecart gradient <-> sans-gradient s'inverse sur les modeles degeneres.**
+   Sur abl_a l'attaque a gradient est la plus faible (APGD-DLR 85.4% contre
+   Square-3000 63.2% : +22 points pour Square). Sur abl_c, c'est l'inverse :
+   APGD-DLR fait 1.6% et Square-3000 11.2%. Autrement dit, l'ecart structurel
+   de 22 points est le symptome d'un modele **reellement robuste** (la surface
+   aplatie trompe l'attaquant gradient), il disparait quand le modele est casse
+   (la tout marche). -> a garder pour expliquer pourquoi Square est le juge.
+4. **Precision propre stable** sur toute la plage etudiee (98.4% - 99.8%) :
+   la recette adversarial ne coute quasi rien en propre tant qu'on ne depasse
+   pas le budget ~5 eps ; la falaise est purement du cote robustesse.
+
+A FAIRE (suite) : comparer les colonnes CE adv des logs abl_a et abl_c (attendu :
+~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin (eps/20, 1 eps) pour
+savoir si le sommet est plus haut a gauche de 2 eps ; tracer la figure "pire cas
+vs budget" ; puis `--large` (1.7M params) a budget 2 eps.
