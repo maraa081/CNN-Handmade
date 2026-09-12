@@ -293,6 +293,13 @@ def main():
     print(f"[CONF] attack={args.attack} steps={args.pgd_steps} eps={args.eps} "
           f"loss={args.loss} mix={args.mix} lr={args.lr} clip={args.clip} "
           f"batch={args.batch} epochs={args.epochs} augment={args.augment}")
+    if args.bande:
+        # Traceabilite : le budget de l'attaque interne n'est plus un nombre de
+        # pas fixe, il faut donc ecrire la REGLE d'arret dans le log du run.
+        print(f"[BANDE] attaque interne a budget ADAPTATIF : cible "
+              f"{args.cible:.2f} ({args.cible_type}), depart {args.cible_depart:.2f}, "
+              f"rampe {args.cible_rampe:.0%} du run, plafond tolere "
+              f"{args.plafond_tol:.0%} des batchs | note : attaque_adaptative.md")
 
     # -- Modele --
     modele = CNN(large=args.large).to(device)

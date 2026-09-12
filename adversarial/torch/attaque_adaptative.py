@@ -85,6 +85,14 @@ def pgd_bande(modele, x, y, eps, steps=20, alpha=None, cible=0.5,
     """
     if alpha is None:
         alpha = eps / 10.0
+    # Garde-fou : sous no_grad() les logits n'ont pas de grad_fn et autograd
+    # echoue avec "element 0 of tensors does not require grad". Le message
+    # brut de PyTorch ne dit pas d'ou vient l'erreur, celui-ci si.
+    if not torch.is_grad_enabled():
+        raise RuntimeError(
+            "pgd_bande a ete appele sous torch.no_grad() : l'attaque a besoin du "
+            "graphe pour deriver par rapport a l'image. Sortir du bloc no_grad() "
+            "(les mesures de difficulte sont deja protegees en interne).")
     x_adv = (x + torch.empty_like(x).uniform_(-eps, eps)).clamp(0.0, 1.0)
 
     iterats = [x_adv]          # iterats[k] = le point apres k pas de PGD

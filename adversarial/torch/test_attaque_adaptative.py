@@ -63,9 +63,12 @@ def main():
     eps, steps, alpha = 0.3, 20, 0.03
 
     print("\n[1] Selection du pas k*")
-    with torch.no_grad():
-        _, res_cible = pgd_bande(modele, x, y, eps, steps, alpha, cible=0.5)
-        traj = res_cible["tromperie_trajectoire"]
+    # IMPORTANT : hors de torch.no_grad() -- l'attaque a besoin du graphe pour
+    # calculer le gradient par rapport a l'image (erreur attrapee le 12/09 :
+    # sous no_grad les logits n'ont pas de grad_fn et torch.autograd.grad leve
+    # "element 0 of tensors does not require grad").
+    _, res_cible = pgd_bande(modele, x, y, eps, steps, alpha, cible=0.5)
+    traj = res_cible["tromperie_trajectoire"]
     k = res_cible["k"]
     if k < steps:
         avant = traj[k - 1] if k > 0 else 0.0
