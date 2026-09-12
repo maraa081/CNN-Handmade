@@ -170,6 +170,14 @@ utilisable.
     python3 adversarial/torch/eval_suite.py --weights models/....pt --quick
     python3 adversarial/torch/eval_suite.py --weights models/....pt --famille blackbox
 
+    # 9b. ... et ecrire les chiffres en JSON pour le tableau final
+    python3 adversarial/torch/eval_suite.py --weights models/....pt --label "mon run" \
+        --json adversarial/results/logs/mon_run.json
+
+    # 9c. Le tableau recapitulatif, pret a coller (lit tous les JSON du dossier)
+    python3 adversarial/torch/tableau_recap.py
+    python3 adversarial/torch/tableau_recap.py --csv adversarial/results/logs/recap.csv
+
     # 10. Robustesse CERTIFIEE (borne L2 garantie, pas une observation)
     python3 adversarial/torch/smoothing.py --entrainer --sigma 0.5 --epochs 90
     python3 adversarial/torch/smoothing.py --certifier --sigma 0.5 --n 1000

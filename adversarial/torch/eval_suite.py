@@ -32,10 +32,11 @@ Sortie : un tableau par famille + le PIRE CAS tous types confondus.
 """
 
 import argparse
+import json
 import os
 import sys
 import time
-from os.path import abspath, dirname, isabs, join
+from os.path import abspath, basename, dirname, isabs, join
 
 import torch
 
@@ -98,6 +99,12 @@ def main():
     p.add_argument("--famille", choices=["tout", "whitebox", "blackbox", "l2"], default="tout")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "dml"])
+    p.add_argument("--json", default="",
+                   help="ecrit les resultats en JSON (lu par tableau_recap.py) ; "
+                        "ex: adversarial/results/logs/kmnist_plan_doux.json")
+    p.add_argument("--label", default="",
+                   help="nom lisible du run dans le tableau de recap "
+                        "(defaut : le nom du fichier de poids)")
     p.add_argument("--quick", action="store_true", help="budget reduit (verification de la chaine)")
 
     # budgets (surchargeables)
@@ -223,6 +230,7 @@ def main():
 
     # ---------------- Verdict ----------------
     linf = {k: v for k, v in resultats.items() if k[0] in ("grad", "bb") and k[2] == max(args.eps)}
+    pire = qui = None
     if linf:
         pire = min(linf.values())
         qui = [k[1] for k, v in linf.items() if v == pire][0]
@@ -230,6 +238,48 @@ def main():
         print(f"  PIRE CAS a eps={max(args.eps)} : {pire:.1%}   (attaque : {qui})")
         print(f"  Precision propre                : {propre:.1%}")
         print("=" * 72)
+
+    # ---------------- Dump machine-readable ----------------
+    # But : ne PAS avoir a recopier les chiffres a la main dans le tableau final.
+    # tableau_recap.py relit ces JSON et imprime un tableau Markdown pret a
+    # coller dans le README. Ajoute le 2026-09-13 (serie KMNIST).
+    if args.json:
+        etat = {
+            "format": 1,
+            "horodatage": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "dataset": args.dataset,
+            "modele": args.weights,
+            "libelle": args.label or basename(args.weights).replace(".pt", ""),
+            "n_images": args.n,
+            "eps": list(args.eps),
+            "propre": propre,
+            "attaques": {},   # nom d'attaque -> {eps: accuracy}
+            "l2": {},         # nom d'attaque -> {eps: taux de succes}
+            "config": {
+                "pgd_steps": args.pgd_steps, "pgd_restarts": args.pgd_restarts,
+                "apgd_steps": args.apgd_steps, "apgd_restarts": args.apgd_restarts,
+                "square_steps": args.square_steps, "square_restarts": args.square_restarts,
+                "nes_steps": args.nes_steps, "nes_samples": args.nes_samples,
+                "cw_steps": args.cw_steps, "boundary_steps": args.boundary_steps,
+                "famille": args.famille, "quick": bool(args.quick),
+            },
+        }
+        for (famille, nom, eps), valeur in resultats.items():
+            cle = f"{eps:.2f}"
+            if famille == "l2":
+                etat["l2"][nom] = {cle: valeur}
+            else:
+                etat["attaques"].setdefault(nom, {})[cle] = valeur
+        if linf:
+            etat["pire_cas"] = {"eps": max(args.eps), "attaque": qui, "accuracy": pire}
+        chemin_json = args.json if isabs(args.json) else join(ROOT_DIR, args.json)
+        dossier = dirname(chemin_json)
+        if dossier:
+            os.makedirs(dossier, exist_ok=True)
+        with open(chemin_json, "w", encoding="utf-8") as f:
+            json.dump(etat, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print(f"[JSON] resultats ecrits -> {args.json}")
 
     m, s = divmod(time.time() - t_total, 60)
     print(f"\n[TEMPS] suite terminee en {int(m)} min {int(s)} s")

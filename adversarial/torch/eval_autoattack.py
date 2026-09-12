@@ -35,9 +35,11 @@ rugueuse : cf. le rapport gradient/aleatoire de `audit_masquage.py`).
 """
 
 import argparse
+import json
+import os
 import sys
 import time
-from os.path import abspath, dirname, join
+from os.path import abspath, basename, dirname, join
 
 import torch
 
@@ -60,6 +62,12 @@ def main():
     p.add_argument("--version", choices=["standard", "plus", "rand"], default="standard")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "dml"])
+    p.add_argument("--json", default="",
+                   help="ecrit le resultat en JSON (lu par tableau_recap.py) ; "
+                        "ex: adversarial/results/logs/kmnist_plan_doux_autoattack.json")
+    p.add_argument("--label", default="",
+                   help="nom lisible du run dans le tableau de recap "
+                        "(defaut : le nom du fichier de poids)")
     args = p.parse_args()
 
     try:
@@ -118,6 +126,35 @@ def main():
     print(f"  duree                 : {dt / 60:.1f} min")
     print(f"  images                : {len(x)}")
     print("=" * 70)
+
+    # Dump machine-readable : meme format d'esprit que eval_suite.py --json, avec
+    # "source": "autoattack" pour que tableau_recap.py ajoute la colonne
+    # OFFICIELLE a cote des chiffres maison (ajoute le 2026-09-13).
+    if args.json:
+        etat = {
+            "format": 1,
+            "source": "autoattack",
+            "horodatage": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "dataset": args.dataset,
+            "modele": args.weights,
+            "libelle": args.label or basename(args.weights).replace(".pt", ""),
+            "n_images": len(x),
+            "eps": [args.eps],
+            "propre": propre,
+            "version": args.version,
+            "duree_min": dt / 60,
+            "pire_cas": {"eps": args.eps,
+                         "attaque": f"AutoAttack ({args.version})",
+                         "accuracy": robuste},
+        }
+        chemin_json = args.json if os.path.isabs(args.json) else join(ROOT_DIR, args.json)
+        dossier = dirname(chemin_json)
+        if dossier:
+            os.makedirs(dossier, exist_ok=True)
+        with open(chemin_json, "w", encoding="utf-8") as f:
+            json.dump(etat, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print(f"[JSON] resultat officiel ecrit -> {args.json}")
     return 0
 
 

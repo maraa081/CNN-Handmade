@@ -35,6 +35,7 @@ adversarial/
 |   |-- entrainement.py<- pgdat / trades, augmentation, validation robuste
 |   |-- attaques_avancees.py <- CW, APGD (CE/DLR), Square, NES, Boundary
 |   |-- eval_suite.py  <- suite d'attaques multi-familles (le juge)
+|   |-- tableau_recap.py <- tableau final Markdown depuis les JSON d'evaluation
 |   |-- smoothing.py   <- robustesse CERTIFIEE : randomized smoothing (rayon L2)
 |   |-- lire-le-code.md<- visite guidee du code (pour le modifier)
 |   `-- harden_torch.py<- point d'entree (memes options que harden2.py) + --parite
@@ -732,6 +733,39 @@ python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
   --epochs 120 --augment --pgd-alpha 0.03 --plan-budget "1,0.2" \
   --warm-start models/kmnist_standard.npz --out models/kmnist_plan_inverse.pt
 ```
+
+## Le tableau final : le recap automatique des runs
+
+`eval_suite.py` et `eval_autoattack.py` savent écrire leurs résultats en JSON
+(`--json chemin.json`), et `tableau_recap.py` les relit pour imprimer **le**
+tableau Markdown, trié par pire cas :
+
+```bash
+# Évaluer un modèle (mêmes réglages que les runs MNIST : 500 images,
+# Square poussé à 3000, 2 restarts) ET écrire le JSON
+python3 adversarial/torch/eval_suite.py --dataset kmnist \
+  --weights models/kmnist_plan_doux.pt --n 500 --eps 0.3 \
+  --square-steps 3000 --square-restarts 2 --device cuda \
+  --label "KMNIST plan doux 0.2->1" \
+  --json adversarial/results/logs/kmnist_plan_doux.json
+
+# Le chiffre officiel, sur le gagnant, avec son JSON (même chemin de poids :
+# le tableau le rattache tout seul à la bonne ligne)
+python3 adversarial/torch/eval_autoattack.py --dataset kmnist \
+  --weights models/kmnist_plan_doux.pt --n 10000 --eps 0.3 \
+  --device cuda --label "KMNIST plan doux 0.2->1" \
+  --json adversarial/results/logs/kmnist_plan_doux_autoattack.json
+
+# Le tableau final (lit tous les JSON de adversarial/results/logs/)
+python3 adversarial/torch/tableau_recap.py
+python3 adversarial/torch/tableau_recap.py --csv recap.csv   # export tableur
+```
+
+Sortie : une ligne par modèle, une colonne par attaque (le nombre de pas est
+dans l'en-tête, donc on voit immédiatement si deux lignes sont comparables), le
+**pire cas maison** et, quand elle existe, la colonne **AutoAttack (officiel)**
+qui est le chiffre d'annonce. Le tableau est du Markdown brut : copier-coller
+vers le README ou la model card, rien à reformater.
 
 Prédiction/extrapolation, écrite AVANT de lancer les runs : le départ dur
 (série 1) plafonne vers 60-65% de pire cas, la recette douce (série 2) monte
