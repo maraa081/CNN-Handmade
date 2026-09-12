@@ -638,3 +638,82 @@ Note technique du jour : le bug de peripherique corrige dans
 `attaques_avancees.py` (restarts d'APGD et de Square qui creaient un tenseur
 GPU avec un generateur CPU) etait invisible sur CPU - voir le piege "tester sur
 le peripherique cible" ci-dessus.
+
+---
+
+## 2026-09-12 (soir) - Pourquoi le run v5 s'est effondre : la GRAINE de l'attaque interne
+
+Symptome (run v5 de Maraa, GPU RX 7800 XT, `--attack apgd-dlr --pgd-steps 10
+--augment --batch 256 --epochs 120 --seed 42`, tout le reste identique au run B) :
+la **val PGD10 monte a 46.5% (epoch 16) puis s'effondre** (20.5% e23, 4.9% e28,
+**0.6% e32**) et **ne remonte jamais**. Pendant ce temps la precision propre reste
+a 99.5-99.6% et la **perte d'entrainement ne cesse de BAISSER** (0.19 e16 -> 0.08
+e46, contre ~0.39 pour le run B au meme stade). Journal :
+`results/v5_apgd_dlr_effondrement.log`.
+
+Lecture de la perte qui baisse : sur un batch mixte (50% propre + 50% adverse), la
+perte de la moitie adverse devrait rester HAUTE (un exemple adverse est difficile).
+Une perte qui tombe a 0.08 signifie que les "exemples adverses" sont devenus
+FACILES : l'attaque interne ne fabrique plus rien d'adverse. Le chiffre de
+validation (PGD10) ne fait que constater la consequence.
+
+Cause racine : deux defauts cumules de notre port d'APGD, invisibles tant que
+l'attaque d'entrainement etait PGD (A/B/v4).
+
+1. **La graine du depart aleatoire etait FIXE (`seed=0` par defaut).** Le depart
+   est tire par `torch.empty_like(x).uniform_(-eps, eps, generator=gen)` avec un
+   generateur recree a chaque appel avec la meme graine : pour une forme de
+   tenseur donnee (batch 256) c'est le MEME motif de bruit a chaque batch, de
+   l'epoch 1 a l'epoch 120. Or l'APGD garde le meilleur point de sa trajectoire,
+   et a eps=0.3 ce depart (bruit uniforme sur toute l'image) est souvent deja mal
+   classe : l'attaque renvoyait donc tres souvent CE MOTIF FIXE comme "meilleur
+   exemple adverse". Le modele apprenait par coeur a vaincre un motif constant -
+   d'ou la perte qui tend vers zero et la precision propre intacte - et
+   n'apprenait plus la robustesse. `pgd()` n'avait pas ce defaut (il tire sur le
+   generateur GLOBAL, donc un depart frais a chaque batch) : c'est pour cela que
+   les runs A/B/v4 n'ont pas souffert. La SEULE variable qui change en v5 est
+   l'attaque interne.
+2. **Le pas adaptatif ne s'adaptait jamais a budget court.** Les points de
+   controle etaient codoes "tous les 10 pas" en dur (`i % 10`), alors que la
+   reference (Croce & Hein 2020) les cale sur ~22% du budget. Avec
+   `--pgd-steps 10` il n'y avait donc AUCUN palier utile : le pas restait a
+   2*eps (0.6) du debut a la fin et l'attaque ne faisait que rejouer FGSM au coin
+   de la boule. En prime le "momentum" melangeait des POINTS puis re-projetait,
+   ce qui colle le point aux coins : le momentum ne servait a rien (la reference
+   melange des DEPLACEMENTS).
+
+Corrections (meme commit) :
+
+- `attaques_avancees.py::apgd` : `seed=None` par defaut -> graine fraiche a CHAQUE
+  appel pour le depart aleatoire (tirage sur le generateur global, donc variable
+  d'un batch a l'autre, et reproductible si `torch.manual_seed` est appele au
+  demarrage). L'evaluation passe toujours une graine explicite
+  (`eval_suite` : 2000 / 3000) : elle reste reproductible au bit pres.
+- `attaques_avancees.py::apgd` : paliers du pas proportionnels au budget
+  (k = 22% de `steps`, puis k diminue par pas de 3% jusqu'a 6%) et melange
+  Nesterov sur les deplacements, avec a = 1 au premier pas (comme la reference).
+- `attaques.py` : l'attaque d'entrainement APGD demande explicitement `seed=None`.
+- `harden_torch.py` : `torch.manual_seed(args.seed)` au demarrage (le run reste
+  reproductible). Et l'etat de l'OPTIMISEUR est desormais restaure par
+  `--resume` : il etait ecrit dans le checkpoint mais jamais recharge, donc le
+  momentum de SGD repartait de zero en plein milieu d'un run long.
+- `entrainement.py` : la ligne d'epoch affiche maintenant **CE propre | CE adv |
+  taux de tromperie de l'attaque interne**. C'est le chiffre qui aurait montre le
+  probleme des l'epoch 20. Deux garde-fous : [ALERTE] si l'attaque interne ne
+  trompe plus 50% du batch adverse, [ALERTE] si la val PGD passe sous le meilleur
+  de plus de `--collapse-tol` points (5 par defaut) pendant `--collapse-patience`
+  epochs (3), avec `--stop-on-collapse` pour arreter un run qui ne remonte plus
+  (le meilleur modele est deja sauvegarde).
+
+Lecon a garder : **le chiffre d'entrainement n'est pas le chiffre de robustesse, et
+une attaque interne se juge sur sa PERTE et son taux de tromperie.** Une attaque
+interne qui renvoie toujours le meme motif fabrique un modele "robuste" sur le
+papier et nu a l'evaluation, exactement comme une attaque trop faible. La
+validation robuste seule ne suffit pas : il faut instrumenter l'interieur.
+
+Suite : relancer v5 avec l'attaque corrigee en surveillant la colonne CE adv.
+Pour l'ENTRAINEMENT, preferer `--attack apgd-ce` (ou rester sur
+`pgd --pgd-steps 20 --pgd-alpha 0.03`, la recette v4) : l'objectif DLR de
+Croce & Hein est concu pour EXPOSER une surface de perte deguisee a l'evaluation,
+le minimiser en boucle n'est pas le meme probleme. Le meilleur modele du run casse
+reste l'epoch 16 (val PGD10 46.5%), deja sauvegarde : rien n'est perdu.

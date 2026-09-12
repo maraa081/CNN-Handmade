@@ -186,11 +186,27 @@ def main():
     p.add_argument("--parite", action="store_true")
     p.add_argument("--parite-n", type=int, default=200)
     p.add_argument("--restarts", type=int, default=1)
+    p.add_argument("--collapse-tol", type=float, default=5.0,
+                   help="garde-fou : alerte quand la val PGD passe sous le meilleur "
+                        "de plus de N points (0 = desactive)")
+    p.add_argument("--collapse-patience", type=int, default=3,
+                   help="nombre d'epochs sous le meilleur avant l'alerte / l'arret")
+    p.add_argument("--stop-on-collapse", action="store_true",
+                   help="arreter le run quand la robustesse s'effondre et ne remonte "
+                        "plus (le meilleur modele est deja sauvegarde)")
     p.add_argument("--eval-steps", type=int, default=20)
     p.add_argument("--eval-n", type=int, default=500)
     p.add_argument("--quick", action="store_true")
     args = p.parse_args()
     lr_donne = args.lr          # None si l'utilisateur n'a pas force --lr
+
+    # Graine du generateur GLOBAL. Elle sert au depart aleatoire des attaques
+    # d'entrainement (PGD et APGD, qui tirent une graine fraiche a chaque batch)
+    # et aux transformations d'augmentation : le run est donc reproductible, tout
+    # en variant d'un batch a l'autre. Ne PAS fixer la graine des attaques :
+    # un depart aleatoire constant a chaque batch a fait s'effondrer le run v5
+    # (voir memoire.md, 2026-09-12).
+    torch.manual_seed(args.seed)
 
     if args.quick:
         args.n_train, args.epochs, args.val = 800, 1, 100
@@ -267,6 +283,7 @@ def main():
 
     # -- Reprise d'un run interrompu (veille du PC, arret manuel...) --
     # Le checkpoint complet est ecrit a chaque epoch dans <out>_last.pt.
+    opt_etat = None
     if args.resume:
         chemin_resume = (args.resume if os.path.isabs(args.resume)
                          else join(ROOT_DIR, args.resume))
@@ -276,6 +293,12 @@ def main():
         ck = torch.load(chemin_resume, map_location="cpu", weights_only=False)
         if isinstance(ck, dict) and "model" in ck:
             modele.load_state_dict(ck["model"])
+            # [fix 2026-09-12] l'etat de l'optimiseur etait sauvegarde mais
+            # JAMAIS recharge : apres une reprise, le momentum de SGD repartait
+            # de zero, ce qui change la dynamique du run en plein milieu (et
+            # c'est invisible dans les logs). On le restaure juste apres la
+            # creation de l'optimiseur, plus bas.
+            opt_etat = ck.get("opt")
             print(f"[RESUME] {chemin_resume} (epoch {ck.get('epoch', '?')}, "
                   f"lr {ck.get('lr', '?')})")
             if lr_donne is None and ck.get("lr") is not None:
@@ -318,6 +341,12 @@ def main():
         opt = torch.optim.Adam(modele.parameters(), lr=args.lr,
                                weight_decay=args.weight_decay)
     print(f"[OPT] {args.optimizer}")
+    if opt_etat is not None:
+        try:
+            opt.load_state_dict(opt_etat)
+            print("[RESUME] etat de l'optimiseur restaure (momentum inclus)")
+        except (ValueError, KeyError) as err:
+            print(f"[RESUME] [warn] etat de l'optimiseur non restaure : {err}")
 
     # -- Entrainement --
     t0 = time.time()

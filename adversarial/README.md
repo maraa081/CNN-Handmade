@@ -189,12 +189,27 @@ sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annonce
 | B | PGD | 5 | eps/4 | oui | pgdat | 99.6% / 91.0% (120 epochs) |
 | C | PGD | 5 | eps/4 | oui | trades (beta=2) | 96.9% / 2.2% |
 | v4 | PGD | 20 | eps/10 | oui | pgdat | 99.4% / **61.8%** (Square 3000) |
-| v5 (a venir) | APGD-DLR | 100 | adaptatif | oui | pgdat | - |
+| v5 (essai 1) | APGD-DLR | 10 | adaptatif | oui | pgdat | **casse** : val PGD10 46.5% -> 0.6% (attaque interne inoperante) |
+| v5 (a relancer) | APGD-CE | >= 20 | adaptatif | oui | pgdat | - |
 
 eps = 0.30 partout. Le seul changement de v4 : une attaque interne plus fine
 (plus de pas, pas plus petit) - c'est la reponse directe au pire cas de 42.0%,
 et elle a paye : **+19.8 points** de pire cas (42.0% -> 61.8%). Detail dans
 `memoire.md`.
+
+### Le faux pas de v5 (essai 1) : une attaque interne peut "reussir" et ne rien apprendre
+
+Le premier essai de v5 (APGD-DLR, 10 pas) s'est **effondre** : la val PGD10 est
+montee a 46.5% (epoch 16) puis est tombee a 0.6% (epoch 32) sans jamais remonter,
+alors que la precision propre restait a 99.6% et que la perte d'entrainement
+continuait de baisser. Ce n'est pas de la malchance : la perte qui baisse sur un
+batch a moitie adverse veut dire que **l'attaque interne ne fabriquait plus
+d'exemples adverses** (le depart aleatoire de l'APGD etait le meme a chaque batch,
+et l'attaque renvoyait ce motif fixe comme "meilleur" exemple). Le modele
+apprenait par coeur a le vaincre. Corrige depuis (voir `memoire.md`, 2026-09-12
+soir) : graine fraiche a chaque batch, paliers du pas proportionnels au budget,
+Nesterov sur les deplacements, et la ligne d'epoch affiche desormais la CE propre,
+la CE adverse et le taux de tromperie de l'attaque interne.
 
 ---
 

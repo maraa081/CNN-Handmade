@@ -227,6 +227,8 @@ def entrainer(modele, opt, train, val, args, device):
         print(f"  [REPRISE] rien a faire : {start} > {args.epochs} epochs")
         return meilleur
 
+    epochs_sous = 0        # epochs consecutifs sous le meilleur (garde-fou)
+
     for epoch in range(start, args.epochs + 1):
         t0 = time.time()
 
@@ -243,6 +245,15 @@ def entrainer(modele, opt, train, val, args, device):
 
         ordre = torch.randperm(n, generator=gen)
         perte_tot = 0.0
+        # Diagnostic de l'attaque interne (affiche sur la ligne d'epoch) :
+        # perte sur la moitie PROPRE, perte et taux de tromperie sur la moitie
+        # ADVERSE. Les deux pertes sont gratuites : elles sont lues sur les
+        # logits du batch mixte, qui servent deja au calcul de la perte.
+        ce_propre_som = 0.0
+        ce_adv_som = 0.0
+        n_propre_tot = 0
+        n_adv_tot = 0
+        n_adv_succ = 0.0
         modele.train()
 
         # ---- Un batch = les etapes [1] a [5] de la visite guidee ----
@@ -289,14 +300,37 @@ def entrainer(modele, opt, train, val, args, device):
                               F.softmax(logits_adv, dim=1),
                               reduction="batchmean")
                 perte = ce + beta * kl
+                # diagnostic : les deux moities sont deja calculees ici
+                with torch.no_grad():
+                    ce_propre_som += ce.item() * len(bx)
+                    n_propre_tot += len(bx)
+                    ce_adv_som += F.cross_entropy(logits_adv, by).item() * len(bx)
+                    n_adv_succ += (logits_adv.argmax(1) != by).float().sum().item()
+                    n_adv_tot += len(bx)
             else:
+                n_propre = 0
                 if args.mix < 1.0:
                     k = int(round(len(bx) * args.mix))
                     cx = torch.cat([bx, bx_adv[:k]], dim=0)
                     cy = torch.cat([by, by[:k]], dim=0)
+                    n_propre = len(bx)
                 else:
                     cx, cy = bx_adv, by
-                perte = F.cross_entropy(modele(cx), cy)
+                logits_batch = modele(cx)
+                perte = F.cross_entropy(logits_batch, cy)
+                # diagnostic : on relit les logits du batch mixte, deja calcules
+                with torch.no_grad():
+                    if n_propre:
+                        ce_propre_som += F.cross_entropy(
+                            logits_batch[:n_propre], cy[:n_propre]).item() * n_propre
+                        n_propre_tot += n_propre
+                    n_adv = len(cx) - n_propre
+                    if n_adv:
+                        ce_adv_som += F.cross_entropy(
+                            logits_batch[n_propre:], cy[n_propre:]).item() * n_adv
+                        n_adv_succ += (logits_batch[n_propre:].argmax(1)
+                                       != cy[n_propre:]).float().sum().item()
+                        n_adv_tot += n_adv
 
             # [5] mise a jour des poids (zero_grad -> backward -> clip -> step)
             opt.zero_grad(set_to_none=True)
@@ -317,9 +351,42 @@ def entrainer(modele, opt, train, val, args, device):
 
         dt = time.time() - t0
         reste = (args.epochs - epoch) * dt / 60
-        print(f"  Epoch {epoch:>2}/{args.epochs} | loss {perte_tot / n:6.4f} | "
+        detail = ""
+        if n_adv_tot:
+            ce_p = (ce_propre_som / n_propre_tot) if n_propre_tot else float("nan")
+            detail = (f" | CE propre {ce_p:5.3f} | CE adv {ce_adv_som / n_adv_tot:5.3f} "
+                      f"| attaque {n_adv_succ / n_adv_tot:6.1%}")
+        print(f"  Epoch {epoch:>2}/{args.epochs} | loss {perte_tot / n:6.4f}{detail} | "
               f"val clean {acc_clean:6.2%} | val PGD{args.val_steps} {acc_rob:6.2%} | "
               f"{dt / 60:5.1f} min | reste ~{reste:4.0f} min")
+
+        # [ALERTE 1] L'attaque interne fabrique-t-elle encore des exemples
+        # adverses ? Si elle ne trompe plus la moitie du batch adverse, le
+        # modele n'apprend plus que du propre : c'est le signal AVANT-COUREUR de
+        # l'effondrement de la robustesse (constate le 2026-09-12 : la CE adv
+        # rejoint la CE propre, puis la val PGD10 tombe a 0.6%). On previent,
+        # on ne corrige pas tout seul : c'est un probleme de recette d'attaque,
+        # pas de patience.
+        if n_adv_tot and n_adv_succ / n_adv_tot < 0.5:
+            print(f"           [ALERTE] l'attaque interne ne trompe plus que "
+                  f"{n_adv_succ / n_adv_tot:.0%} du batch adverse : la robustesse "
+                  "apprise est en train de disparaitre (voir memoire.md, 2026-09-12).")
+
+        # [ALERTE 2] Effondrement de la robustesse de validation : "s'effondre et
+        # ne remonte plus" -> inutile de bruler le GPU, le meilleur modele est
+        # deja sauvegarde.
+        if args.collapse_tol and meilleur >= 0 and acc_rob < meilleur - args.collapse_tol:
+            epochs_sous += 1
+            print(f"           [ALERTE] val PGD{args.val_steps} {acc_rob:.1%} : "
+                  f"{meilleur - acc_rob:.1%} sous le meilleur ({meilleur:.1%}), "
+                  f"{epochs_sous} epoch(s) de suite.")
+            if args.stop_on_collapse and epochs_sous >= args.collapse_patience:
+                print(f"           [ARRET] --stop-on-collapse : plus rien ne progresse depuis "
+                      f"{epochs_sous} epochs. Meilleur modele conserve : {args.out} "
+                      f"(val PGD {meilleur:.1%}).")
+                return meilleur
+        else:
+            epochs_sous = 0
 
         # Checkpoint complet : permet de REPRENDRE apres une coupure (veille du
         # PC, arret manuel...) sans repartir de zero. Le fichier "best" reste au

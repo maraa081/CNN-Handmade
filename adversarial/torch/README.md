@@ -182,8 +182,27 @@ Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,
     --batch 256                     conseille sur GPU
     --resume FICHIER                reprendre un run interrompu (<out>_last.pt)
     --start-epoch N                 epoch de depart (0 = deduit du checkpoint)
+    --collapse-tol N                alerte si la val PGD passe sous le meilleur de
+                                    plus de N points (5 par defaut, 0 = desactive)
+    --collapse-patience N           epochs sous le meilleur avant l'alerte (3)
+    --stop-on-collapse              arreter un run qui s'effondre et ne remonte plus
     --parite                        test d'equivalence avec NumPy
     --npz FICHIER                   exporter les poids au format NumPy
+
+Deux choses a savoir avant de lancer un run long (ajoutees le 2026-09-12) :
+
+- **La ligne d'epoch instrumente l'attaque interne** :
+  `CE propre | CE adv | attaque N%`. Le taux de tromperie et la CE adverse sont
+  lus sur les logits du batch mixte, donc c'est gratuit. Si la CE adverse rejoint
+  la CE propre (ou si le taux de tromperie passe sous 50%), l'attaque interne ne
+  fabrique plus d'exemples adverses et le modele n'apprendra plus la robustesse,
+  meme si la perte continue de baisser : un [ALERTE] est affiche. C'est le
+  symptome exact du run v5 du 12/09 (perte 0.08, val PGD10 0.6%).
+- **La graine du depart aleatoire des attaques d'entrainement doit etre FRAICHE a
+  chaque batch.** `harden_torch.py` appelle `torch.manual_seed(args.seed)` au
+  demarrage (donc le run est reproductible) et les attaques tirent leur depart sur
+  le generateur global a chaque appel. Ne jamais figer la graine d'une attaque
+  d'entrainement : un depart constant fait apprendre par coeur un motif fixe.
 
 ---
 

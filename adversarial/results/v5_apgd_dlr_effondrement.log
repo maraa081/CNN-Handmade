@@ -1,0 +1,71 @@
+Extrait du run v5 qui s'est effondre (machine de Maraa, GPU AMD RX 7800 XT).
+Commande : --n-train 60000 --epochs 120 --attack apgd-dlr --pgd-steps 10
+            --augment --batch 256 --device cuda --seed 42
+Autres recettes identiques au run B (pgdat, mix 0.5, lr 0.05, clip 1.0, eps 0.3).
+
+Ce qui est montre ici : la val PGD10 monte a 46.5% (epoch 16), puis s'effondre
+et ne remonte JAMAIS, alors que la precision propre reste a 99.5-99.6% et que la
+perte d'entrainement continue de BAISSER (0.19 -> 0.08). Une perte qui baisse
+pendant que la robustesse s'effondre = l'attaque interne ne fabrique plus
+d'exemples adverses. Cause et correction : memoire.md, 2026-09-12 (soir).
+
+  [WARM] auto -> models/model_weights_full.npz
+  [WARM] clean test : 98.60%
+  [OPT] momentum
+  [LR] paliers aux epochs [60, 96]
+  Epoch  1/120 | loss 0.8879 | val clean 99.10% | val PGD10  7.30%
+  Epoch  2/120 | loss 0.6375 | val clean 98.80% | val PGD10 13.50%
+  Epoch  3/120 | loss 0.5473 | val clean 99.40% | val PGD10 21.30%
+  Epoch  4/120 | loss 0.4704 | val clean 98.90% | val PGD10 20.60%
+  Epoch  5/120 | loss 0.4170 | val clean 99.70% | val PGD10 32.00%
+  Epoch  6/120 | loss 0.3741 | val clean 99.20% | val PGD10 29.60%
+  Epoch  7/120 | loss 0.3425 | val clean 99.30% | val PGD10 36.40%
+  Epoch  8/120 | loss 0.3044 | val clean 99.60% | val PGD10 32.10%
+  Epoch  9/120 | loss 0.2828 | val clean 99.50% | val PGD10 30.40%
+  Epoch 10/120 | loss 0.2650 | val clean 99.60% | val PGD10 35.70%
+  Epoch 11/120 | loss 0.2523 | val clean 99.60% | val PGD10 46.20%
+  Epoch 12/120 | loss 0.2332 | val clean 99.30% | val PGD10 34.20%
+  Epoch 13/120 | loss 0.2207 | val clean 99.30% | val PGD10 44.20%
+  Epoch 14/120 | loss 0.2127 | val clean 99.60% | val PGD10 27.40%
+  Epoch 15/120 | loss 0.2001 | val clean 99.40% | val PGD10 43.30%
+  Epoch 16/120 | loss 0.1919 | val clean 99.20% | val PGD10 46.50%
+  Epoch 17/120 | loss 0.1854 | val clean 99.60% | val PGD10 36.30%
+  Epoch 18/120 | loss 0.1811 | val clean 99.20% | val PGD10 38.80%
+  Epoch 19/120 | loss 0.1678 | val clean 99.70% | val PGD10 26.30%
+  Epoch 20/120 | loss 0.1583 | val clean 99.40% | val PGD10 23.80%
+  Epoch 21/120 | loss 0.1621 | val clean 99.50% | val PGD10 26.00%
+  Epoch 22/120 | loss 0.1515 | val clean 99.50% | val PGD10 23.00%
+  Epoch 23/120 | loss 0.1479 | val clean 99.60% | val PGD10 20.50%
+  Epoch 24/120 | loss 0.1398 | val clean 99.70% | val PGD10 19.70%
+  Epoch 25/120 | loss 0.1398 | val clean 99.50% | val PGD10 12.30%
+  Epoch 26/120 | loss 0.1197 | val clean 99.80% | val PGD10 11.80%
+  Epoch 27/120 | loss 0.1181 | val clean 99.60% | val PGD10  8.30%
+  Epoch 28/120 | loss 0.1133 | val clean 99.70% | val PGD10  4.90%
+  Epoch 29/120 | loss 0.1116 | val clean 99.60% | val PGD10  7.00%
+  Epoch 30/120 | loss 0.1041 | val clean 99.70% | val PGD10  7.40%
+  Epoch 31/120 | loss 0.1017 | val clean 99.50% | val PGD10  6.80%
+  Epoch 32/120 | loss 0.1023 | val clean 99.50% | val PGD10  0.60%
+  Epoch 33/120 | loss 0.0968 | val clean 99.60% | val PGD10  2.20%
+  Epoch 34/120 | loss 0.0933 | val clean 99.50% | val PGD10  3.50%
+  Epoch 35/120 | loss 0.0984 | val clean 99.60% | val PGD10  2.10%
+  Epoch 36/120 | loss 0.0858 | val clean 99.50% | val PGD10  2.50%
+  Epoch 37/120 | loss 0.0957 | val clean 99.50% | val PGD10  2.30%
+  Epoch 38/120 | loss 0.0842 | val clean 99.70% | val PGD10  1.40%
+  Epoch 39/120 | loss 0.0925 | val clean 99.60% | val PGD10  2.30%
+  Epoch 40/120 | loss 0.0896 | val clean 99.60% | val PGD10  4.70%
+  Epoch 41/120 | loss 0.0932 | val clean 99.60% | val PGD10  5.70%
+  Epoch 42/120 | loss 0.0861 | val clean 99.60% | val PGD10  1.80%
+  Epoch 43/120 | loss 0.0891 | val clean 99.60% | val PGD10  1.70%
+  Epoch 44/120 | loss 0.0861 | val clean 99.70% | val PGD10  1.40%
+  Epoch 45/120 | loss 0.0815 | val clean 99.60% | val PGD10  2.60%
+  Epoch 46/120 | loss 0.0809 | val clean 99.70% | val PGD10  1.40%
+  Epoch 47/120 | loss 0.0813 | val clean 99.60% | val PGD10  1.40%
+  Epoch 48/120 | loss 0.0825 | val clean 99.60% | val PGD10  3.80%
+  Epoch 49/120 | loss 0.0810 | val clean 99.50% | val PGD10  2.60%
+  Epoch 50/120 | loss 0.0839 | val clean 99.50% | val PGD10  6.50%
+  Epoch 51/120 | loss ... (le log s'arrete ici dans l'extrait)
+
+Comparaison au meme stade, run B (attaque interne PGD-5, tout le reste identique) :
+  Epoch 47/120 | loss 0.3929 | val clean 99.70% | val PGD10 87.30%
+La perte y reste autour de 0.39 (les exemples adverses sont difficiles). En v5
+elle tombe a 0.08 (les "exemples adverses" sont devenus triviaux).

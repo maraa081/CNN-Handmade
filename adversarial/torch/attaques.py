@@ -95,12 +95,20 @@ def attaque(modele, x, y, eps, type_attaque="pgd", steps=20, alpha=None):
         # pas adaptatif + objectif DLR. Motivation : sur nos modeles durcis,
         # c'est APGD-DLR qui resiste le moins bien (81.0% contre 90.4% pour
         # PGD-20 sur le modele v4), donc c'est contre elle qu'il faut
-        # s'entrainer. Import local : attaques_avancees importe ce module
-        # (cycle sinon).
+        # s'entrainer.
+        # [fix CRITIQUE 2026-09-12] `seed=None` : le depart aleatoire de
+        # l'attaque doit etre RETIRE a chaque batch. Avec la graine fixe par
+        # defaut (0), le meme motif de bruit revenait a chaque batch ; l'attaque
+        # le renvoyait comme meilleur point et le modele apprenait par coeur a
+        # le vaincre: loss d'entrainement -> 0.08 et val PGD10 effondree a 0.6%
+        # sans jamais remonter (run v5, 2026-09-12). Reproduire un run reste
+        # possible : torch.manual_seed(args.seed) est appele au demarrage de
+        # harden_torch.py, et l'evaluation passe toujours une graine explicite.
+        # Import local : attaques_avancees importe ce module (cycle sinon).
         from adversarial.torch.attaques_avancees import apgd
         loss = "dlr" if type_attaque == "apgd-dlr" else "ce"
         return apgd(modele, x, y, eps, loss=loss, steps=steps, restarts=1,
-                    random_start=True).detach()
+                    random_start=True, seed=None).detach()
     return pgd(modele, x, y, eps, steps=steps, alpha=alpha)
 
 

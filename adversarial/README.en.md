@@ -189,11 +189,25 @@ announcing 91.0% while the worst case was 42.0%.
 | B | PGD | 5 | eps/4 | yes | pgdat | 99.6% / 91.0% (120 epochs) |
 | C | PGD | 5 | eps/4 | yes | trades (beta=2) | 96.9% / 2.2% |
 | v4 | PGD | 20 | eps/10 | yes | pgdat | 99.4% / **61.8%** (Square 3000) |
-| v5 (upcoming) | APGD-DLR | 100 | adaptive | yes | pgdat | - |
+| v5 (attempt 1) | APGD-DLR | 10 | adaptive | yes | pgdat | **collapsed** : val PGD10 46.5% -> 0.6% (inner attack no longer effective) |
+| v5 (to relaunch) | APGD-CE | >= 20 | adaptive | yes | pgdat | - |
 
 eps = 0.30 everywhere. The only change in v4: a finer inner attack (more steps,
 smaller step) - the direct answer to the 42.0% worst case. And it paid off:
 **+19.8 points** of worst case (42.0% -> 61.8%). Details in `memoire.md`.
+
+### The v5 misstep (attempt 1): an inner attack can look like it works and teach nothing
+
+The first v5 attempt (APGD-DLR, 10 steps) **collapsed**: val PGD10 climbed to
+46.5% (epoch 16), then fell to 0.6% (epoch 32) and never recovered, while clean
+accuracy stayed at 99.6% and the training loss kept decreasing. That is not bad
+luck: a decreasing loss on a half-adversarial batch means the **inner attack
+stopped producing adversarial examples** (APGD's random start was the same for
+every batch, and the attack kept returning that fixed pattern as its "best"
+example). The model memorised it. Fixed since (see `memoire.md`, 2026-09-12
+evening): a fresh start every batch, step-size checkpoints proportional to the
+budget, Nesterov on displacements, and the epoch line now reports clean CE,
+adversarial CE and the inner attack's fooling rate.
 
 ---
 

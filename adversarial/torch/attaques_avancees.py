@@ -88,50 +88,80 @@ def _obj(modele, z, y, loss="ce"):
 #  APGD : PGD avec pas adaptatif, momentum et restarts (Croce & Hein 2020)
 # --------------------------------------------------------------------------
 
-def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0,
+def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=None,
          random_start=False):
     """APGD (Auto-PGD) : la version moderne de PGD.
 
     Trois ameliorations par rapport a PGD classique :
 
-    1. PAS ADAPTATIF. Tous les 10 pas, on regarde si l'objectif a progresse.
-       Si oui, on garde le point et on continue. Si non, on REVIENT au
-       meilleur point connu et on DIVISE LE PAS par 2. PGD, lui, garde un pas
-       fixe (eps/4) : il peut osciller sans converger.
-    2. MOMENTUM (Nesterov). On ajoute une fraction du deplacement precedent,
-       ce qui accelere la progression.
+    1. PAS ADAPTATIF. Tous les `k` pas (k = 22% du budget, puis decroissant,
+       comme dans la reference), on regarde si l'objectif a progresse. Si oui,
+       on garde le point et on continue. Si non, on REVIENT au meilleur point
+       connu et on DIVISE LE PAS par 2. PGD, lui, garde un pas fixe (eps/4) :
+       il peut osciller sans converger.
+    2. MOMENTUM (Nesterov). On melange des DEPLACEMENTS, pas des points (voir le
+       commentaire dans la boucle) : c'est ce qui fait avancer l'attaque a
+       l'interieur de la boule au lieu de la laisser collee aux coins.
     3. RESTARTS. On relance l'attaque depuis plusieurs points de depart
        aleatoires, et on garde le meilleur resultat.
 
     `loss` : "ce" (APGD-CE) ou "dlr" (APGD-DLR). Ce sont les deux attaques
     white-box de l'AutoAttack.
+
+    `seed` : graine du depart aleatoire. None = TIRAGE FRAIS A CHAQUE APPEL,
+    ce qui est le seul mode correct pour une attaque d'ENTRAINEMENT. Avec une
+    graine fixe, `torch.empty_like(x)` produit le MEME motif de bruit a chaque
+    batch (meme forme de tenseur) : l'attaque renvoie alors souvent ce meme
+    motif comme "meilleur point", le modele apprend par coeur a le vaincre, et
+    la robustesse reelle s'effondre (constate le 2026-09-12 : loss d'entrainement
+    -> 0.08, val PGD10 -> 0.6%). A l'EVALUATION on passe une graine explicite
+    (eval_suite : seed=2000/3000) pour rester reproductible.
     """
     n = x.shape[0]
     dev = x.device
-    gen = torch.Generator(device="cpu").manual_seed(seed)
+    gen = torch.Generator(device="cpu")
+    if seed is None:
+        # tirage sur le generateur GLOBAL : frais a chaque appel, donc varie
+        # d'un batch a l'autre (et reproductible si torch.manual_seed est
+        # appele au demarrage du run).
+        gen.manual_seed(int(torch.randint(0, 2 ** 31 - 1, (1,)).item()))
+    else:
+        # generateur CPU + tenseur cree sur CPU : la sequence aleatoire est
+        # identique sur CPU et sur GPU (reproductible), et surtout le
+        # generateur ne peut pas etre CPU quand le tenseur est CUDA.
+        gen.manual_seed(seed)
 
     meilleur_global = x.clone()
     obj_global = torch.full((n,), float("-inf"), device=dev)
+
+    # Paliers du pas adaptatif, proportionnels au budget (reference Croce &
+    # Hein 2020 : n_iter_2 = 22% du budget, size_decr = 3%, n_iter_min = 6%).
+    # Les coder "tous les 10 pas" en dur etait un bug : avec steps <= 20 - le
+    # cas de nos entrainements (steps=10) - il n'y avait AUCUN palier utile, le
+    # pas restait bloque a 2*eps et l'attaque ne faisait que rejouer FGSM au
+    # coin de la boule (attaque faible = effondrement de la robustesse).
+    k = max(int(0.22 * steps), 2)
+    k_min = max(int(0.06 * steps), 1)
+    k_dec = max(int(0.03 * steps), 1)
 
     for r in range(restarts):
         if r == 0 and not random_start:
             x_r = x.clone()
         else:
-            # generateur CPU + tenseur cree sur CPU : la sequence aleatoire est
-            # identique sur CPU et sur GPU (reproductible), et surtout le
-            # generateur ne peut pas etre CPU quand le tenseur est CUDA.
             b = torch.empty_like(x, device="cpu").uniform_(
                 -eps, eps, generator=gen).to(dev)
             x_r = _projeter(x + b.to(dev), x, eps)
 
-        x_prev = x_r.clone()
+        x_prec = x_r.clone()
         x_best = x_r.clone()
         f_best = _obj(modele, x_r, y, loss)
         eta = torch.full((n,), 2.0 * eps, device=dev)
+        prochain = 0
+        k_courant = k
 
         for i in range(steps):
             # -- Point de controle : on evalue, et on divise le pas si besoin --
-            if (i % 10 == 0) or (i == steps - 1):
+            if (i == prochain) or (i == steps - 1):
                 f_cur = _obj(modele, x_r, y, loss)
                 ameliore = f_cur >= f_best
                 m = ameliore.view(-1, 1, 1, 1)
@@ -139,21 +169,23 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0,
                 f_best = torch.where(ameliore, f_cur, f_best)
                 retour = (~ameliore).view(-1, 1, 1, 1)
                 x_r = torch.where(retour, x_best, x_r)
-                x_prev = torch.where(retour, x_best, x_prev)
+                x_prec = torch.where(retour, x_best, x_prec)
                 eta = torch.where(~ameliore, (eta / 2).clamp(min=1e-8), eta)
-                if bool((eta < 1e-8).all()):
-                    break
+                prochain = i + k_courant
+                k_courant = max(k_courant - k_dec, k_min)
 
-            # -- Pas de gradient signe + momentum Nesterov --
+            # -- Pas de gradient signe, puis melange Nesterov --
+            # On melange des DEPLACEMENTS (comme la reference), pas des points :
+            #   x <- proj(x + a * pas + (1 - a) * pas_precedent),  a = 1 au 1er pas
+            # Melanger des POINTS puis re-projeter colle le point aux coins de
+            # la boule L-infini : le "momentum" ne servait alors a rien et
+            # l'attaque ne faisait que recalculer FGSM au coin.
             g = _grad_obj(modele, x_r, y, loss)
-            z = _projeter(x_r + eta.view(-1, 1, 1, 1) * g.sign(), x, eps)
-
-            ameliore = _obj(modele, z, y, loss) > _obj(modele, x_r, y, loss)
-            m = ameliore.view(-1, 1, 1, 1)
-            x_prev_old = x_prev
-            x_prev = x_r
-            z_nesterov = _projeter(z + rho * (z - x_prev_old), x, eps)
-            x_r = torch.where(m, z_nesterov, z)
+            x1 = _projeter(x_r + eta.view(-1, 1, 1, 1) * g.sign(), x, eps)
+            a = 1.0 if i == 0 else rho
+            z = _projeter(x_r + (x1 - x_r) * a + (x_r - x_prec) * (1 - a), x, eps)
+            x_prec = x_r
+            x_r = z
 
         # -- Fin du restart : on compare au meilleur global --
         f_fin = _obj(modele, x_best, y, loss)
