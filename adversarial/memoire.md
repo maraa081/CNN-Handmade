@@ -1093,3 +1093,69 @@ positif, la cible "tromperie" est disqualifiee (elle sature vite) et il faut
 passer a la cible CE-relative (A2) AVEC le plancher de budget. Si l'audit est
 propre sur les cinq tests, on tient un resultat majeur (a croiser avec
 AutoAttack, item n°1 du perimetre, avant toute annonce).
+
+### 2026-09-12 (21h20) - AUDIT DE MASQUAGE SUR A1 : HYPOTHESE REFUTEE, LE RESULTAT TIENT
+
+Resultat de `torch/audit_masquage.py` sur `bande_cible50` (reference `abl_a`) :
+
+| Test | Mesure | Verdict |
+|---|---|---|
+| [1] saturation | CE propre 0.0454, max-prob 0.974, ecart logits 5.76 | **non sature** (abl_a : CE 0.0122, max-prob 0.994, ecart 10.65 -> la reference est PLUS sure que le candidat) |
+| [2] difference finie | CE 0.0454 -> 0.0838 le long du gradient (+0.038, x8.52 mieux qu'une direction aleatoire +0.0045) | **gradient informatif** |
+| [3] balayage de eps | insensible jusqu'a 0.3 ; **s'effondre a 0.5** (FGSM 70.4%, PGD-20 14.4%, PGD fin 0.6%) et 1.0 (2.0%) | **pas un masquage : un RAYON ROBUSTE reel** |
+| [4] pas fin contre grossier | 96.6% / 96.2% / 95.8% / 96.4% / 96.8% (eps/4 a eps/400) | aucun effet du pas |
+| [5] transfert | transfert PGD 97.6% contre white-box 96.2% | le transfert ne bat PAS le white-box |
+
+**Conclusion : l'hypothese de masquage de gradient est refutee.** Le modele est
+reellement robuste jusqu'a ~0.3-0.4 puis il s'effondre : c'est la signature d'un
+rayon robuste, pas d'une defense qui cache son gradient (un modele masque resiste
+AUSSI a eps=1.0, ce qui n'est pas le cas ici).
+
+Deux corrections d'honnetete (mes erreurs) :
+
+1. Le drapeau `[SUSPECT]` du test [3] etait un **faux positif de mon propre
+   critere** ("insensible a eps=0.3" suffisait a alerter). Corrige : il faut
+   desormais que le modele resiste AUSSI a eps=0.5 et 1.0.
+2. Le test [1] pouvait declarer un faux positif sur la CE propre (`< 0.02`) : nos
+   modeles durcis sont TOUS tres surs (0.012 pour abl_a), donc le seuil alertait
+   sur la reference elle-meme. Corrige (seuils sur max-prob et ecart de logits).
+
+Ajout dans l'audit : **[3b] rayon robuste approche** (eps ou la precision passe
+sous 50% sous PGD a pas fin). C'est une meilleure mesure d'un modele qu'un pire
+cas a un eps arbitraire : elle permet de comparer deux candidats sur une courbe
+et non sur un point.
+
+**CE QUE CA CHANGE POUR LA LOI.** Notre ablation du 12/09 variait le PAS de
+l'attaque interne a nombre de pas fixe (20) : budget 2 eps -> 92.0%, 5 eps ->
+75.6%, 20 eps -> 6.8%. On en avait tire "c'est le budget qui compte". Or A1 garde
+un pas FIN (eps/10) et raccourcit le NOMBRE de pas : **93.6% de pire cas**. Et le
+run B (pas GROSSIER eps/4, budget 1.25 eps seulement) ne donnait que 42%.
+
+-> a budget comparable, un pas grossier detruit et un pas fin construit : **la
+finesse du pas est un facteur AUSSI important que le budget**. L'ablation
+precedente confondait les deux axes (elle changeait le pas ET le budget, puisque
+budget = pas x nombre de pas). La loi doit etre reformulee en deux dimensions.
+
+Deux mecanismes candidats pour expliquer les 93.6% (a departager, voir plus bas) :
+(a) pas fin + budget court = perturbation lisible et peu ample ;
+(b) l'arret anticipe change l'OBJECTIF en min-min (on entraine sur l'exemple
+adverse le MOINS difficile qui atteint la cible) : c'est exactement FAT (ICML
+2020), qui rapporte de meilleurs resultats que le min-max.
+
+EXPERIENCE 2x2 qui tranche (a ecrire dans le README avant de lancer) :
+
+| Run | pas | nombre de pas | arret anticipe | Question |
+|---|---|---|---|---|
+| abl_a (fait) | eps/10 | 20 (budget 2 eps) | non | reference 63.2% |
+| run B (fait) | eps/4 | 5 (budget 1.25 eps) | non | 42.0% |
+| A4 (a lancer) | eps/10 | 5 (budget 0.5 eps) | **non** | pas fin + budget court SUFFIT-il ? |
+| A1 (fait) | eps/10 | 20, tronque | oui (cible 0.5) | 93.6% |
+
+Si A4 fait ~93% : c'est le couple (pas fin, budget court), l'arret anticipe n'est
+qu'un moyen de trouver ce budget -> resultat simple et publiable.
+Si A4 fait ~40-60% : c'est l'OBJECTIF min-min (FAT) qui fait tout -> resultat plus
+profond, et il faut le dire clairement (on n'entraine plus sur le pire cas).
+
+PROCHAINE ETAPE (perimetre) : **AutoAttack sur `bande_cible50`** (item n°1 de la
+checklist "avant de publier"), puis lancer l'audit sur `abl_a` aussi pour une
+comparaison a armes egales (rayon robuste des deux modeles).
