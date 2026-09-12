@@ -290,6 +290,9 @@ DirectML fonctionne sur toute carte DirectX 12, mais Microsoft l'a place en
     |                          au pas k* ou la difficulte atteint la cible du batch
     |                          (option --bande ; note : ../attaque_adaptative.md)
     |-- test_attaque_adaptative.py <- verifie selection / equivalence pgd / cout
+    |-- audit_masquage.py  <- le modele est-il robuste ou est-ce que nos attaques
+    |                          ne le lisent plus ? (saturation, difference finie,
+    |                          eps jusqu'a 1.0, pas fin, transfert) - evaluation seule
     |-- smoothing.py       <- robustesse certifiee (randomized smoothing)
     `-- harden_torch.py    <- point d'entree (memes options que harden2.py)
 

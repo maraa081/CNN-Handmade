@@ -35,8 +35,13 @@
   `harden_v5_apgd_ce.pt` ; colonnes `CE adv` des logs abl_a / abl_c ; option
   `--pgd-alpha 0.05` (budget 1 eps) ; puis `--large` a budget 2 eps ; figure
   "pire cas vs budget" (faite) ; et l'**ATTAQUE A BUDGET ADAPTATIF de Maraa** :
-  formalisee et codee (`attaque_adaptative.md` + option `--bande`), aucun run
-  lance -> prochaine etape, tester le module puis les runs A1/A2/A3.
+  formalisee et codee (`attaque_adaptative.md` + option `--bande`), AUCUN RUN
+  LANCE -> prochaine etape, tester le module puis les runs A1/A2/A3.
+- **A1 (bande, cible tromperie 0.5) : pire cas 93.6% (Square-3000), RESULTAT
+  SUSPECT** -> `torch/audit_masquage.py` ecrit pour trancher (saturation des
+  sorties, difference finie, eps jusqu'a 1.0, pas fin, transfert depuis abl_a).
+  Details : section "2026-09-12 (21h10)" plus bas. **Ne rien publier tant que
+  l'audit n'est pas passe.**
 - **Commits de la journee** : 7bb256c, e354b82, 3f46836, 6e2eaa8, 4471a10,
   9a27947, 94c9177, 8d6fdb0, + le commit du module adaptatif.
 - **Commandes** : entrainer `python -u adversarial/torch/harden_torch.py ...`,
@@ -1023,3 +1028,68 @@ dans **`adversarial/attaque_adaptative.md`** (a lire avant de coder).
 STATUT : module ecrit et compile, **aucun run lance** (Maraa lance sur sa
 machine). Attendu honnete : +2 a +5 points de pire cas, et un entrainement moins
 cher ; le vrai gain est le recit (un seul hyperparametre de difficulte).
+
+### 2026-09-12 (21h10) - A1 (bande, cible tromperie 0.5) : 93.6% de pire cas, RESULTAT SUSPECT
+
+Run A1 termine en 20 min 12 s (meme cout que abl_a : la promesse "surcout nul" du
+module tient). Chiffres bruts (500 images, suite complete) :
+
+| Attaque (eps=0.30) | abl_a (reference) | **bande_cible50 (A1)** |
+|---|---|---|
+| precision propre | 99.6% | 98.6% |
+| FGSM | 94.0% | **98.2%** |
+| PGD-20 (3 restarts) | 91.6% | **96.2%** |
+| APGD-CE (100) | 89.8% | 95.6% |
+| APGD-DLR (100) | 85.4% | 95.4% |
+| Square (3000, 2 restarts) | 63.2% | **93.6%** |
+| NES | 92.4% | 97.4% |
+| CW-L2 (succes / distance) | 21.6% / 1.325 | **2.6% / 0.073** |
+| Boundary (succes) | 87.8% | 90.4% |
+| **PIRE CAS** | **63.2%** | **93.6%** |
+
+**+30 points de pire cas pour un changement d'hyperparametre d'attaque interne :
+c'est trop beau pour etre pris tel quel.** On ne publie rien avant d'avoir
+tranche entre deux explications.
+
+Prediction faite AVANT le juge (21h05, notee dans memory/2026-09-12.md) : pire
+cas 30-50%, regime du run B (budget effectif trop faible = robustesse masquee).
+**PREDICTION FAUSSE**, et assume : le mecanisme invoque n'est pas celui qui joue.
+
+Trois incoherences internes qui empechent d'y croire :
+
+1. **FGSM a eps=0.30 ne coute que 0.4 point** (98.2% contre 98.6% propre). Sur
+   abl_a le meme FGSM coutait 5.6 points. Une perturbation PLEINE GRANDEUR qui ne
+   change presque pas la decision = la sortie ne reagit plus a son entree
+   (suspicion de softmax saturee / logits enormes).
+2. **CW-L2 : 2.6% de succes a distance moyenne 0.073** (abl_a : 21.6% a 1.325).
+   Reussir tres pres de la frontiere sur 2.6% des images seulement n'est pas une
+   geometrie saine.
+3. **Toutes nos attaques lisent le gradient OU les scores** (FGSM, PGD, APGD,
+   Square, NES) : si ces signaux sont ecrases, la suite entiere se degrade en
+   recherche aveugle. Seule Boundary (label seul) ne depend pas d'eux - et il
+   passe encore sur 90.4%, ce qui n'est PAS le profil d'un modele robuste.
+
+Hypothese de travail : entrainer sur des attaques plus COURTES a retire la
+regularisation implicite de l'AT -> le modele optimise la CE propre plus
+violemment -> **logits qui explosent -> gradient et scores illisibles ->
+robustesse apparente**. C'est exactement la famille "obfuscated gradients"
+(Athalye et al. 2018), deja dans nos references.
+
+Outil ecrit pour trancher : **`torch/audit_masquage.py`** (evaluation seule, cinq
+tests) : (1) saturation des sorties (max-prob, CE propre, ecart de logits) ;
+(2) difference finie contre gradient analytique (le gradient fait-il mieux qu'une
+direction aleatoire ?) ; (3) balayage de eps jusqu'a 1.0 + controle par bruit
+aleatoire ; (4) pas fin (eps/100, eps/400) contre pas grossier ; (5) TRANSFERT
+depuis `abl_a` - le test decisif : une defense qui masque son gradient se fait
+battre par un transfert, qui n'utilise pas ce gradient.
+
+Commande :
+
+    python -u adversarial/torch/audit_masquage.py \
+      --weights models/bande_cible50.pt --reference models/abl_a_eps10.pt --device cuda
+
+CONSEQUENCE SUR LE PERIMETRE : si l'audit confirme le masquage, A1 est un FAUX
+positif, la cible "tromperie" est disqualifiee (elle sature vite) et il faut
+passer a la cible CE-relative (A2) AVEC le plancher de budget. Si l'audit est
+propre sur les cinq tests, on tient un resultat majeur (a croiser avec
+AutoAttack, item n°1 du perimetre, avant toute annonce).
