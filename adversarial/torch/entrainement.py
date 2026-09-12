@@ -445,7 +445,8 @@ def entrainer(modele, opt, train, val, args, device):
             perte_tot += perte.item() * len(bx)
 
         # [6] validation : propre + sous attaque. C'est ce chiffre (et non
-        #     l'accuracy propre) qui decide quel modele est sauvegarde.
+        #     l'accuracy propre) qui decide quel modele est sauvegarde -- sauf en
+        #     mode --sans-attaque, voir le critere juste apres.
         modele.eval()
         with torch.no_grad():
             acc_clean = accuracy(modele, x_val.to(device), y_val.to(device))
@@ -453,10 +454,31 @@ def entrainer(modele, opt, train, val, args, device):
                      args.eps, "pgd", args.val_steps)
         acc_rob = accuracy(modele, xa, y_val.to(device))
 
+        # [6bis] Critere de selection du meilleur modele.
+        #   - run robuste : la robustesse de validation (regle historique) ;
+        #   - --sans-attaque : la precision PROPRE.
+        # Pourquoi : en mode propre, la val PGD vaut 0% partout (c'est normal,
+        # un modele propre n'est pas robuste). Avec `acc_rob > meilleur`, la
+        # comparaison n'est vraie qu'une seule fois, a l'epoch 1 -- le modele
+        # exporte etait donc celui de l'epoch 1 (val clean 94.6%), pas le modele
+        # fini (99%+), et les runs robustes demarraient d'un warm start
+        # volontairement affaibli. Bug trouve le 2026-09-13 en lançant la serie
+        # KMNIST, avant que le run n'ait produit quoi que ce soit.
+        sans_attaque = getattr(args, "sans_attaque", False)
+        acc_critere = acc_clean if sans_attaque else acc_rob
+        nom_critere = "val clean" if sans_attaque else f"val PGD{args.val_steps}"
+
         dt = time.time() - t0
         reste = (args.epochs - epoch) * dt / 60
         detail = ""
-        if n_adv_tot:
+        if n_adv_tot and sans_attaque:
+            # La "moitie adverse" est ici le batch propre lui-meme : ces colonnes
+            # mesurent l'ERREUR D'ENTRAINEMENT, pas la reussite d'une attaque.
+            # Les nommer "CE adv / attaque" induisait en erreur (13/09).
+            ce_p = (ce_propre_som / n_propre_tot) if n_propre_tot else float("nan")
+            detail = (f" | CE {ce_p:5.3f} "
+                      f"| erreur train {n_adv_succ / n_adv_tot:6.1%}")
+        elif n_adv_tot:
             ce_p = (ce_propre_som / n_propre_tot) if n_propre_tot else float("nan")
             detail = (f" | CE propre {ce_p:5.3f} | CE adv {ce_adv_som / n_adv_tot:5.3f} "
                       f"| attaque {n_adv_succ / n_adv_tot:6.1%}")
@@ -475,7 +497,10 @@ def entrainer(modele, opt, train, val, args, device):
         # rejoint la CE propre, puis la val PGD10 tombe a 0.6%). On previent,
         # on ne corrige pas tout seul : c'est un probleme de recette d'attaque,
         # pas de patience.
-        if n_adv_tot and n_adv_succ / n_adv_tot < 0.5:
+        # En mode --sans-attaque il n'y a AUCUNE attaque interne : le signal
+        # mesure juste l'erreur d'entrainement en baisse, donc aucune alerte
+        # (sinon tous les runs de reference crient au loup pendant 120 epochs).
+        if n_adv_tot and not sans_attaque and n_adv_succ / n_adv_tot < 0.5:
             print(f"           [ALERTE] l'attaque interne ne trompe plus que "
                   f"{n_adv_succ / n_adv_tot:.0%} du batch adverse : la robustesse "
                   "apprise est en train de disparaitre (voir memoire.md, 2026-09-12).")
@@ -492,15 +517,15 @@ def entrainer(modele, opt, train, val, args, device):
             if msg:
                 print(f"           {msg}")
 
-        if args.collapse_tol and meilleur >= 0 and acc_rob < meilleur - args.collapse_tol:
+        if args.collapse_tol and meilleur >= 0 and acc_critere < meilleur - args.collapse_tol:
             epochs_sous += 1
-            print(f"           [ALERTE] val PGD{args.val_steps} {acc_rob:.1%} : "
-                  f"{meilleur - acc_rob:.1%} sous le meilleur ({meilleur:.1%}), "
+            print(f"           [ALERTE] {nom_critere} {acc_critere:.1%} : "
+                  f"{meilleur - acc_critere:.1%} sous le meilleur ({meilleur:.1%}), "
                   f"{epochs_sous} epoch(s) de suite.")
             if args.stop_on_collapse and epochs_sous >= args.collapse_patience:
                 print(f"           [ARRET] --stop-on-collapse : plus rien ne progresse depuis "
                       f"{epochs_sous} epochs. Meilleur modele conserve : {args.out} "
-                      f"(val PGD {meilleur:.1%}).")
+                      f"({nom_critere} {meilleur:.1%}).")
                 return meilleur
         else:
             epochs_sous = 0
@@ -510,10 +535,10 @@ def entrainer(modele, opt, train, val, args, device):
         # format state_dict simple (compatible --report et --npz).
         torch.save({"format": 2, "model": modele.state_dict(), "opt": opt.state_dict(),
                     "epoch": epoch, "lr": lr, "meilleur": meilleur}, args.out + "_last.pt")
-        if acc_rob > meilleur:
-            meilleur = acc_rob
+        if acc_critere > meilleur:
+            meilleur = acc_critere
             torch.save(modele.state_dict(), args.out)
-            print(f"           -> meilleur modele sauvegarde (val PGD {acc_rob:.2%})")
+            print(f"           -> meilleur modele sauvegarde ({nom_critere} {acc_critere:.2%})")
 
     return meilleur
 

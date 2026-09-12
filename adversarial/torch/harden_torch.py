@@ -300,9 +300,17 @@ def main():
     else:
         args.aug_cfg = None
 
-    print(f"[CONF] attack={args.attack} steps={args.pgd_steps} eps={args.eps} "
-          f"loss={args.loss} mix={args.mix} lr={args.lr} clip={args.clip} "
-          f"batch={args.batch} epochs={args.epochs} augment={args.augment}")
+    if args.sans_attaque:
+        # Sinon le log affiche attack=pgd et laisse croire qu'on entraine contre
+        # une attaque, alors que ce run est PROPRE (13/09).
+        print(f"[CONF] attack=AUCUNE (--sans-attaque, entrainement PROPRE) "
+              f"loss={args.loss} lr={args.lr} clip={args.clip} "
+              f"batch={args.batch} epochs={args.epochs} augment={args.augment}")
+        print("[CONF] selection du meilleur modele : val clean (pas la robustesse)")
+    else:
+        print(f"[CONF] attack={args.attack} steps={args.pgd_steps} eps={args.eps} "
+              f"loss={args.loss} mix={args.mix} lr={args.lr} clip={args.clip} "
+              f"batch={args.batch} epochs={args.epochs} augment={args.augment}")
     if args.bande:
         # Traceabilite : le budget de l'attaque interne n'est plus un nombre de
         # pas fixe, il faut donc ecrire la REGLE d'arret dans le log du run.

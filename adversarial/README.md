@@ -692,6 +692,18 @@ cartes AMD, réglage du batch) : [`torch/README.md`](torch/README.md).
 
 ### Réplication KMNIST (l'ancre Japon) — série lancée le 2026-09-13
 
+Deux corrections de code faites en préparant cette série (13/09) :
+
+1. `data/kmnist/` n'était jamais téléchargé par la piste PyTorch -> voir la note
+   « Données à télécharger une fois » ci-dessus.
+2. En mode `--sans-attaque` (run propre), le meilleur modèle était sélectionné
+   sur la **robustesse de validation** : comme elle vaut 0% partout pour un
+   modèle propre, la comparaison `> meilleur` n'était vraie qu'à l'epoch 1 et le
+   fichier exporté était le modèle de l'epoch 1 au lieu du modèle fini. La
+   sélection se fait maintenant sur la **précision propre** quand
+   `--sans-attaque` est actif (et l'alerte « l'attaque interne ne trompe plus »
+   est désactivée : sans attaque, elle mesure l'erreur d'entraînement).
+
 Même CNN, mêmes recettes, jeu japonais : la question est de savoir si la **loi
 locale** du projet (le budget de déplacement de l'attaque interne, puis l'ordre
 des budgets) reproduit à l'identique sur un autre jeu. Deux options ont été
@@ -721,7 +733,7 @@ python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
   --warm-start models/kmnist_standard.npz --out models/kmnist_plan_inverse.pt
 ```
 
-Extrapolation de la loi MNIST, écrite AVANT de lancer les runs : le départ dur
+Prédiction/extrapolation, écrite AVANT de lancer les runs : le départ dur
 (série 1) plafonne vers 60-65% de pire cas, la recette douce (série 2) monte
 vers ~84%, et l'ordre inverse (série 3) perd ~20 points. Si KMNIST ne se
 comporte pas comme MNIST, c'est que la loi n'est pas propre au jeu de données --
