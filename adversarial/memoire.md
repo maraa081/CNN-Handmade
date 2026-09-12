@@ -1419,3 +1419,25 @@ Consequence de methode : **on n'enchaine plus deux runs avec `--resume` pour
 simuler un curriculum** ; on utilise `--plan-budget`. Si on doit absolument
 reprendre, il faut passer `--lr` explicitement ET desactiver le planificateur de
 la phase courte (`--lr-drop ""`).
+
+### 2026-09-13 (01h05) - A6 : 82.40% OFFICIEL. Le plan suffit a +32 points, l'adaptatif ajoute +9
+
+AutoAttack `standard`, 10 000 images, eps=0.30 :
+
+| Recette | duree | propre | robuste (officiel) |
+|---|---|---|---|
+| A1 : budget adaptatif (cible par batch) | 20 min | 98.85% | **91.25%** |
+| A6 : plan deterministe `0.2 -> 2 eps` | 11 min | 99.17% | **82.40%** |
+| abl_a : constante 2 eps, depart dur | 20 min | 99.53% | 50.71% |
+
+- Le CURRICULUM explique +31.7 points (50.71 -> 82.40) : c'est l'ingredient
+  principal, et il coute un seul flag (`--plan-budget "0.2,2"`).
+- L'ASSERVISSEMENT par batch (idee Marla) ajoute +8.9 points (82.40 -> 91.25)
+  pour ~9 minutes de calcul en plus.
+- Notre suite maison est optimiste d'environ 3 points de facon coherente
+  (A6 : 85.8% annonce -> 82.40% officiel ; A1 : 93.6% -> 91.25%).
+
+Deux ablations du plan sont rentrees, a identifier par le modele de cout :
+13 min 57 s (coherent avec `"1,2"`) -> PGD-20 92.6% ; 8 min 17 s (coherent avec
+`"0.2,1"`) -> PGD-20 89.8%. **Le PGD-20 ne dit rien du pire cas** : la suite
+complete et l'audit sont necessaires avant de conclure.
