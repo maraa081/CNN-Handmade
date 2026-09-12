@@ -185,6 +185,35 @@ def _paliers_lr(spec, epochs):
                    for p in spec.split(",") if p.strip()})
 
 
+def pas_planifies(args, epoch):
+    """Nombre de pas de l'attaque interne pour cette epoch, si un plan de
+    budget est demande (`--plan-budget "0.2,2"`, bornes en multiples de eps).
+
+    CURRICULUM DETERMINISTE : le budget de l'attaque interne monte au fil du
+    run, lineairement. Le pas reste FIXE (eps/10), on ne change QUE le nombre
+    de pas -- donc le budget vaut `nombre de pas x pas`.
+
+    Pourquoi une option, alors qu'on peut relancer en deux phases avec
+    `--resume` : la reprise RESTAURE le learning rate du checkpoint, et les
+    paliers du lr sont calcules sur la duree de la phase. Une phase courte
+    (30 epochs) fait donc tomber le lr a 0.0005 (paliers aux epochs 15 et 24),
+    et la phase suivante repart a ce lr minuscule : le modele n'apprend plus.
+    Mesure du 2026-09-13 : A6 en deux phases = 71.2% au lieu des ~91% vises.
+    Un seul run supprime toute cette classe d'erreur.
+    """
+    if not getattr(args, "plan_budget", ""):
+        return args.pgd_steps
+    try:
+        deb, fin = (float(v) for v in args.plan_budget.split(","))
+    except ValueError:
+        print(f"  [PLAN] [warn] --plan-budget mal forme ({args.plan_budget}) : ignore")
+        return args.pgd_steps
+    alpha = args.pgd_alpha if args.pgd_alpha else args.eps / 10.0
+    t = (epoch - 1) / max(1, args.epochs - 1)
+    budget = deb + (fin - deb) * t          # en multiples de eps
+    return max(1, int(round(budget * args.eps / alpha)))
+
+
 def _beta_effectif(beta, epoch, epochs, warmup):
     """Rampe de beta pour TRADES.
 
@@ -230,6 +259,7 @@ def entrainer(modele, opt, train, val, args, device):
         return meilleur
 
     epochs_sous = 0        # epochs consecutifs sous le meilleur (garde-fou)
+    pas_ep_prec = None     # derniere valeur annoncee du plan de budget
 
     for epoch in range(start, args.epochs + 1):
         t0 = time.time()
@@ -246,6 +276,17 @@ def entrainer(modele, opt, train, val, args, device):
                   f"(rampe sur {args.beta_warmup:.0%} du run)")
 
         ordre = torch.randperm(n, generator=gen)
+        # [plan de budget] curriculum deterministe : le nombre de pas de
+        # l'attaque interne monte au fil du run (le PAS reste fixe, donc le
+        # budget `pas x alpha` monte avec lui).
+        pas_ep = args.pgd_steps
+        if getattr(args, "plan_budget", ""):
+            pas_ep = pas_planifies(args, epoch)
+            if pas_ep != pas_ep_prec:
+                alpha_eff = args.pgd_alpha if args.pgd_alpha else args.eps / 10.0
+                print(f"  [PLAN] budget attaque interne -> {pas_ep} pas "
+                      f"({pas_ep * alpha_eff / args.eps:.2f} eps)")
+                pas_ep_prec = pas_ep
         perte_tot = 0.0
         # Diagnostic de l'attaque interne (affiche sur la ligne d'epoch) :
         # perte sur la moitie PROPRE, perte et taux de tromperie sur la moitie
@@ -287,7 +328,7 @@ def entrainer(modele, opt, train, val, args, device):
                                          getattr(args, "cible_type", "tromperie"))
                 journal.ajouter(info)
             else:
-                bx_adv = attaque(modele, bx, by, args.eps, args.attack, args.pgd_steps,
+                bx_adv = attaque(modele, bx, by, args.eps, args.attack, pas_ep,
                                  getattr(args, "pgd_alpha", None))
             modele.train()
 

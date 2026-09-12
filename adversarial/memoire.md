@@ -1392,3 +1392,30 @@ Nuance a garder sur le metrique de sensibilite : il separe les REGIMES
 
 A FAIRE : identifier les deux runs colles sans etiquette (1 min 33 s : PGD-20
 0.3 = 21.0% ; 12 min 30 s : PGD-20 0.3 = 71.2%) -> demander les commandes a Maraa.
+
+### 2026-09-13 (00h10) - PIEGE DE LA REPRISE : le lr du checkpoint est restaure
+
+A6 en deux phases (`a6_gradient_doux` puis `a6_doux`) est INVALIDE, et ce n'est
+pas une hypothese : c'est le code.
+
+- `harden_torch.py` ligne 328 : si `--lr` n'est pas donne, la reprise fait
+  `args.lr = ck["lr"]` -- le learning rate du checkpoint est RESTAURE.
+- La phase 1 tournait avec `--epochs 30`, donc `_paliers_lr("0.5,0.8", 30)` donne
+  les paliers **15 et 24** : le lr tombe a 0.005 puis **0.0005** des l'epoch 24.
+- La phase 2 a donc repris a **lr 0.0005 au lieu de 0.05** (100x trop petit) et a
+  entraine un modele quasi gele. Son resultat (71.2% sous PGD-20 a 0.3) ne dit
+  RIEN du curriculum.
+
+Signature a chercher dans le log de la phase 2 : `[RESUME] lr repris du
+checkpoint -> 0.00050`.
+
+CORRECTIF : nouvelle option **`--plan-budget "deb,fin"`** (en multiples de eps),
+qui fait le curriculum DANS UN SEUL RUN : le pas reste fixe (alpha = eps/10), seul
+le NOMBRE de pas monte lineairement. Exemple `--plan-budget "0.2,2"` = 2 pas a
+l'epoch 1 -> 20 pas a la fin. Le plan est annonce au demarrage (`[PLAN]`) et a
+chaque changement de valeur (`[PLAN] budget attaque interne -> N pas`).
+
+Consequence de methode : **on n'enchaine plus deux runs avec `--resume` pour
+simuler un curriculum** ; on utilise `--plan-budget`. Si on doit absolument
+reprendre, il faut passer `--lr` explicitement ET desactiver le planificateur de
+la phase courte (`--lr-drop ""`).

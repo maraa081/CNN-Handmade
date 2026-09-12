@@ -54,7 +54,7 @@ sys.path.insert(0, dirname(abspath(__file__)))
 
 from modele import CNN, charger_npz, sauver_npz, nb_parametres          # noqa: E402
 from entrainement import (charger_train, charger_test, entrainer,       # noqa: E402
-                          rapport, CONFIG_AUG)
+                          rapport, CONFIG_AUG, pas_planifies)
 
 EPS_EVAL = [0.05, 0.1, 0.2, 0.3]
 
@@ -212,6 +212,12 @@ def main():
     p.add_argument("--plafond-tol", type=float, default=0.5,
                    help="alerte quand la cible n'est atteinte qu'au plafond sur plus "
                         "de N des batchs")
+    p.add_argument("--plan-budget", default="",
+                   help="curriculum deterministe : budget de l'attaque interne de "
+                        "DEPART a FIN, en multiples de eps (ex. '0.2,2'). Le pas reste "
+                        "fixe (--pgd-alpha), seul le nombre de pas monte. Un seul run : "
+                        "a preferer a deux runs enchaines par --resume (le lr du "
+                        "checkpoint est restaure et fausse la phase 2).")
     p.add_argument("--eval-n", type=int, default=500)
     p.add_argument("--quick", action="store_true")
     args = p.parse_args()
@@ -300,6 +306,12 @@ def main():
               f"{args.cible:.2f} ({args.cible_type}), depart {args.cible_depart:.2f}, "
               f"rampe {args.cible_rampe:.0%} du run, plafond tolere "
               f"{args.plafond_tol:.0%} des batchs | note : attaque_adaptative.md")
+    if args.plan_budget:
+        alpha_eff = args.pgd_alpha if args.pgd_alpha else args.eps / 10.0
+        print(f"[PLAN] curriculum deterministe : budget de {args.plan_budget} eps "
+              f"(pas fixe {alpha_eff:.4f} = {alpha_eff / args.eps:.2f} eps, donc "
+              f"{pas_planifies(args, 1)} pas a l'epoch 1 -> "
+              f"{pas_planifies(args, args.epochs)} pas a la fin)")
 
     # -- Modele --
     modele = CNN(large=args.large).to(device)
