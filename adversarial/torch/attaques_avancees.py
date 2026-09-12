@@ -116,7 +116,11 @@ def apgd(modele, x, y, eps, loss="ce", steps=100, restarts=1, rho=0.75, seed=0):
         if r == 0:
             x_r = x.clone()
         else:
-            b = torch.empty_like(x).uniform_(-eps, eps, generator=gen)
+            # generateur CPU + tenseur cree sur CPU : la sequence aleatoire est
+            # identique sur CPU et sur GPU (reproductible), et surtout le
+            # generateur ne peut pas etre CPU quand le tenseur est CUDA.
+            b = torch.empty_like(x, device="cpu").uniform_(
+                -eps, eps, generator=gen).to(dev)
             x_r = _projeter(x + b.to(dev), x, eps)
 
         x_prev = x_r.clone()
@@ -190,7 +194,8 @@ def square(modele, x, y, eps, steps=500, restarts=1, p_init=0.8, seed=0):
         if r == 0:
             delta = torch.zeros_like(x)
         else:
-            b = torch.empty_like(x).uniform_(-eps, eps, generator=gen).to(dev)
+            b = torch.empty_like(x, device="cpu").uniform_(
+                -eps, eps, generator=gen).to(dev)
             delta = (x_clip + b).clamp(0.0, 1.0) - x_clip
         obj = _obj(modele, x_clip + delta, y, "ce")
 
