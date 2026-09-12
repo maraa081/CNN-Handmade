@@ -84,6 +84,22 @@ def _obj(modele, z, y, loss="ce"):
         return objectif(modele(z), y, loss)
 
 
+def objectif_par_lots(modele, z, y, loss="ce", lot=2048):
+    """Meme chose que `objectif(modele(z), y, loss)`, mais par tranches.
+
+    Correctif du 2026-09-12 : NES construisait UN SEUL lot de `samples * n`
+    images (10 x 10 000 = 100 000 a l'evaluation sur tout le jeu de test), soit
+    ~9.4 Gio d'activations dans la premiere convolution -> HIP out of memory sur
+    une carte de 16 Gio. Ici la memoire reste bornee par `lot`, quelle que soit
+    la taille du jeu qu'on evalue.
+    """
+    if z.shape[0] <= lot:
+        return objectif(modele(z), y, loss)
+    morceaux = [objectif(modele(z[i:i + lot]), y[i:i + lot], loss)
+                for i in range(0, z.shape[0], lot)]
+    return torch.cat(morceaux)
+
+
 # --------------------------------------------------------------------------
 #  APGD : PGD avec pas adaptatif, momentum et restarts (Croce & Hein 2020)
 # --------------------------------------------------------------------------
@@ -317,11 +333,12 @@ def nes(modele, x, y, eps, steps=40, samples=20, sigma=0.005,
     for _ in range(steps):
         u = torch.randn(samples, n, *forme, generator=gen).to(dev)
         base = (x + delta).unsqueeze(0)
+        yrep = y.repeat(samples)
         with torch.no_grad():
-            op = objectif(modele((base + sigma * u).reshape(samples * n, *forme)),
-                          y.repeat(samples), "ce").view(samples, n)
-            om = objectif(modele((base - sigma * u).reshape(samples * n, *forme)),
-                          y.repeat(samples), "ce").view(samples, n)
+            op = objectif_par_lots(modele, (base + sigma * u).reshape(samples * n, *forme),
+                                   yrep, "ce").view(samples, n)
+            om = objectif_par_lots(modele, (base - sigma * u).reshape(samples * n, *forme),
+                                   yrep, "ce").view(samples, n)
         g = (((op - om) / (2.0 * sigma)).view(samples, n, 1, 1, 1) * u).mean(dim=0)
 
         cand = _projeter(x + delta + alpha * g.sign(), x, eps)

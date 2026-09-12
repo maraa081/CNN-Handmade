@@ -1159,3 +1159,68 @@ profond, et il faut le dire clairement (on n'entraine plus sur le pire cas).
 PROCHAINE ETAPE (perimetre) : **AutoAttack sur `bande_cible50`** (item n°1 de la
 checklist "avant de publier"), puis lancer l'audit sur `abl_a` aussi pour une
 comparaison a armes egales (rayon robuste des deux modeles).
+
+### 2026-09-12 (21h45) - RAYONS ROBUSTES + AUDIT CROISE : LE RESULTAT CHANGE DE NATURE
+
+L'audit a tourne sur les deux modeles. Tableau comparatif complet :
+
+| Mesure | abl_a (reference) | **bande_cible50 (A1)** |
+|---|---|---|
+| propre (500 / 10 000 images) | 99.6% / - | 98.6% / 98.8% |
+| CE propre | 0.0122 | 0.0454 |
+| delta CE le long du gradient (eps=0.3) | **+0.2675** | **+0.0384** |
+| delta CE en direction ALEATOIRE | +0.2091 | +0.0045 |
+| **rapport gradient / aleatoire** | **x1.28** | **x8.52** |
+| rayon robuste (PGD pas fin, seuil 50%) | ~0.41 | ~0.39 |
+| pire cas @0.3 (notre suite) | 63.2% | 93.6% |
+| pire cas @0.3 (PGD fin, 100 pas) | 91.2% | 96.0% |
+
+TROIS CONCLUSIONS, et la premiere change le recit du projet.
+
+1. **Les deux modeles ont le MEME RAYON ROBUSTE (~0.40).** Les courbes se
+   croisent vers 0.34 : en dessous A1 est meilleur (0.30 : 96.0% contre 91.2%),
+   au-dessus c'est abl_a (0.40 : 55.8% contre 45.2% ; 0.45 : 13.2% contre 11.0%).
+   Donc A1 **n'est pas "plus robuste"** : a rayon egal, le +30 points a eps=0.3
+   est un EFFET DE FENETRE, pas un gain de robustesse. C'est ce qu'il faut
+   annoncer, sinon on se fait demonter en review ("vous avez ameliore la metrique
+   au eps ou vous mesurez").
+
+2. **Ce qui a vraiment change : la PLATITUDE de la surface DANS la boule.**
+   - Chez abl_a, la CE monte de +0.27 des qu'on bouge dans la boule, et la
+     direction du gradient ne fait presque pas mieux qu'une direction aleatoire
+     (x1.28) : le modele est "sensible partout, mais mal guide".
+   - Chez A1, la CE ne bouge quasi pas (+0.038, soit 7x moins) et le gradient
+     est informatif (x8.52).
+   Cela explique DEJA deux choses qui nous obsedaient :
+   - l'ecart de 22-28 points entre APGD et Square sur abl_a : quand le gradient
+     ne guide plus, seule une recherche par SCORES trouve les poches de perte
+     elevee. Square n'est pas "plus fort", c'est le gradient qui est aveugle ;
+   - le 93.6% de A1 sous Square : il n'y a simplement pas de poche a trouver.
+   **Le rapport gradient/aleatoire (test [2] de l'audit) predit l'ecart**
+   (abl_a 1.28 -> 22-28 pts ; A1 8.52 -> 1.8 pt). Deux points font une
+   hypothese, pas une loi -> a verifier sur v4, abl_b, abl_c (3 x 5 min).
+
+3. **Le sous-echantillon de 500 images nous flattait.** A 10 000 images, A1
+   descend : APGD-CE 95.6% -> 93.8%, PGD-20 96.2% -> 95.3%, FGSM 98.2% -> 97.4%.
+   On a compare 8 modeles sur les MEMES 500 images de test : c'est de
+   l'ajustement au chiffre. Regle : selectionner sur la validation, ANNONCER sur
+   10 000 images de test.
+
+Bug corrige au passage : NES construisait un seul lot de `samples x n` images
+(10 x 10 000 = 100 000) -> 9.4 Gio d'activations -> HIP out of memory. Corrige
+par `objectif_par_lots` dans `attaques_avancees.py` (tranches de 2048, memoire
+bornee quelle que soit la taille du jeu).
+
+Nouveaux outils :
+- `torch/eval_autoattack.py` : le juge officiel (APGD-CE, APGD-DLR, FAB, Square,
+  version `plus` pour les chiffres d'annonce). C'est l'item n°1 du perimetre.
+- audit [3b] rayon robuste, et audit [2] rapport gradient/aleatoire comme
+  predicteur de l'ecart gradient <-> scores.
+
+PROCHAINES ETAPES (dans l'ordre) :
+1. relancer l'evaluation 10 000 images avec le NES corrige (Square + NES) ;
+2. AutoAttack sur `bande_cible50` ET sur `abl_a` (le croisement des chiffres) ;
+3. auditer v4, abl_b, abl_c -> nuage de points (rapport gradient/aleatoire,
+   ecart APGD-Square) pour tester la prediction du point 2 ;
+4. experience 2x2 (A4 sans arret anticipe a pas fin et 5 pas ; A5 arret anticipe
+   a pas grossier) pour expliquer la platitude.

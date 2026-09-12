@@ -66,6 +66,20 @@ from adversarial.torch.entrainement import charger_test             # noqa: E402
 from adversarial.torch.eval_suite import charger_modele             # noqa: E402
 
 SUSPECTS = []
+DRAPEAUX = []        # profil a surveiller (n'est PAS une preuve de masquage)
+PREUVES = []         # element qui, lui, conclut au masquage
+
+
+def drapeau(test, message, detail):
+    """Signe de profil : ne conclut a RIEN tout seul (voir la synthese).
+
+    Lecon du 12/09 : un modele MNIST durci est naturellement tres confiant et sa
+    surface peut etre rugueuse (le gradient renseigne mal) SANS masquer quoi que
+    ce d'autre. Ce qui fait un masquage, c'est le profil + le fait que TOUTES les
+    attaques echouent, y compris a eps=1.0. On separe donc les deux.
+    """
+    DRAPEAUX.append(f"{test} : {detail}")
+    print(f"    [NOTE] {message}")
 
 
 def alerte(test, message):
@@ -136,9 +150,11 @@ def main():
             ref = None
 
     if surconf > 0.8 or ecart > 20.0:
-        alerte(1, "sorties quasi saturees (max-prob > 0.999 sur presque toutes "
-                  "les images, ecart de logits enorme) : gradient et scores sont "
-                  "ecrases, les attaques qui les lisent perdent leur signal")
+        drapeau(1, "sorties tres confiantes (courant sur MNIST durci : un modele "
+                   "a 99.6% en propre est presque toujours > 0.999) -- a confronter "
+                   "au rayon robuste du test [3b]",
+                f"sorties tres confiantes (max-prob>0.999 sur {surconf:.0%}, "
+                f"ecart de logits {ecart:.1f})")
     else:
         ok(1, "sorties non saturees : les attaques ont de quoi lire le modele")
     # Remarque (2026-09-12) : la CE propre seule ne dit RIEN de la saturation. Nos
@@ -165,13 +181,21 @@ def main():
     print(f"    gradient / aleatoire            : x{rapport:.2f}")
     print(f"    |gradient| moyen (par pixel)    : {g.abs().mean().item():.3e}")
     if d_grad <= 0:
-        alerte(2, "la perturbation dans le sens du gradient NE FAIT PAS monter la "
-                  "perte : le gradient ne pointe plus la vulnerabilite")
+        drapeau(2, "la perturbation dans le sens du gradient ne fait pas monter la "
+                   "perte : le gradient ne pointe plus la vulnerabilite",
+                "gradient non informatif (delta CE <= 0)")
     elif rapport < 2.0:
-        alerte(2, f"la direction du gradient fait a peine mieux qu'une direction "
-                  f"aleatoire (x{rapport:.2f}) : signal tres faible")
+        drapeau(2, f"la direction du gradient fait a peine mieux qu'une direction "
+                   f"aleatoire (x{rapport:.2f}) : surface rugueuse, l'attaquant a "
+                   "gradient va patiner. ATTENTION : cela PREDIT un ecart entre "
+                   "attaques a gradient et attaques par scores (verifier la ligne "
+                   "APGD vs Square de la suite), sans que le modele soit masque",
+                f"gradient peu informatif (x{rapport:.2f} contre une direction aleatoire)")
     else:
         ok(2, f"le gradient reste informatif (x{rapport:.2f} mieux que l'aleatoire)")
+    print(f"    [INDICE] rapport gradient/aleatoire : abl_a = 1.28 (ecart APGD/Square de "
+          f"22-28 pts) ; bande_cible50 = 8.52 (ecart de 1.8 pt). Ce rapport "
+          f"est le meilleur predicteur qu'on ait trouve de cet ecart.")
 
     # ---------------------------------------------------------------- [3]
     print("\n[3] Balayage de eps (jusqu'a la borne non contrainte) + bruit aleatoire")
@@ -196,17 +220,17 @@ def main():
     tres_faibles = [l for l in lignes if l[0] >= 0.3 and l[1] > 0.95 and l[2] > 0.95]
     resiste_partout = all(l[1] > 0.90 for l in lignes if l[0] >= 0.5)
     if tres_faibles and resiste_partout:
-        alerte(3, "le modele reste insensible a eps=1.0 : la il n'y a plus de "
-                  "robustesse a trouver, la decision ne depend plus de l'entree")
+        PREUVES.append("le modele reste insensible a eps=1.0 : la il n'y a plus de "
+                       "robustesse a trouver, la decision ne depend plus de l'entree")
+        print("    [SUSPECT] insensible jusqu'a eps=1.0")
     elif tres_faibles:
         print("    [OK] insensible jusqu'a eps=0.3 mais s'effondre au-dela : ce "
               "n'est PAS un masquage, c'est un RAYON ROBUSTE reel (voir [3b])")
     for eps, a_fgsm, _a_pgd, _a_fin, a_bruit in lignes:
         if eps == args.eps and a_bruit < a_fgsm - 0.05:
-            alerte(3, f"a eps={eps}, du BRUIT ALEATOIRE fait plus de degats "
-                      f"({a_bruit:.1%}) que l'attaque dirigee ({a_fgsm:.1%}) : "
-                      "signature d'un masquage (le bruit n'utilise ni gradient "
-                      "ni score)")
+            PREUVES.append(f"a eps={eps}, le bruit aleatoire fait plus de degats "
+                           f"({a_bruit:.1%}) que l'attaque dirigee ({a_fgsm:.1%})")
+            print(f"    [SUSPECT] bruit aleatoire plus efficace que l'attaque dirigee")
 
     # ---------------------------------------------------------------- [3b]
     # Le vrai chiffre a comparer entre modeles n'est pas le pire cas a un eps
@@ -264,27 +288,39 @@ def main():
               f"(white-box : {a_wb_pgd:.1%})")
         # Comparaison a armes egales : transfert PGD contre white-box PGD.
         if a_t_pgd < a_wb_pgd - 0.05:
-            alerte(5, f"un transfert bat l'attaque white-box de "
-                      f"{a_wb_pgd - a_t_pgd:.1%} : le masquage est confirme, "
-                      "la robustesse n'est pas dans les poids")
+            PREUVES.append(f"un transfert bat l'attaque white-box de "
+                           f"{a_wb_pgd - a_t_pgd:.1%} : la robustesse n'est pas dans "
+                           "les poids")
+            print("    [SUSPECT] le transfert bat le white-box")
         else:
             ok(5, "le transfert ne bat pas l'attaque white-box : pas de masquage")
 
     # ---------------------------------------------------------------- synthese
     print("\n" + "=" * 72)
-    if SUSPECTS:
-        print(f"  SYNTHESE : {len(SUSPECTS)} signal(aux) de masquage")
-        for s in SUSPECTS:
+    if PREUVES:
+        print(f"  SYNTHESE : MASQUAGE PROBABLE ({len(PREUVES)} preuve(s))")
+        for s in PREUVES:
             print(f"    - {s}")
         print("\n  -> NE PAS publier ni entrainer davantage sur ce modele avant")
         print("     d'avoir tranche : un modele qui masque son gradient peut")
         print("     tomber a 30% sous une attaque adaptative (AutoAttack).")
+    elif DRAPEAUX or SUSPECTS:
+        print("  SYNTHESE : aucun masquage (le modele s'effondre des que eps augmente,"
+              " donc il y a un rayon robuste reel a trouver), MAIS a surveiller :")
+        for s in DRAPEAUX:
+            print(f"    - [profil] {s}")
+        for s in SUSPECTS:
+            print(f"    - [mesure] {s}")
+        print("\n  -> ces signes decrivent une surface RUGUEUSE et tres confiante, pas une")
+        print("     defense opaque. Consequence attendue : les attaques par SCORES doivent")
+        print("     battre les attaques a gradient sur ce modele. A confirmer par la suite")
+        print("     d'attaques (ligne APGD vs Square) et par AutoAttack.")
     else:
         print("  SYNTHESE : aucun signe de masquage sur ces cinq tests.")
         print("  -> la robustesse est plausible ; la croiser avec AutoAttack")
         print("     reste l'etape 1 du perimetre avant toute publication.")
     print("=" * 72)
-    return 1 if SUSPECTS else 0
+    return 1 if PREUVES else 0
 
 
 if __name__ == "__main__":
