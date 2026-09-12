@@ -823,12 +823,17 @@ haut. Ce qui reste, par ordre d'importance :
 | Priorité | À faire | Pourquoi |
 |---|---|---|
 | 1 | **Croiser nos chiffres avec `autoattack`** (le paquet officiel) | notre APGD est une réimplémentation maison : sans ce croisement, aucun chiffre n'est opposable devant une review |
-| 2 | **Run v4** (PGD-20 au pas eps/10) puis réévaluation par la MÊME suite | répondre au pire cas de 42.0% (Square) : vérifier que la cause était bien une attaque d'entraînement trop grossière |
+| 2 | **Attaquer l'écart gradient <-> Square (22 points)** : APGD-DLR 85.4% contre Square-3000 63.2% | c'est LE résultat honnête à publier et le principal point ouvert du modèle. Pistes : transférer/ensembler, `--large` (1,7M paramètres) à budget 2 eps, ou s'entraîner contre une attaque par scores |
 | 3 | **Smoothing à relancer** (`--epochs 90`) | le bug de learning rate est corrigé (commit 4f420f8) ; le run précédent s'effondrait |
 | 4 | **KMNIST** : entraîner proprement et documenter | l'ancre Japon du repo (aujourd'hui : 70.1% sur 5000 images / 3 epochs, preuve de chaîne seulement) |
 | 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
-| 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense" |
+| 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense", avec la **loi du budget de déplacement de l'attaque interne** comme pièce centrale |
 | 7 | **Model card Hugging Face + Space Gradio** | la publication elle-même (poids, recette, robustesse par eps, limites) |
+
+**Fait depuis (2026-09-12)** : run v4 (pire cas 61.8%) puis sa reproduction
+`abl_a` (pire cas **63.2%**, nouveau modèle de référence) ; **ablation contrôlée
+du pas de l'attaque interne** (budget 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps ->
+6.8%) ; diagnostic `diag_attaque_interne.py`.
 
 Pistes complémentaires (non bloquantes) : modèle plus gros (`--large`, ~1,7M
 paramètres) pour tester l'hypothèse "capacité" ; Free-AT (Wong 2020, bien moins

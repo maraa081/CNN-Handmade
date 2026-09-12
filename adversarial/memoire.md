@@ -16,6 +16,29 @@
 
 ##  Journal
 
+## ETAT AU 2026-09-12 (20h40) - REPRENDRE ICI
+
+- **Meilleur modele : `models/abl_a_eps10.pt`** (recette PGD-20 pas eps/10,
+  augment, 120 epochs, 60k images, lr 0.05) -> propre 99.6%, PGD-20 (3 restarts)
+  91.6%, APGD-DLR 85.4%, Square-500 82.0%, **Square-3000 63.2% = pire cas**
+  (v4 : 61.8%). Contre-exemple a garder pour l'article :
+  `models/harden_v5_apgd_ce.pt` (propre 99.2% / robuste 14%).
+- **LOI DU BUDGET DE DEPLACEMENT** (section du 20h30 ci-dessous) : a recette
+  identique, budget 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps -> 6.8%. Notre APGD
+  (pas de 2 eps = budget 40 eps) entraine un modele a ~11% : bon pour JUGER,
+  mauvais pour ENTRAINER. Ne jamais utiliser `apgd-*` comme attaque interne.
+- **Probleme ouvert** : 22 points entre APGD-DLR (85.4%) et Square-3000 (63.2%).
+- **En attente** : eval_suite de abl_b (5 eps) et abl_c (20 eps) pour la courbe
+  "pire cas vs budget" ; push des poids `harden_v6_pgd20eps10.pt` (= abl_a) et
+  `harden_v5_apgd_ce.pt` ; colonnes `CE adv` des logs abl_a / abl_c ; option
+  `--pgd-alpha 0.05` (budget 1 eps) ; puis `--large` a budget 2 eps.
+- **Commits de la journee** : 7bb256c, e354b82, 3f46836, 6e2eaa8, 4471a10, 9a27947.
+- **Commandes** : entrainer `python -u adversarial/torch/harden_torch.py ...`,
+  evaluer `python -u adversarial/torch/eval_suite.py --weights ...`, diagnostiquer
+  `python -u adversarial/torch/diag_attaque_interne.py --weights ...`. Tout tourne
+  dans **WSL Ubuntu-24.04** (`~/.venv-rocm`, `HSA_ENABLE_DXG_DETECTION=1`), PAS
+  dans Git Bash.
+
 ### 2026-08-24 — Préparation du terrain
 
 - Structure `adversarial/` créée (README, scripts/, results/, ce carnet)

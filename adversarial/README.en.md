@@ -818,12 +818,17 @@ remains, in order of importance:
 | Priority | To do | Why |
 |---|---|---|
 | 1 | **Cross-check our numbers with `autoattack`** (the official package) | our APGD is a hand-made reimplementation: without this cross-check, no number is defensible in a review |
-| 2 | **Run v4** (PGD-20 with eps/10 steps) then re-evaluate with the SAME suite | answer the 42.0% worst case (Square): confirm the cause was a too-coarse training attack |
+| 2 | **Attack the gradient <-> Square gap (22 points)**: APGD-DLR 85.4% vs Square-3000 63.2% | this is THE honest result to publish and the main open point of the model. Leads: transfer/ensemble, `--large` (1.7M parameters) with a 2 eps budget, or training against a score-based attack |
 | 3 | **Re-run smoothing** (`--epochs 90`) | the learning-rate bug is fixed (commit 4f420f8); the previous run was collapsing |
 | 4 | **KMNIST**: train properly and document | the Japan anchor of the repo (today: 70.1% on 5000 images / 3 epochs, pipeline check only) |
 | 5 | **Settle the TRADES variant** | deviation from the reference implementation (see `defenses.md` 6.5): align the code or document the variant |
-| 6 | **In-depth write-up** (FR + EN) | the full story "build -> attack -> defend -> break your own defence" |
+| 6 | **In-depth write-up** (FR + EN) | the full story "build -> attack -> defend -> break your own defence", with the **inner attack's travel-budget law** as the centrepiece |
 | 7 | **Hugging Face model card + Gradio Space** | the publication itself (weights, recipe, robustness per eps, limits) |
+
+**Done since (2026-09-12)**: run v4 (worst case 61.8%) then its reproduction
+`abl_a` (worst case **63.2%**, the new reference model); the **controlled ablation
+of the inner attack's step size** (budget 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps
+-> 6.8%); the `diag_attaque_interne.py` diagnostic.
 
 Further leads (non-blocking): larger model (`--large`, ~1.7M parameters) to
 test the "capacity" hypothesis; Free-AT (Wong 2020, much cheaper); ROCm to move
