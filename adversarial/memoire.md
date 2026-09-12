@@ -816,3 +816,68 @@ interne decide si l'entrainement apprend, pas sa force".
 Le diag a ete enrichi pour mesurer directement cette douceur : colonnes
 `|d|moy`, `borne` (part de pixels a |delta| = eps) et `signes opposes` (50% =
 masque aleatoire, moins = champ coherent).
+
+### 2026-09-12 (20h30) - ABLATION : la LOI DU BUDGET DE DEPLACEMENT de l'attaque interne
+
+Experience controlee demandee apres le plateau a 11.6% : meme commande, meme
+recette (PGD-20 pas, eps=0.30, augment, batch 256, lr 0.05, 120 epochs, seed 42,
+60 000 images), **seul le pas de l'attaque interne change**. Le "budget de
+deplacement" est `pas x nombre de pas` : c'est la distance maximale (en L-infini)
+que l'attaque peut parcourir dans la boule.
+
+Evaluation finale (500 images, PGD-20, 1 restart) :
+
+| Run | pas alpha | budget | FGSM eps=0.30 | PGD-20 eps=0.30 |
+|---|---|---|---|---|
+| abL_a | 0.03 (eps/10) | 0.6 = **2 eps** | 94.0% | **92.0%** |
+| abl_b | 0.075 (eps/4) | 1.5 = 5 eps | 79.4% | 75.6% |
+| abl_c | 0.30 (eps) | 6.0 = 20 eps | 48.6% | **6.8%** |
+
+Et si on ajoute tous les runs precedents (meme recette, meme budget de 120
+epochs), la tendance est monotone :
+
+| Run | attaque interne | budget | PGD-20 eps=0.3 | pire cas |
+|---|---|---|---|---|
+| run B | PGD-5, eps/4 | 0.375 = 1.25 eps | 91.0% | 42.0% (Square 3000) |
+| v4 | PGD-20, eps/10 | 0.6 = 2 eps | 90.4% | **61.8%** |
+| abl_a | PGD-20, eps/10 | 0.6 = 2 eps | **92.0%** | a mesurer |
+| abl_b | PGD-20, eps/4 | 1.5 = 5 eps | 75.6% | a mesurer |
+| abl_c | PGD-20, eps | 6.0 = 20 eps | 6.8% | a mesurer |
+| v5 | APGD-CE-20, pas 2 eps | 12.0 = 40 eps | ~11% | - |
+
+LECTURE :
+
+1. **La robustesse apprise decroit avec le budget de deplacement de l'attaque
+   interne**, et il y a une FALAISE entre 2 eps et 20 eps : a budget 2 eps on
+   obtient 92%, a budget 6 eps on tombe a 6.8%. Ce n'est donc pas la "force" de
+   l'attaque interne qui compte (au sens du pire cas qu'elle atteint) : c'est la
+   LISIBILITE de la perturbation qu'elle fabrique.
+2. **Mecanisme.** Avec un pas >= eps, chaque iteration saute au COIN de la boule
+   (tous les pixels a la borne) et la suivante re-saute vers un autre coin, en
+   suivant le gradient evalue sur une image deja totalement deformer : le motif de
+   signe obtenu est chaotique, proche d'un masque de bruit. Le modele ne peut pas
+   apprendre une frontiere coherente dessus : il se bloque et repond
+   uniformement (CE = ln(10) = 2.303, mesure exacte du plateau a 11.6%). Avec un
+   pas fin (eps/10), la perturbation se construit progressivement, en accumulant
+   des signes de gradient coherents : elle reste lisible, et le modele apprend.
+3. **Pourquoi APGD echoue comme attaque interne alors qu'il est excellent en
+   evaluation** : APGD (Croce & Hein) demarre avec un pas de **2 eps** et adapte
+   a la hausse la puissance de sa recherche. C'est exactement ce qu'on veut pour
+   JUGER un modele (trouver le pire point), et exactement ce qui detruit
+   l'apprentissage (budget 40 eps -> plateau ln(10)). Ce n'est pas un bug de
+   notre port : c'est un CONTRAT different.
+4. **Le bon reglage est un compromis, pas un maximum.** Trop mou, l'entrainement
+   apprend une robustesse masquee (run B, budget 1.25 eps : 91% sous PGD-20 mais
+   42% seulement de pire cas). Trop dur, il n'apprend plus rien (abl_c, v5).
+   Le creux de la courbe est autours de **2 eps** (PGD-20 pas eps/10) : 92% sous
+   PGD-20 ET le meilleur pire cas mesure (61.8% pour v4, meme recette).
+
+REGLE A RETENIR : **une attaque interne doit rester DOUCE (budget <= 2 eps, donc
+pas <= eps/10 avec 20 pas). On n'entraine pas contre la meme attaque qu'on
+utilise pour juger.** Si le budget depasse ~5 eps, l'entrainement se verrouille
+(CE adverse = ln(10)) et le tableau de bord le montre des les premieres epochs.
+
+A FAIRE : pire cas de abl_a (eval_suite avec Square 3000) pour verifier qu'il
+egale ou depasse v4 (61.8%) ; comparer les colonnes CE adv des logs abl_a et
+abl_c (attendu : ~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin
+(eps/20) pour savoir si le creux est plus bas.

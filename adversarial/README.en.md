@@ -192,10 +192,32 @@ announcing 91.0% while the worst case was 42.0%.
 | v5 (attempt 1) | APGD-DLR | 10 | adaptive | yes | pgdat | **collapsed** : val PGD10 46.5% -> 0.6% (inner attack no longer effective) |
 | v5 (attempt 2) | APGD-CE | 20 | adaptive | yes | pgdat | val PGD10 **stuck at 11.6%** (attack returned the random start) |
 | v5 (to relaunch) | APGD-CE | 20 | adaptive | yes | pgdat | - |
+| abl_a | PGD | 20 | eps/10 (budget 2 eps) | yes | pgdat | **92.0%** under PGD-20 |
+| abl_b | PGD | 20 | eps/4 (budget 5 eps) | yes | pgdat | 75.6% under PGD-20 |
+| abl_c | PGD | 20 | eps (budget 20 eps) | yes | pgdat | 6.8% under PGD-20 (CE=ln10 lock-in) |
 
 eps = 0.30 everywhere. The only change in v4: a finer inner attack (more steps,
 smaller step) - the direct answer to the 42.0% worst case. And it paid off:
 **+19.8 points** of worst case (42.0% -> 61.8%). Details in `memoire.md`.
+
+### The ablation that explains everything: the inner attack's TRAVEL BUDGET
+
+Same recipe, same duration, only the inner attack's step size changes (PGD-20):
+travel `step x 20` of 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps -> 6.8% accuracy
+under PGD-20 eps=0.30. With our APGD's budget (40 eps, step of 2 eps): a plateau
+at ~11% with the adversarial CE locked at ln(10) = 2.30 (the model answers
+uniformly, it gives up on the adversarial half of the batch).
+
+**Learned robustness therefore decreases with the inner attack's travel budget,
+with a cliff between 2 eps and 20 eps. What matters is the READABILITY of the
+perturbation, not the strength of the attack.** A step >= eps jumps to the
+corner of the ball and stays there: the sign pattern becomes a chaotic mask,
+unlearnable. A fine step builds the perturbation progressively: it stays
+readable.
+
+And that is why APGD, excellent for JUDGING (it pushes its search to the limit),
+destroys training: **you don't train against the attack you use to judge.** The
+bottom of the curve is around 2 eps = PGD-20 with step eps/10 (v4, abl_a).
 
 ### The v5 misstep (attempt 1): an inner attack can look like it works and teach nothing
 
