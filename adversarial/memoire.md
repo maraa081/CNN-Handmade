@@ -1441,3 +1441,23 @@ Deux ablations du plan sont rentrees, a identifier par le modele de cout :
 13 min 57 s (coherent avec `"1,2"`) -> PGD-20 92.6% ; 8 min 17 s (coherent avec
 `"0.2,1"`) -> PGD-20 89.8%. **Le PGD-20 ne dit rien du pire cas** : la suite
 complete et l'audit sont necessaires avant de conclure.
+
+### 2026-09-13 (01h10) - A7 / A8 : les marqueurs de sante pointent la douceur du DEPART
+
+| Mesure | A7 : plan `1 -> 2 eps` | A8 : plan `0.2 -> 1 eps` |
+|---|---|---|
+| propre | 99.6% | 99.0% |
+| PGD-20 (fin de run) | **92.6%** | 89.8% |
+| rapport gradient/aleatoire | **x1.33** (rugueux) | aucun drapeau |
+| sorties saturees | oui (90% > 0.999) | non |
+| **rayon PGD vs Square** | **0.45 vs 0.35 : DESACCORD** | **0.40 = 0.40 : ACCORD** |
+| synthese de l'audit | 3 drapeaux (profil d'abl_a) | "robustesse plausible" |
+
+**PREDICTION (avant les pires cas)** : A7 aura un pire cas mauvais (45-60%)
+malgre un PGD-20 PLUS ELEVE qu'A8, et A8 sera nettement meilleur (75-85%).
+Sur les 4 modeles ou il a ete mesure, l'accord des rayons PGD/Square accompagne
+toujours un bon pire cas (A6 0.40/0.40 -> 82.40% ; abl_a 0.41/<0.30 -> 50.71%).
+
+Si c'est confirme : **l'ingredient actif est la douceur du DEPART**, pas la
+puissance finale (A8 finit a 1 eps et parait sain ; A7 demarre a 1 eps et parait
+malade). Si c'est infirme, le marqueur tombe et il faut AutoAttack partout.
