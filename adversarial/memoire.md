@@ -840,7 +840,7 @@ epochs), la tendance est monotone :
 |---|---|---|---|---|
 | run B | PGD-5, eps/4 | 0.375 = 1.25 eps | 91.0% | 42.0% (Square 3000) |
 | v4 | PGD-20, eps/10 | 0.6 = 2 eps | 90.4% | **61.8%** |
-| abl_a | PGD-20, eps/10 | 0.6 = 2 eps | **92.0%** | a mesurer |
+| abl_a | PGD-20, eps/10 | 0.6 = 2 eps | **92.0%** | **63.2%** (Square 3000) |
 | abl_b | PGD-20, eps/4 | 1.5 = 5 eps | 75.6% | a mesurer |
 | abl_c | PGD-20, eps | 6.0 = 20 eps | 6.8% | a mesurer |
 | v5 | APGD-CE-20, pas 2 eps | 12.0 = 40 eps | ~11% | - |
@@ -877,7 +877,30 @@ pas <= eps/10 avec 20 pas). On n'entraine pas contre la meme attaque qu'on
 utilise pour juger.** Si le budget depasse ~5 eps, l'entrainement se verrouille
 (CE adverse = ln(10)) et le tableau de bord le montre des les premieres epochs.
 
-A FAIRE : pire cas de abl_a (eval_suite avec Square 3000) pour verifier qu'il
-egale ou depasse v4 (61.8%) ; comparer les colonnes CE adv des logs abl_a et
+RESULTAT (20h30) : premier bilan complet de abl_a, meme suite que v4, 500
+images. Pire cas **63.2%** (Square 3000), soit +1.4 point devant v4 (61.8%) a
+recette IDENTIQUE (c'est donc la variance de run ; la recette est reproductible).
+
+| Attaque (eps=0.30) | v4 | **abl_a** |
+|---|---|---|
+| precision propre | 99.4% | 99.6% |
+| FGSM | 94.2% | 94.0% |
+| PGD-20 (3 restarts) | 90.4% | 91.6% |
+| APGD-CE (100) | 88.2% | 89.8% |
+| APGD-DLR (100) | 81.0% | **85.4%** |
+| Square (500) | 83.6% | 82.0% |
+| Square (3000, 2 restarts) | 61.8% | **63.2%** |
+| NES | 93.0% | 92.4% |
+| CW-L2 (taux de succes / distance) | - | 21.6% / 1.325 |
+| Boundary (taux de succes) | - | 87.8% |
+| **PIRE CAS** | 61.8% | **63.2%** |
+
+L'ecart structurel PGD <-> Square reste neanmoins entier : 22 points entre
+APGD-DLR (85.4%) et Square-3000 (63.2%). Une recherche par les seuls scores
+reste plus efficace que le gradient sur ce modele, comme en v4 (19 points).
+C'est le prochain chantier, et le vrai chiffre a publier.
+
+A FAIRE : pire cas de abl_b et abl_c (eval_suite, 2 min) pour tracer la courbe
+"pire cas vs budget de deplacement" ; comparer les colonnes CE adv des logs abl_a et
 abl_c (attendu : ~1 pour abl_a, ~2.30 pour abl_c) ; tester un budget plus fin
 (eps/20) pour savoir si le creux est plus bas.

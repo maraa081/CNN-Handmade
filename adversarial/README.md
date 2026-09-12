@@ -192,7 +192,7 @@ sur la seule attaque qui l'arrange. C'est exactement l'erreur qui a fait annonce
 | v5 (essai 1) | APGD-DLR | 10 | adaptatif | oui | pgdat | **casse** : val PGD10 46.5% -> 0.6% (attaque interne inoperante) |
 | v5 (essai 2) | APGD-CE | 20 | adaptatif | oui | pgdat | val PGD10 **figee a 11.6%** (attaque qui renvoyait le depart aleatoire) |
 | v5 (a relancer) | APGD-CE | 20 | adaptatif | oui | pgdat | - |
-| abl_a | PGD | 20 | eps/10 (budget 2 eps) | oui | pgdat | **92.0%** sous PGD-20 |
+| abl_a | PGD | 20 | eps/10 (budget 2 eps) | oui | pgdat | **92.0%** PGD-20 / **pire cas 63.2%** |
 | abl_b | PGD | 20 | eps/4 (budget 5 eps) | oui | pgdat | 75.6% sous PGD-20 |
 | abl_c | PGD | 20 | eps (budget 20 eps) | oui | pgdat | 6.8% sous PGD-20 (verrou CE=ln10) |
 

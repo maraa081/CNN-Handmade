@@ -192,7 +192,7 @@ announcing 91.0% while the worst case was 42.0%.
 | v5 (attempt 1) | APGD-DLR | 10 | adaptive | yes | pgdat | **collapsed** : val PGD10 46.5% -> 0.6% (inner attack no longer effective) |
 | v5 (attempt 2) | APGD-CE | 20 | adaptive | yes | pgdat | val PGD10 **stuck at 11.6%** (attack returned the random start) |
 | v5 (to relaunch) | APGD-CE | 20 | adaptive | yes | pgdat | - |
-| abl_a | PGD | 20 | eps/10 (budget 2 eps) | yes | pgdat | **92.0%** under PGD-20 |
+| abl_a | PGD | 20 | eps/10 (budget 2 eps) | yes | pgdat | **92.0%** PGD-20 / **worst case 63.2%** |
 | abl_b | PGD | 20 | eps/4 (budget 5 eps) | yes | pgdat | 75.6% under PGD-20 |
 | abl_c | PGD | 20 | eps (budget 20 eps) | yes | pgdat | 6.8% under PGD-20 (CE=ln10 lock-in) |
 
