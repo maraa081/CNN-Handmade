@@ -97,7 +97,7 @@ def main():
     p.add_argument("--weights", required=True)
     p.add_argument("--reference", default="models/abl_a_eps10.pt",
                    help="modele de comparaison (saturation + transfert)")
-    p.add_argument("--dataset", choices=["mnist", "emnist"], default="mnist")
+    p.add_argument("--dataset", choices=["mnist", "kmnist", "emnist"], default="mnist")
     p.add_argument("--n", type=int, default=500)
     p.add_argument("--eps", type=float, default=0.3)
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "dml"])

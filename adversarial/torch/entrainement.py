@@ -42,9 +42,21 @@ CONFIG_AUG = {
 # --------------------------------------------------------------------------
 
 def charger_train(n_train, n_val, dataset="mnist"):
-    """Reproduit exactement la selection de donnees de harden2.py."""
-    loader = MNISTLoader()
-    (x_all, y_all), _ = loader.load(join(ROOT_DIR, "data"))
+    """Reproduit exactement la selection de donnees de harden2.py.
+
+    `dataset` : "mnist" (defaut), "kmnist" (kana japonais, meme format 28x28 et
+    10 classes) ou "emnist". Branche KMNIST ajoutee le 2026-09-13 pour la
+    replication de l'etude sur le jeu japonais (ancre Japon du repo).
+    """
+    if dataset == "kmnist":
+        from data import KMNISTLoader
+        loader, dossier = KMNISTLoader(), join(ROOT_DIR, "data", "kmnist")
+    elif dataset == "emnist":
+        from data import EMNISTLoader
+        loader, dossier = EMNISTLoader("letters"), join(ROOT_DIR, "data", "emnist")
+    else:
+        loader, dossier = MNISTLoader(), join(ROOT_DIR, "data")
+    (x_all, y_all), _ = loader.load(dossier)
     rng = np.random.RandomState(0)
     idx = rng.choice(len(x_all), size=min(n_train + n_val, len(x_all)), replace=False)
     x = np.ascontiguousarray(normalize(add_channel_dim(x_all[idx])).transpose(0, 3, 1, 2))
@@ -61,7 +73,10 @@ def charger_test(dataset="mnist", n=500):
     que de torch et numpy (les scripts NumPy importent matplotlib au chargement).
     La selection est identique : RandomState(42) sur l'ordre du test set.
     """
-    if dataset == "mnist":
+    if dataset == "kmnist":
+        from data import KMNISTLoader
+        (_, _), (x_test, y_test) = KMNISTLoader().load(join(ROOT_DIR, "data", "kmnist"))
+    elif dataset == "mnist":
         loader = MNISTLoader()
         (_, _), (x_test, y_test) = loader.load(join(ROOT_DIR, "data"))
     else:
@@ -316,7 +331,13 @@ def entrainer(modele, opt, train, val, args, device):
             #     comporte a l'inference (dropout desactive), puis on revient
             #     en train().
             modele.eval()
-            if getattr(args, "bande", False):
+            if getattr(args, "sans_attaque", False):
+                # Entrainement PROPRE, sans aucune attaque : sert a produire le
+                # modele de reference et le point de depart (warm start) des
+                # runs robustes. Sinon tout run passe par une attaque, meme
+                # avec --eps 0.
+                bx_adv = bx
+            elif getattr(args, "bande", False):
                 # Attaque a budget ADAPTATIF : on s'arrete au pas k* ou la
                 # difficulte (tromperie ou CE) atteint la cible de l'epoch.
                 # Cout identique a pgd() : voir attaque_adaptative.py.

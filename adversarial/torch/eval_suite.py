@@ -61,7 +61,7 @@ def charger_modele(chemin, device, dataset):
     la premiere convolution a 32 canaux en standard et 64 en large. Comme ca,
     aucun risque de se tromper de taille en evaluant un modele sauvegarde.
     """
-    num_classes = 10 if dataset == "mnist" else 26
+    num_classes = 26 if dataset == "emnist" else 10
     if chemin.endswith(".npz"):
         modele = CNN(num_classes=num_classes).to(device)   # .npz = standard
         charger_npz(modele, chemin)
@@ -91,7 +91,8 @@ def main():
     p = argparse.ArgumentParser(description="Suite d'attaques complete (white-box + black-box)")
     p.add_argument("--weights", default="models/harden2_aug_pgdat_120ep.pt",
                    help="modele a evaluer (.pt ou .npz)")
-    p.add_argument("--dataset", choices=["mnist", "emnist"], default="mnist")
+    p.add_argument("--dataset", choices=["mnist", "kmnist", "emnist"], default="mnist",
+                   help="mnist par defaut ; kmnist = kana japonais (meme format, 10 classes)")
     p.add_argument("--n", type=int, default=500, help="images de test")
     p.add_argument("--eps", nargs="+", type=float, default=EPS_DEFAUT)
     p.add_argument("--famille", choices=["tout", "whitebox", "blackbox", "l2"], default="tout")

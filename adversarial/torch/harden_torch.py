@@ -134,7 +134,11 @@ def mode_parite(chemin, device, n=200):
 
 def main():
     p = argparse.ArgumentParser(description="Version durcie v2 en PyTorch (autograd)")
-    p.add_argument("--dataset", choices=["mnist", "emnist"], default="mnist")
+    p.add_argument("--dataset", choices=["mnist", "kmnist", "emnist"], default="mnist",
+                   help="mnist par defaut ; kmnist = kana japonais (meme format, 10 classes)")
+    p.add_argument("--sans-attaque", action="store_true",
+                   help="entrainement PROPRE (aucune attaque) : modele de reference "
+                        "et point de depart (warm start) des runs robustes")
     p.add_argument("--n-train", type=int, default=60000)
     p.add_argument("--val", type=int, default=1000)
     p.add_argument("--batch", type=int, default=256,
@@ -357,6 +361,7 @@ def main():
         pass
     elif args.warm_start == "auto":
         auto = {"mnist": "models/model_weights_full.npz",
+                "kmnist": "models/kmnist_weights.npz",
                 "emnist": "models/emnist_letters_weights_full.npz"}[args.dataset]
         args.warm_start = auto if os.path.exists(join(ROOT_DIR, auto)) else "none"
         print(f"[WARM] auto -> {args.warm_start}")

@@ -53,7 +53,7 @@ from adversarial.torch.eval_suite import charger_modele        # noqa: E402
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--weights", required=True)
-    p.add_argument("--dataset", choices=["mnist", "emnist"], default="mnist")
+    p.add_argument("--dataset", choices=["mnist", "kmnist", "emnist"], default="mnist")
     p.add_argument("--eps", type=float, default=0.3, help="budget L-infini")
     p.add_argument("--n", type=int, default=10000, help="images de test (10000 = le jeu complet)")
     p.add_argument("--bs", type=int, default=250, help="taille de lot")

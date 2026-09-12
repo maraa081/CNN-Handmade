@@ -83,6 +83,7 @@ def main():
     p.add_argument("--n", type=int, default=256, help="images de test")
     p.add_argument("--eps", type=float, default=0.3)
     p.add_argument("--steps", type=int, default=20)
+    p.add_argument("--dataset", choices=["mnist", "kmnist", "emnist"], default="mnist")
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda", "dml"])
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
@@ -90,8 +91,8 @@ def main():
     torch.manual_seed(args.seed)
     device = choisir_device(args.device)
     chemin = args.weights if isabs(args.weights) else join(ROOT_DIR, args.weights)
-    modele = charger_modele(chemin, device, "mnist")
-    x, y = charger_test("mnist", args.n)
+    modele = charger_modele(chemin, device, args.dataset)
+    x, y = charger_test(args.dataset, args.n)
     x, y = x.to(device), y.to(device)
 
     print("=" * 78)
