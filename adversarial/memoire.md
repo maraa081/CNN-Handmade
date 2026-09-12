@@ -1495,3 +1495,40 @@ la difficulte est presentee. C'est contre-intuitif, mesurable et pas cher.
 PROCHAIN TEST DECISIF : **A9 = plan inverse `"2,0.2"`** (meme ensemble de budgets,
 ordre inverse). ~50% -> c'est l'ordre qui fait tout ; ~85% -> autre chose, a
 chercher. 11 min.
+
+### 2026-09-13 (01h35) - A9 : LA LOI DE L'ORDRE EST CONFIRMEE
+
+| Recette | budgets de l'attaque interne | coût | pire cas |
+|---|---|---|---|
+| A6 | 0.2 -> 2 eps (2 -> 20 pas), croissant | 11 min | **85.8%** |
+| **A9** | **2 -> 0.2 eps (20 -> 2 pas), DECROISSANT** | 11 min | **63.8%** |
+| A7 | 1 -> 2 eps | 14 min | 62.0% |
+| abl_a | 2 eps constant | 20 min | 63.2% |
+
+**Meme ensemble de budgets, meme cout, ordre inverse : 22 points d'ecart.** Les
+quatre recettes "mauvaises" (abl_a, A7, A9, v4) ont toutes un budget de DEPART
+eleve ; les trois bonnes (A1, A6, A8) commencent a 2 pas (0.2 eps).
+
+**C'est l'ORDRE dans lequel la difficulte est presentee qui construit la
+robustesse** -- ni la quantite de calcul, ni la force de l'attaque. Resultat
+net, contre-intuitif, reproduit deux fois (A6/A9), et pas cher (11 min).
+
+### 2026-09-13 (01h35) - KMNIST : deuxieme jeu de donnees et ancre Japon
+
+Support KMNIST ajoute a toute la piste PyTorch (`--dataset kmnist`) :
+`harden_torch`, `eval_suite`, `eval_autoattack`, `audit_masquage`,
+`diag_attaque_interne` ; `charger_train` / `charger_test` branches ;
+`charger_modele` corrige (10 classes sauf EMNIST = 26). Nouvelle option
+`--sans-attaque` : entrainement PROPRE, qui produit le modele de reference et le
+point de depart (warm start) des runs robustes -- exporter en `.npz` avec
+`--npz` car `--warm-start` ne lit que le format NumPy.
+
+Protocole de replication (meme pipeline, meme eps=0.3, 60k images, 120 epochs) :
+modele de reference -> budget constant 2 eps (depart dur) -> plan `0.2,1`
+(doux) -> plan inverse `1,0.2` (test de l'ordre sur KMNIST), puis suite complete
+et AutoAttack. Cout : ~45 min + ~30 min d'evaluation.
+
+Attendu honnete : KMNIST est plus dur (kana cursifs, classes proches) -> propre
+plus bas (~96-98%) et robustesse plus basse ; l'ecart entre recettes devrait se
+reproduire, peut-etre en plus petit. PORTE : si l'ecart ne se reproduit pas, on
+fait de KMNIST une extension "Japon" et MNIST reste le recit principal.
