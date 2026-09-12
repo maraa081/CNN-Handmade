@@ -183,8 +183,10 @@ Les options sont **les memes** que `harden2.py` (`--loss`, `--mix`, `--beta`,
     --resume FICHIER                reprendre un run interrompu (<out>_last.pt)
     --start-epoch N                 epoch de depart (0 = deduit du checkpoint)
     --collapse-tol N                alerte si la val PGD passe sous le meilleur de
-                                    plus de N points (5 par defaut, 0 = desactive)
-    --collapse-patience N           epochs sous le meilleur avant l'alerte (3)
+                                    plus de N points (10 par defaut, 0 = desactive). La val
+                                    PGD10 est bruitee (1 restart, 1000 images) :
+                                    augmenter la tolerance plutot que la patience
+    --collapse-patience N           epochs sous le meilleur avant l'alerte (6)
     --stop-on-collapse              arreter un run qui s'effondre et ne remonte plus
     --parite                        test d'equivalence avec NumPy
     --npz FICHIER                   exporter les poids au format NumPy

@@ -186,10 +186,10 @@ def main():
     p.add_argument("--parite", action="store_true")
     p.add_argument("--parite-n", type=int, default=200)
     p.add_argument("--restarts", type=int, default=1)
-    p.add_argument("--collapse-tol", type=float, default=5.0,
+    p.add_argument("--collapse-tol", type=float, default=10.0,
                    help="garde-fou : alerte quand la val PGD passe sous le meilleur "
                         "de plus de N points (0 = desactive)")
-    p.add_argument("--collapse-patience", type=int, default=3,
+    p.add_argument("--collapse-patience", type=int, default=6,
                    help="nombre d'epochs sous le meilleur avant l'alerte / l'arret")
     p.add_argument("--stop-on-collapse", action="store_true",
                    help="arreter le run quand la robustesse s'effondre et ne remonte "

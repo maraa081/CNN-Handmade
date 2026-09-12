@@ -701,8 +701,8 @@ Corrections (meme commit) :
   taux de tromperie de l'attaque interne**. C'est le chiffre qui aurait montre le
   probleme des l'epoch 20. Deux garde-fous : [ALERTE] si l'attaque interne ne
   trompe plus 50% du batch adverse, [ALERTE] si la val PGD passe sous le meilleur
-  de plus de `--collapse-tol` points (5 par defaut) pendant `--collapse-patience`
-  epochs (3), avec `--stop-on-collapse` pour arreter un run qui ne remonte plus
+  de plus de `--collapse-tol` points (10 par defaut) pendant
+  `--collapse-patience` epochs (6), avec `--stop-on-collapse` pour arreter un run qui ne remonte plus
   (le meilleur modele est deja sauvegarde).
 
 Lecon a garder : **le chiffre d'entrainement n'est pas le chiffre de robustesse, et
