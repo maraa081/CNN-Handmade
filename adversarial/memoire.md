@@ -1309,3 +1309,31 @@ PROCHAINES ETAPES :
    anticipe a pas grossier) avec la SENSIBILITE comme lecture principale ;
 4. puis A2 (cible CE-relative) : la cible "tromperie" a fait le job, mais la
    cible lisse est peut-etre encore mieux.
+
+### 2026-09-12 (23h20) - LE RAYON PGD CLASSE A L'ENVERS (abl_b, contre-exemple)
+
+Les cinq audits, relus en classement. Sensibilite = dCE sous perturbation dans la
+boule (eps=0.30) : plus PETIT = mieux. Pire cas = AutoAttack quand on l'a, sinon
+notre suite.
+
+| Modele | sensibilite | rang | rayon PGD | rang | pire cas | rang |
+|---|---|---|---|---|---|---|
+| **bande_cible50 (A1)** | 0.038 | 1 | 0.39 | 4 | **91.25%** | 1 |
+| v4 | 0.261 | 2 | 0.40 | 3 | 61.8% | 2 |
+| abl_a | 0.268 | 3 | 0.41 | 2 | 50.71% | 3 |
+| abl_b | 0.859 | 4 | **0.45** | **1** | 38.8% | 4 |
+| abl_c | 1.813 | 5 | 0.30 | 5 | 1.6% | 5 |
+
+- **La sensibilite predit le classement du pire cas : 5/5.** Une mesure a deux
+  secondes (un passage avant) classe correctement cinq modeles dont le pire cas
+  va de 1.6% a 91.25%.
+- **Le rayon PGD ne le predit pas : il le contredit.** abl_b a le PLUS GRAND
+  rayon PGD de la famille (0.45) et le 4e pire cas sur 5 (38.8%) : a eps=0.05 il
+  est deja a 87.8% sous PGD-20 et 95.2% sous FGSM. Un modele qui perd 12 points a
+  eps=0.05 n'a pas un rayon robuste de 0.45 ; il a un gradient qui patine
+  (rapport 1.05) et une surface rugueuse.
+
+CONCLUSION A GARDER : **on n'annonce plus jamais un rayon robuste mesure au PGD
+seul**, ni un pire cas mesure par notre suite seule. Le chiffre publiable est le
+pire cas sous AutoAttack, a un eps donne, sur 10 000 images. La sensibilite sert
+de TRI et d'explication (et d'alerte quand elle est elevee), jamais de preuve.

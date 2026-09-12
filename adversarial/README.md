@@ -838,8 +838,8 @@ haut. Ce qui reste, par ordre d'importance :
 
 | Priorité | À faire | Pourquoi |
 |---|---|---|
-| 1 | **Croiser nos chiffres avec `autoattack`** (le paquet officiel) | notre APGD est une réimplémentation maison : sans ce croisement, aucun chiffre n'est opposable devant une review |
-| 2 | **Attaquer l'écart gradient <-> Square (22 points)** : APGD-DLR 85.4% contre Square-3000 63.2% | c'est LE résultat honnête à publier et le principal point ouvert du modèle. Pistes : transférer/ensembler, `--large` (1,7M paramètres) à budget 2 eps, ou s'entraîner contre une attaque par scores |
+| 1 | ~~**Croiser nos chiffres avec `autoattack`**~~ **FAIT le 12/09** pour `bande_cible50` et `abl_a` | notre APGD était une réimplémentation maison : AutoAttack a confirmé le classement et révélé que nos chiffres maison étaient optimistes (abl_a : 63.2% annoncé, **50.71%** officiel) |
+| 2 | **Attaquer l'écart gradient <-> Square** : résolu dans son principe le 12/09 (rapport gradient/aléatoire ; marges anisotropes) | reste à le documenter proprement dans le write-up |
 | 3 | **Smoothing à relancer** (`--epochs 90`) | le bug de learning rate est corrigé (commit 4f420f8) ; le run précédent s'effondrait |
 | 4 | **KMNIST** : entraîner proprement et documenter | l'ancre Japon du repo (aujourd'hui : 70.1% sur 5000 images / 3 epochs, preuve de chaîne seulement) |
 | 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
@@ -852,7 +852,7 @@ du pas de l'attaque interne** (budget 2 eps -> 92.0%, 5 eps -> 75.6%, 20 eps ->
 6.8%) et sa **courbe du pire cas en cloche** (sommet à 2 eps) ; diagnostic
 `diag_attaque_interne.py`.
 
-### Piste ouverte : l'attaque interne à budget ADAPTATIF (idée Maraa, 12/09)
+### Piste ouverte : l'attaque interne à budget ADAPTATIF (idée Maraa, 12/09) - ELLE MARCHE
 
 Au lieu d'un budget fixé une fois pour toutes, on vise par batch une **difficulté
 cible** et on arrête l'attaque au pas `k*` qui l'atteint (option `--bande`).
@@ -862,6 +862,68 @@ protocole d'ablation sont dans **`attaque_adaptative.md`** ; le code est dans
 Point clé : à pas fixe (`eps/10`), faire varier le nombre de pas revient à faire
 varier le budget, donc la trajectoire de PGD contient déjà tous les candidats --
 le surcoût est **nul** par rapport à PGD-20.
+
+---
+
+## Périmètre de fin de projet et séquence (état au 2026-09-12)
+
+**Jalon d'arrêt = la publication**, pas un chiffre : model card Hugging Face +
+Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
+2027), CNN-Handmade doit être terminé en janvier.
+
+### Où on en est
+
+| # | Élément | État |
+|---|---|---|
+| 1 | Suite d'attaques (BPDA+EOT, CW-L2, black-box Square/NES, Boundary, smoothing) | OK |
+| 2 | **Chiffres croisés avec AutoAttack** | **OK depuis le 12/09** (sur `bande_cible50` et `abl_a`) |
+| 3 | Ablation du budget de déplacement + courbe en cloche + attaque à budget adaptatif | OK |
+| 4 | KMNIST entraîné proprement et documenté (ancre Japon) | à faire |
+| 5 | Smoothing relancé (`--epochs 90`) | à faire |
+| 6 | Variante TRADES tranchée (aligner ou documenter) | à faire |
+| 7 | Write-up de fond FR + EN | à faire |
+| 8 | Model card Hugging Face + Space Gradio | à faire |
+
+### Les chiffres à annoncer (AutoAttack `standard`, 10 000 images, eps=0.30)
+
+| Modèle | propre | robuste (pire cas officiel) |
+|---|---|---|
+| `bande_cible50` (attaque interne à budget adaptatif) | 98.85% | **91.25%** |
+| `abl_a` (PGD-20, pas eps/10) | 99.53% | 50.71% |
+
+Note : `abl_a` était annoncé à 63.2% par notre suite (500 images). L'écart de
+12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
+existait.
+
+### Les six règles de mesure (leçons du 2026-09-12)
+
+1. **Annoncer sur 10 000 images.** Sur les 500 mêmes images de test, tous les
+   modèles étaient tirés vers le haut (APGD-CE d'A1 : 95.6% → 93.8%).
+2. **Sélectionner sur la validation, annoncer sur le test.**
+3. **Le juge, c'est AutoAttack.** Notre suite sert de diagnostic rapide et
+   d'explication, pas de chiffre final.
+4. **Jamais de rayon robuste mesuré au PGD seul.** Sur un modèle à surface
+   rugueuse il classe à l'envers (`abl_b` : plus grand rayon, 4e pire cas).
+   Toujours mesurer le rayon au PGD **et** au Square (`audit_masquage.py`,
+   option `--rayon-square`, active par défaut).
+5. **La sensibilité (2 s) trie, elle ne prouve pas.** Un modèle qui masque son
+   gradient est plat par construction.
+6. **Une seule variable à la fois**, et on écrit le critère d'adoption AVANT de
+   lancer le run.
+
+### Séquence des runs
+
+- **Phase candidats** (time-boxée : ~6 essais, quelques heures de GPU) : A1 (fait),
+  A2 (cible CE-relative), A4/A5 (le 2x2 qui explique le mécanisme), `--large`.
+- **Phase gel** : un modèle, un nom définitif, poussé dans le repo ; on ne touche
+  plus à la recette.
+- **Phase validation** : AutoAttack sur l'artefact gelé (c'est ce qui va dans la
+  model card), puis KMNIST, smoothing, TRADES.
+- **Phase rédaction** : write-up, model card, Space.
+
+Hors périmètre (décision explicite, pas en passant) : ensemble de modèles,
+entraînement contre Square, au-delà de 1.7M de paramètres, transfert
+cross-dataset.
 
 Pistes complémentaires (non bloquantes) : modèle plus gros (`--large`, ~1,7M
 paramètres) pour tester l'hypothèse "capacité" ; Free-AT (Wong 2020, bien moins
