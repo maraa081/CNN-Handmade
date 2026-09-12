@@ -16,13 +16,25 @@ Pour chacune : la cross-entropy moyenne, la precision du modele et |delta|inf.
 
 Lecture : ln(10) = 2.303. Une ligne a CE ~ 2.30 et precision ~10% veut dire que
 le modele repond n'importe quoi (uniforme) sur ces images : elles ne lui
-apprennent RIEN. Si la ligne 1 (le simple depart aleatoire) est aussi
-destructrice que les attaques, alors l'attaque qui renvoie le "meilleur point"
-renvoie ce bruit - et un modele entraine la-dessus reste bloque.
+apprennent RIEN. Mesure du 2026-09-12 (run v5) : CE adv 2.33 = ln(10) et val
+PGD10 figee a 11.6% pendant 12 epochs, alors que le meme modele et la meme
+recette donnaient 91.0% avec une attaque interne PGD (pas fin eps/10).
 
-Mesure du 2026-09-12 (run v5 casse) : CE adv 2.32 = ln(10) et val PGD10 figee a
-11.6% pendant 12 epochs, alors que le meme modele et la meme recette donnaient
-91.0% avec une attaque interne PGD. Detail : adversarial/memoire.md.
+Deux colonnes de structure ont ete ajoutees apres ce diagnostic :
+
+  - 'borne' = part de pixels pousses a la limite de la boule (|delta| = eps).
+    Un pas de 2*eps (APGD) saute au coin des le premier pas ; un pas eps/10
+    (PGD, recette v4) y arrive progressivement, donc une plus grande part de
+    pixels reste a l'interieur : la perturbation est plus douce, donc
+    apprenable par le modele.
+  - 'signes opposes' = part de pixels voisins dont la perturbation change de
+    signe. 50% = masque binaire aleatoire (illisible), nettement moins = champ
+    de signe coherent.
+
+ATTENTION (mesure du 12/09, moteur NumPy) : le bruit uniforme n'est PAS une
+attaque. Sur le modele standard non robuste (model_weights_full.npz) : propre
+98.5%, bruit uniforme eps=0.3 97.0%, FGSM eps=0.3 2.1%. La ligne 1 a ~90-97%
+est donc normale et n'indique rien.
 
     python3 adversarial/torch/diag_attaque_interne.py --weights models/harden_v5_apgd_ce.pt
     python3 adversarial/torch/diag_attaque_interne.py --weights models/harden_v4_pgd20.pt
@@ -48,12 +60,21 @@ from adversarial.torch.harden_torch import choisir_device     # noqa: E402
 from adversarial.torch.eval_suite import charger_modele       # noqa: E402
 
 
-def decrire(nom, modele, x, xa, y):
+def decrire(nom, modele, x, xa, y, eps):
     with torch.no_grad():
         ce = F.cross_entropy(modele(xa), y).item()
         acc = accuracy(modele, xa, y)
-    delta = (xa - x).abs().flatten(1).max(1).values.mean().item()
-    print(f"  {nom:<36} | CE {ce:6.3f} | acc {acc:6.2%} | |delta|inf {delta:.3f}")
+    delta = xa - x
+    moyen = delta.abs().mean().item()
+    # fraction de pixels pousses a la borne de la boule (|delta| = eps)
+    frac_borne = (delta.abs() >= 0.99 * eps).float().mean().item()
+    # structure : part de pixels voisins dont le signe differe (50% = bruit pur,
+    # moins = champ de signe coherent, donc perturbation "lisible")
+    s = torch.sign(delta)
+    flips = (s[:, :, :, 1:] != s[:, :, :, :-1]).float().mean().item()
+    flips += (s[:, :, 1:, :] != s[:, :, :-1, :]).float().mean().item()
+    print(f"  {nom:<33} | CE {ce:6.3f} | acc {acc:6.2%} | |d|moy {moyen:.3f} | "
+          f"borne {frac_borne:5.1%} | signes opposes {flips / 2:5.1%}")
 
 
 def main():
@@ -83,26 +104,31 @@ def main():
 
     # 1) le depart aleatoire seul (candidat du retour "meilleur")
     b = torch.empty_like(x, device="cpu").uniform_(-args.eps, args.eps).to(device)
-    decrire("1. depart aleatoire seul (bruit)", modele, x, (x + b).clamp(0.0, 1.0), y)
+    decrire("1. depart aleatoire seul (bruit)", modele, x, (x + b).clamp(0.0, 1.0), y, args.eps)
 
     # 2) et 3) APGD, les deux semantiques de retour
     xa_dernier = apgd(modele, x, y, args.eps, loss="ce", steps=args.steps,
                       restarts=1, random_start=True, seed=1234, retour="dernier")
-    decrire(f"2. APGD-CE-{args.steps} retour=dernier", modele, x, xa_dernier, y)
+    decrire(f"2. APGD-CE-{args.steps} retour=dernier", modele, x, xa_dernier, y, args.eps)
     xa_meilleur = apgd(modele, x, y, args.eps, loss="ce", steps=args.steps,
                        restarts=1, random_start=True, seed=1234, retour="meilleur")
-    decrire(f"3. APGD-CE-{args.steps} retour=meilleur", modele, x, xa_meilleur, y)
+    decrire(f"3. APGD-CE-{args.steps} retour=meilleur", modele, x, xa_meilleur, y, args.eps)
 
     # 4) et 5) PGD, pas fin (recette v4) et pas eps/4 (metrique de suivi)
     decrire(f"4. PGD-{args.steps} pas eps/10 (v4)", modele, x,
-            pgd(modele, x, y, args.eps, steps=args.steps, alpha=args.eps / 10.0), y)
+            pgd(modele, x, y, args.eps, steps=args.steps, alpha=args.eps / 10.0), y, args.eps)
     decrire("5. PGD-10 pas eps/4 (suivi)", modele, x,
-            pgd(modele, x, y, args.eps, steps=10), y)
+            pgd(modele, x, y, args.eps, steps=10), y, args.eps)
 
-    print("\n  Comment lire : si les lignes 1 et 3 sont au niveau de ln(10) alors")
-    print("  l'attaque qui garde le meilleur point renvoie le bruit de depart, et")
-    print("  l'entrainement n'apprend rien sur la moitie adverse du batch.")
-    print("  La ligne 2 (retour=dernier) doit etre nettement en dessous.")
+    print("\n  Comment lire :")
+    print("  - 'CE' : si elle vaut ln(10) = 2.30, le modele repond uniformement sur ces")
+    print("    images : il n'apprend rien de la moitie adverse du batch.")
+    print("  - '|d|moy' et 'pixels a la borne' : a quel point une attaque pousse TOUS les")
+    print("    pixels a la limite de la boule. Un pas de 2*eps (APGD) saute au coin des")
+    print("    le premier pas ; un pas eps/10 (PGD v4) y arrive progressivement.")
+    print("  - 'signes opposes voisins' : 50% = masque de bruit pur (illisible pour le")
+    print("    modele), nettement moins = perturbation coherente, donc apprenable.")
+    print("  Comparer 2 et 4 : ce sont les deux seules que l'ENTRAINEMENT utilise.")
     return 0
 
 

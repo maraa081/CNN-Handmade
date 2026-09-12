@@ -773,3 +773,46 @@ pas le meme contrat.** L'evaluation cherche le pire point (depart aleatoire incl
 l'entrainement doit fournir une perturbation que le modele PEUT apprendre a
 repousser, donc un point visite par la marche. Utiliser une attaque d'evaluation
 comme attaque interne, c'est entrainer sur du bruit.
+
+#### Correction (meme soir, 19h30) : l'hypothese "l'attaque renvoyait le bruit" est FAUSSE
+
+Deux mesures l'ont refutee, et il faut les garder :
+
+1. `diag_attaque_interne.py` sur le modele v5 bloque : APGD retour=dernier
+   (CE 2.343, acc 14.06%), APGD retour=meilleur (2.343, 14.06%) et PGD-20 eps/10
+   (2.457, 14.06%) trouvent les MEMES points. L'attaque renvoyait donc bien de
+   vrais exemples adverses, pas le depart aleatoire. (Le correctif `retour`
+   reste juste architecturalement, mais il ne change rien ici.)
+2. Mesure au moteur NumPy sur le modele STANDARD non robuste
+   (`model_weights_full.npz`, 1000 images) : propre 98.50%, **bruit uniforme
+   eps=0.3 : 97.00%**, FGSM eps=0.3 : 2.1%. Un bruit uniforme de moyenne nulle
+   est donc quasi inoffensif (les convolutions le moyennent) : il ne peut pas etre
+   la cause de l'effondrement, et la ligne 1 du diag a 90% est normale.
+
+**Ce qui reste vrai et non explique** : sur le modele entraine avec l'attaque
+APGD, la CE de la moitie adverse se bloque a 2.33 = ln(10) et le modele repond
+uniformement sur les exemples adverses (il "abandonne" cette moitie) alors qu'il
+ajuste parfaitement le propre (CE 0.06) ; la val PGD10 est figee a 11.6%. Avec
+PGD-5 (run B, CE adv ~1.14) et PGD-20 eps/10 (v4, 90.4% sous PGD-20 cote test),
+la meme recette apprend. La difference ne peut donc etre que dans la
+perturbation produite par l'attaque interne.
+
+**Hypothese retenue (a tester)** : ce n'est pas la FORCE de l'attaque interne qui
+compte, c'est la DOUCEUR de sa trajectoire. Notre APGD part avec un pas de
+2*eps : le premier pas saute au coin de la boule (tous les pixels a la borne), la
+perturbation est un masque binaire extreme des le depart, et la moitie adverse du
+batch devient impossible a ajuster (verrou : CE = ln(10)). PGD avec un pas fin
+(eps/10, recette v4) n'atteint la borne que progressivement : une grande part de
+pixels reste a l'interieur, la perturbation est lisible, et le modele apprend.
+
+**Experience controlee (20 min, une seule variable, aucun code a toucher) :**
+lancer la MEME commande trois fois en ne faisant varier que le pas de l'attaque
+interne (PGD, 20 pas) : `--pgd-alpha 0.03` (eps/10, temoin attendu robuste),
+`--pgd-alpha 0.075` (eps/4), `--pgd-alpha 0.3` (eps, saut au coin = ce que fait
+notre APGD). Si les trois donnent 90% / intermediaire / ~11%, l'hypothese est
+confirmee et l'ablation devient un resultat publiable : "le pas de l'attaque
+interne decide si l'entrainement apprend, pas sa force".
+
+Le diag a ete enrichi pour mesurer directement cette douceur : colonnes
+`|d|moy`, `borne` (part de pixels a |delta| = eps) et `signes opposes` (50% =
+masque aleatoire, moins = champ coherent).
