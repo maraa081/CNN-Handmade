@@ -736,23 +736,26 @@ attaque de rayon <= R ne peut passer".
 
 ---
 
-## La suite prévue
+## Ce qui reste avant de publier (état au 2026-09-12)
 
-Le modèle durci tient 65.4% sous PGD-20 — mais PGD est exactement l'attaque
-contre laquelle il a été entraîné. Tant qu'on n'a pas testé plus fort, on ne
-sait pas si c'est une **vraie défense** ou du **gradient masking** (une défense
-qui ne fait que déplacer la vulnérabilité vers des directions non visitées).
+Les étapes listées ici auparavant (BPDA/EOT, Carlini-Wagner, black-box,
+randomized smoothing, APGD) sont **faites** : voir "La suite d'attaques" plus
+haut. Ce qui reste, par ordre d'importance :
 
-| Étape | Contenu | Référence |
+| Priorité | À faire | Pourquoi |
 |---|---|---|
-| 1 | **Attaques adaptatives** : BPDA + EOT sur le modèle durci (casser la défense) | Athalye et al. 2018 ; Tramèr et al. 2020 |
-| 2 | **Carlini-Wagner (CW)** : l'attaque white-box de référence qui manque | Carlini & Wagner 2017 |
-| 3 | **Black-box** : score-based (ZOO/NES) puis decision-based (Boundary/HSJA) | Chen et al. 2017 ; Brendel & Bethge 2019 |
-| 4 | **Robustesse certifiée** : randomized smoothing (borne L2 garantie) | Cohen et al. 2019 |
+| 1 | **Croiser nos chiffres avec `autoattack`** (le paquet officiel) | notre APGD est une réimplémentation maison : sans ce croisement, aucun chiffre n'est opposable devant une review |
+| 2 | **Run v4** (PGD-20 au pas eps/10) puis réévaluation par la MÊME suite | répondre au pire cas de 42.0% (Square) : vérifier que la cause était bien une attaque d'entraînement trop grossière |
+| 3 | **Smoothing à relancer** (`--epochs 90`) | le bug de learning rate est corrigé (commit 4f420f8) ; le run précédent s'effondrait |
+| 4 | **KMNIST** : entraîner proprement et documenter | l'ancre Japon du repo (aujourd'hui : 70.1% sur 5000 images / 3 epochs, preuve de chaîne seulement) |
+| 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
+| 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense" |
+| 7 | **Model card Hugging Face + Space Gradio** | la publication elle-même (poids, recette, robustesse par eps, limites) |
 
-Pistes complémentaires notées : transfert avec PGD en source, transfert
-cross-dataset MNIST -> EMNIST, attaque d'ensemble, AutoAttack / RobustBench,
-patches physiques, cartographie MITRE ATLAS.
+Pistes complémentaires (non bloquantes) : modèle plus gros (`--large`, ~1,7M
+paramètres) pour tester l'hypothèse "capacité" ; Free-AT (Wong 2020, bien moins
+coûteux) ; ROCm pour passer du CPU au GPU ; transfert cross-dataset MNIST ->
+EMNIST ; attaque d'ensemble ; cartographie MITRE ATLAS ; patches physiques.
 
 ---
 

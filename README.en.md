@@ -9,7 +9,7 @@
 > - Hardened model (PyTorch, 60000 images, 120 epochs, augmentation): **99.8% clean**, and **42.0% under the strongest attack found** (Square, gradient-free) -- the number measured against the training attack (PGD) was 91%, hence misleading.
 > - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.0%** at 120); TRADES (C) still needs another go.
 > - Two engines, same maths: hand-made NumPy and PyTorch, ~9x faster on CPU, interchangeable `.npz` weights.
-> - Next step: adaptive attacks (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
+> - Next: cross-check our numbers with `autoattack`, train KMNIST, then publish (model card + demo) -- details in `adversarial/README.md`.
 
 **A convolutional neural network for recognising handwritten digits (MNIST), built by hand, from A to Z.**
 

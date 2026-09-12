@@ -9,7 +9,7 @@
 > - Modèle durci (PyTorch, 60000 images, 120 epochs, augmentation) : **99.8% propre**, et **42.0% sous la pire attaque trouvée** (Square, sans gradient) — le chiffre mesuré contre l'attaque d'entraînement (PGD) était de 91%, donc trompeur.
 > - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.0%** à 120) ; TRADES (C) reste à reprendre.
 > - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
-> - La suite : attaques adaptatives (BPDA/EOT), Carlini-Wagner, black-box (ZOO/NES, Boundary/HSJA), randomized smoothing.
+> - La suite : croiser nos chiffres avec `autoattack`, entraîner KMNIST, puis publier (model card + démo) — le détail est dans `adversarial/README.md`.
 
 **Un réseau de neurones convolutionnel pour reconnaître les chiffres manuscrits (MNIST), fait à la main, de A à Z.**
 

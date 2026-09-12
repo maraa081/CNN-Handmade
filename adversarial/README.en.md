@@ -732,23 +732,26 @@ get through".
 
 ---
 
-## What's next
+## What remains before publishing (state as of 2026-09-12)
 
-The hardened model holds 65.4% under PGD-20 — but PGD is exactly the attack
-against which it was trained. As long as we have not tested anything stronger, we do not
-know whether it is a **real defence** or **gradient masking** (a defence
-that only moves the vulnerability towards unvisited directions).
+The steps listed here previously (BPDA/EOT, Carlini-Wagner, black-box,
+randomized smoothing, APGD) are **done**: see "The attack suite" above. What
+remains, in order of importance:
 
-| Step | Content | Reference |
+| Priority | To do | Why |
 |---|---|---|
-| 1 | **Adaptive attacks**: BPDA + EOT on the hardened model (break the defence) | Athalye et al. 2018; Tramèr et al. 2020 |
-| 2 | **Carlini-Wagner (CW)**: the missing reference white-box attack | Carlini & Wagner 2017 |
-| 3 | **Black-box**: score-based (ZOO/NES) then decision-based (Boundary/HSJA) | Chen et al. 2017; Brendel & Bethge 2019 |
-| 4 | **Certified robustness**: randomized smoothing (guaranteed L2 bound) | Cohen et al. 2019 |
+| 1 | **Cross-check our numbers with `autoattack`** (the official package) | our APGD is a hand-made reimplementation: without this cross-check, no number is defensible in a review |
+| 2 | **Run v4** (PGD-20 with eps/10 steps) then re-evaluate with the SAME suite | answer the 42.0% worst case (Square): confirm the cause was a too-coarse training attack |
+| 3 | **Re-run smoothing** (`--epochs 90`) | the learning-rate bug is fixed (commit 4f420f8); the previous run was collapsing |
+| 4 | **KMNIST**: train properly and document | the Japan anchor of the repo (today: 70.1% on 5000 images / 3 epochs, pipeline check only) |
+| 5 | **Settle the TRADES variant** | deviation from the reference implementation (see `defenses.md` 6.5): align the code or document the variant |
+| 6 | **In-depth write-up** (FR + EN) | the full story "build -> attack -> defend -> break your own defence" |
+| 7 | **Hugging Face model card + Gradio Space** | the publication itself (weights, recipe, robustness per eps, limits) |
 
-Additional leads noted: transfer with PGD as source, cross-dataset transfer
-MNIST -> EMNIST, ensemble attack, AutoAttack / RobustBench,
-physical patches, MITRE ATLAS mapping.
+Further leads (non-blocking): larger model (`--large`, ~1.7M parameters) to
+test the "capacity" hypothesis; Free-AT (Wong 2020, much cheaper); ROCm to move
+from CPU to GPU; cross-dataset transfer MNIST -> EMNIST; ensemble attack;
+MITRE ATLAS mapping; physical patches.
 
 ---
 
