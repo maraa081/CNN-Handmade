@@ -198,9 +198,45 @@ def main():
                 f"gradient peu informatif (x{rapport:.2f} contre une direction aleatoire)")
     else:
         ok(2, f"le gradient reste informatif (x{rapport:.2f} mieux que l'aleatoire)")
-    print(f"    [INDICE] rapport gradient/aleatoire : abl_a = 1.28 (ecart APGD/Square de "
-          f"22-28 pts) ; bande_cible50 = 8.52 (ecart de 1.8 pt). Ce rapport "
-          f"est le meilleur predicteur qu'on ait trouve de cet ecart.")
+    print(f"    [INDICE] rapport gradient/aleatoire : abl_a = 1.28 ; bande_cible50 = 8.52 ;"
+          f" A4 = 6.25. Ce rapport dit si les attaques a gradient sont UTILISABLES ;"
+          f" il ne predit PAS le pire cas (A4 : x6.25 et 49.2% seulement).")
+
+    # --------------------------------------------------------------- [2b]
+    # La CE est la MAUVAISE echelle sur ces modeles. Lecon du 12/09 (23h50) :
+    # A4 a un gradient "informatif" (x6.25 sur la CE) et pourtant APGD-DLR
+    # (57.2%) et Square (49.2%) le cassent, alors que le PGD sur la CE le rate
+    # (80.2%). Autrement dit : la surface peut etre PLATE EN CE et fragile en
+    # MARGE. On mesure donc aussi la marge (logit de la vraie classe moins le
+    # meilleur autre logit), le long du gradient et en direction aleatoire.
+    print("\n[2b] Difference finie sur la MARGE (l'echelle qui compte vraiment)")
+
+    def marge(logits, y):
+        vrai = logits.gather(1, y.view(-1, 1)).squeeze(1)
+        autres = logits.clone()
+        autres.scatter_(1, y.view(-1, 1), float("-inf"))
+        return (vrai - autres.max(dim=1)[0]).mean().item()
+
+    with torch.no_grad():
+        m0 = marge(modele(x), y)
+        m_grad = marge(modele((x + args.eps * direction).clamp(0, 1)), y)
+        m_alea = marge(modele((x + args.eps * aleatoire).clamp(0, 1)), y)
+    d_m_grad, d_m_alea = m_grad - m0, m_alea - m0
+    rapport_m = d_m_grad / d_m_alea if abs(d_m_alea) > 1e-9 else float("inf")
+    print(f"    marge propre                    : {m0:+.3f}")
+    print(f"    marge apres eps*sign(gradient)  : {m_grad:+.3f}  (delta {d_m_grad:+.3f})")
+    print(f"    marge apres eps*sign(aleatoire) : {m_alea:+.3f}  (delta {d_m_alea:+.3f})")
+    print(f"    marge detruite par l'aleatoire   : {100 * d_m_alea / abs(m0) if m0 else 0:+.1f}%")
+    print(f"    gradient / aleatoire (marge)     : x{rapport_m:.2f}")
+    if m0 and d_m_alea / abs(m0) < -0.5 and d_m_grad / abs(m0) < -0.5:
+        print("    [ALERTE] UNE DIRECTION ALEATOIRE detruit la marge : le modele n'est"
+              " pas robuste en marge, meme si la CE bouge peu. Les attaques sur la"
+              " marge (APGD-DLR) et par scores (Square) devraient le casser ->"
+              " c'est exactement le profil de A4 (49.2% de pire cas).")
+    elif m0 and d_m_alea / abs(m0) > -0.2:
+        print("    [OK] la marge resiste meme a une direction aleatoire : profil de"
+              " A1 (les attaques sur la CE, sur la marge et par scores echouent"
+              " toutes).")
 
     # ---------------------------------------------------------------- [3]
     print("\n[3] Balayage de eps (jusqu'a la borne non contrainte) + bruit aleatoire")

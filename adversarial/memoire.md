@@ -1337,3 +1337,58 @@ CONCLUSION A GARDER : **on n'annonce plus jamais un rayon robuste mesure au PGD
 seul**, ni un pire cas mesure par notre suite seule. Le chiffre publiable est le
 pire cas sous AutoAttack, a un eps donne, sur 10 000 images. La sensibilite sert
 de TRI et d'explication (et d'alerte quand elle est elevee), jamais de preuve.
+
+### 2026-09-12 (23h50) - A4 : "court partout" ne reproduit PAS A1 (49.2%) -> LE CURRICULUM
+
+A4 = 5 pas FIXES au pas eps/10, sans arret anticipe, 120 epochs : **7 min 56 s**.
+
+| Attaque (eps=0.30) | abl_a | **A4** | A1 |
+|---|---|---|---|
+| precision propre | 99.6% | 99.4% | 98.6-98.8% |
+| FGSM | 94.0% | 94.6% | 98.2% |
+| PGD-20 (3 rest.) | 91.6% | **80.2%** | 95.3% (10k) |
+| APGD-CE (100) | 89.8% | 59.2% | 93.8% (10k) |
+| APGD-DLR (100) | 85.4% | 57.2% | 94.0% (10k) |
+| Square (3000) | 63.2% | **49.2%** | **91.25%** (AutoAttack) |
+| rayon PGD / Square | 0.41 / ? | **0.35 / 0.35** | 0.39 / ? |
+
+**LES TROIS REGIMES, ET LA CONCLUSION QUI EN DECOULE :**
+
+| Run | depart | fin | pire cas |
+|---|---|---|---|
+| abl_a | DUR (20 pas des l'epoch 1) | pleine puissance | 50.71% |
+| **A4** | doux (5 pas partout) | **molle** (5 pas) | **49.2%** |
+| **A1** | doux (cible atteinte en peu de pas) | **pleine puissance** (k* = 20, plafond) | **91.25%** |
+
+**Raccourcir l'attaque ne reproduit PAS A1 : ca reproduit abl_a.** La brievete
+n'est donc pas le mecanisme. L'hypothese qui reste : **il faut un DEPART DOUX
+(bon pour l'organisation des features au debut, quand le modele est faible) ET
+UNE FIN A PLEINE PUISSANCE (qui donne la robustesse)**. Un depart dur (abl_a) ou
+une fin molle (A4) et on retombe a ~50%.
+
+Test direct : **A6, planificateur deterministe** `k(e) = min(20, max(2, 20*e/E))`.
+Si A6 ~ A1 -> un simple programme de difficulte suffit (plus simple a publier).
+Si A6 reste a ~50% -> il faut la boucle d'asservissement par batch.
+
+### 2026-09-12 (23h55) - LA CE EST LA MAUVAISE ECHELLE : IL FAUT REGARDER LA MARGE
+
+A4 donne le contre-exemple qui casse mon metrique de sensibilite en CE :
+rapport gradient/aleatoire **x6.25** (gradient "informant") et pourtant
+APGD-DLR 57.2% et Square 49.2% le cassent, alors que le PGD sur la CE rate
+(80.2%). Donc une surface peut etre **plate en CE et fragile en MARGE**.
+
+Ajoute au diagnostic (**test [2b]** de `audit_masquage.py`) : la marge
+(logit de la vraie classe moins le meilleur autre logit), mesuree a l'identique
+le long du gradient et en direction aleatoire. C'est l'echelle qui separe
+proprement les deux modeles :
+- A1 : la marge resiste meme a une direction aleatoire -> toutes les familles
+  d'attaques echouent (profil sain) ;
+- A4 : une direction ALEATOIRE detruit la marge -> les attaques sur la marge
+  (DLR) et par scores cassent le modele, celles sur la CE patinent.
+
+Nuance a garder sur le metrique de sensibilite : il separe les REGIMES
+(A1 91% contre abl_c 1.6%) mais n'ordonne pas finement le milieu de tableau
+(A4 : 0.198 de dCE pour 49.2%, comme v4 : 0.261 pour 61.8%).
+
+A FAIRE : identifier les deux runs colles sans etiquette (1 min 33 s : PGD-20
+0.3 = 21.0% ; 12 min 30 s : PGD-20 0.3 = 71.2%) -> demander les commandes a Maraa.
