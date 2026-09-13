@@ -765,13 +765,12 @@ Nous avons construit un CNN à la main, l'avons cassé en une seule étape de
 gradient, l'avons défendu, puis avons cherché à casser notre propre défense. Ce
 chemin a produit un résultat simple : **ce n'est pas la force de l'attaque
 d'entraînement qui durcit un réseau, c'est l'ordre dans lequel on lui présente la
-difficulté.** Vingt-deux points d'écart sur MNIST, quarante-et-un sur KMNIST,
+difficulté.** Vingt-deux points d'écart sur MNIST, quarante et un sur KMNIST,
 pour un coût identique.
 
 Le second résultat est une limite, et elle compte autant : **la recette se
 transpose, le niveau non** (-23.9 points à recette identique et à juge officiel).
-Une recette qui marche quelque part n'est pas une recette qui marche quelque
-part.
+Une recette qui marche quelque part n'est pas une recette qui marche partout.
 
 La suite est éditoriale avant d'être technique : model card sur Hugging Face
 (poids, recette, robustesse par eps, limites), démonstration interactive
@@ -790,6 +789,7 @@ retirée faute de soutien expérimental.
 AutoAttack, budget de déplacement, curriculum, min-min (FAT), masquage de
 gradient, randomized smoothing, rayon certifié.
 
-**C. État du document.** Chiffres vérifiés et datés ; figures 1 à 4 à produire
-depuis les JSON ; version anglaise à écrire après validation. Le plan détaillé et
+**C. État du document.** Chiffres vérifiés et datés ; cinq figures produites depuis
+une source unique de chiffres (`figures.py`, chevauchements vérifiés
+automatiquement) ; version anglaise écrite (`ARTICLE-en.md`). Le plan détaillé et
 les points ouverts sont dans `TRAME-fr.md`.
