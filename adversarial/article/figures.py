@@ -13,10 +13,15 @@ Usage:
 """
 
 import os
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), "torch"))
+from analyse_logs import lire  # noqa: E402
 
 plt.rcParams.update({
     "font.size": 12,
@@ -282,9 +287,54 @@ def _verifier_chevauchements(fig):
     return len(elements), len(chevauchements)
 
 
+def figure_trajectoires():
+    """FIGURE 5 -- les trajectoires lues directement dans les logs du depot
+    (adversarial/results/logs/) : taux de tromperie de l'attaque interne et
+    cross-entropie adverse, epoch par epoch. Deux facons de rater un run se
+    voient a l'oeil : l'attaque qui s'eteint (tromperie -> 2%) et le modele qui
+    sature a l'uniforme (CE adv -> ln 10)."""
+    dossier = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "results", "logs")
+    series = [
+        ("kmnist_plan_doux.log", "KMNIST 0.2 -> 1 (good)", VERT),
+        ("kmnist_fixe_2eps.log", "KMNIST constant 2 (uniform)", ROUGE),
+        ("kmnist_eps1.log", "KMNIST constant 1 (masked)", ORANGE),
+        ("kmnist_plan_inverse.log", "KMNIST 1 -> 0.2 (starts high)", GRIS),
+        ("abl_c_eps1.log", "MNIST abl_c (attack dies)", BLEU),
+    ]
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5.5), sharex=True)
+    for nom_fichier, etiquette, couleur in series:
+        lignes = lire(os.path.join(dossier, nom_fichier))
+        assert lignes, f"log illisible : {nom_fichier}"
+        axes[0].plot([l["epoch"] for l in lignes],
+                     [l["attaque"] for l in lignes], color=couleur, linewidth=2.2,
+                     label=etiquette)
+        axes[1].plot([l["epoch"] for l in lignes],
+                     [l["ce_adv"] for l in lignes], color=couleur, linewidth=2.2,
+                     label=etiquette)
+    axes[0].axhline(50, color=GRIS, linestyle=":", linewidth=1)
+    axes[0].set_xlabel("epoch")
+    axes[0].set_ylabel("share of the batch fooled by the inner attack (%)")
+    axes[0].set_title("Is the inner attack still informative?")
+    axes[0].set_ylim(0, 100)
+    axes[1].axhline(2.303, color=GRIS, linestyle=":", linewidth=1)
+    axes[1].annotate("ln 10 = uniform", xy=(2, 2.303), xytext=(4, 2.5),
+                     fontsize=10, color=GRIS)
+    axes[1].set_xlabel("epoch")
+    axes[1].set_ylabel("adversarial cross-entropy")
+    axes[1].set_title("Has the model given up?")
+    for ax in axes:
+        ax.grid(alpha=0.3)
+    axes[1].legend(loc="center right", fontsize=10)
+    fig.suptitle("FIGURE 5 -- Two ways to waste a run, read straight from the logs",
+                 y=1.02, fontsize=13)
+    _enregistrer(fig, "fig5_trajectoires.png")
+
+
 if __name__ == "__main__":
     figure_cloche()
     figure_ordre()
     figure_nuage()
     figure_transposition()
+    figure_trajectoires()
     print("[FIN] figures dans adversarial/article/figures/")

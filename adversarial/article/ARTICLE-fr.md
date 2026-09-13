@@ -241,10 +241,13 @@ verrouille.
 
 `abl_c` est le contre-exemple parfait, et le plus instructif : **98.4% de
 précision propre**, un modèle qui a l'air intact, pour **1.6%** de pire cas. Le
-log d'entraînement explique pourquoi : l'attaque interne ne trompe plus le
-modèle, la cross-entropie adverse se bloque à `ln(10) = 2.303` (le niveau du
-hasard sur dix classes), et le modèle reste à ce plateau pendant la fin du run.
-Il n'apprend plus rien, il répond uniformément.
+log explique pourquoi, et le chiffre est sans ambiguïté : le taux de tromperie de
+l'attaque interne s'écroule de 90.8% à l'epoch 1 à **2.2%** en fin de run, et la
+cross-entropie adverse rejoint la cross-entropie propre (0.068 contre 0.022).
+Autrement dit, les exemples « adverses » ne sont plus adverses du tout : avec un
+pas de la taille de eps, l'attaque saute par-dessus la boule et retombe sur des
+points que le modèle classe correctement. Le run **dégénère en entraînement
+propre**, et le modèle finit sans aucune robustesse (val PGD10 : 0.0%).
 
 FIGURE 1 (`figures/fig1_budget_bell.png`, libellés en anglais) : le pire cas en
 fonction du budget de l'attaque interne. Ligne bleue : budgets constants (le sommet
@@ -312,16 +315,17 @@ Les deux écarts **grandissent** sous le juge non biaisé. L'objection naturelle
 se retourne donc : c'est le contraire, et de 10 points sur MNIST comme de 8.5 points
 sur KMNIST. Une prédiction avait été écrite avant la mesure d'`A9` (48 à 58%) :
 50.35% tombe dedans.
-2. **Le mécanisme proposé est une lecture, pas une hypothèse testée.** Il est
-cohérent avec la courbe en cloche et avec les logs (`abl_c` verrouille, les
-recettes à départ haut n'exploitent pas le signal utile), mais il n'a pas été
-isolé de l'alternative évidente : un ordonnancement de budget qui interagit avec
-le programme de learning rate, indépendamment du contenu informatif du gradient.
-Deux expériences le trancheraient, et elles sont peu coûteuses : (i) un plan
-**non monotone** (`0.2 -> 2 -> 0.2 eps` contre `2 -> 0.2 -> 2 eps`), qui distingue
-"croissance monotone" de "départ doux" ; (ii) une lecture des trajectoires déjà
-enregistrées dans les logs (taux de tromperie et CE adverse epoch par epoch),
-qui ne coûte aucun run. Elles sont laissées à un travail ultérieur.
+2. **Le mécanisme proposé reste une lecture, mais elle est désormais mesurée.**
+Le S.4.5 exploite les trajectoires enregistrées dans les logs (aucun run
+supplémentaire) et remplace « le départ bas préserve l'information » par un
+critère chiffré : tromperie intermédiaire et cross-entropie adverse non saturée.
+Ce qui n'est toujours pas fait, c'est l'**intervention** qui isolerait le
+mécanisme d'une alternative évidente — un ordonnancement de budget qui interagit
+avec le programme de learning rate, indépendamment du contenu informatif du
+gradient. Le test qui trancherait est un plan **non monotone**
+(`0.2 -> 2 -> 0.2 eps` contre `2 -> 0.2 -> 2 eps`) : il distingue « croissance
+monotone » de « départ doux ». Il est peu coûteux et laissé à un travail
+ultérieur.
 
 **Précision sur les 22 points : deux mesures indépendantes, pas une.** L'effet a
 été reproduit sur un second jeu de données avec des runs distincts (§7.3), où
@@ -339,7 +343,69 @@ coût, ordre inversé — en maison (500 images) et au juge officiel (AutoAttack
 10 000 images). Les deux écarts, et le fait que l'écart OFFICIEL soit plus grand,
 sont annotés sur la figure.
 
-### 4.5 L'extension : un budget adaptatif, batch par batch
+### 4.5 Ce que racontent les logs : deux façons de rater, une façon de réussir
+
+Les logs d'entraînement (conservés dans le dépôt, `adversarial/results/logs/`)
+contiennent, à chaque epoch, deux nombres qui suffisent à diagnostiquer un run :
+le **taux de tromperie** de l'attaque interne (quelle part du lot adverse elle a
+fait basculer) et la **cross-entropie adverse** mesurée sur ce lot.
+
+| recette (KMNIST) | tromperie début -> fin | CE adv fin | val PGD10 fin | pire cas |
+|---|---|---|---|---|
+| plan `0.2 -> 2 eps` | 35.2% -> **47.3%** | 1.38 | 89.2% | **62.6%** |
+| plan `0.2 -> 1 eps` | 35.2% -> **40.9%** | 1.18 | 85.2% | **58.4%** |
+| plan `0.2 -> 0.5 eps` | 35.2% -> 27.6% | 0.79 | 67.2% | 31.8% |
+| plan inverse `1 -> 0.2 eps` | 96.5% -> 16.4% | 0.50 | 47.6% | 17.0% |
+| constant 1 eps | 96.5% -> 44.1% | 1.27 | 79.1% | 15.2% |
+| constant 2 eps | 97.2% -> 90.2% | **2.322** | 9.0% | 1.2% |
+| plan `0.05 -> 0.2 eps` | 17.3% -> 14.2% | 0.41 | 3.7% | 0.0% |
+
+Trois lectures.
+
+**Le signal d'entraînement est fixé par le budget de gauche.** Tous ces runs
+partent des mêmes poids (warm start identique). À l'epoch 1, les recettes qui
+démarrent à 2 pas (0.2 eps) voient une cross-entropie adverse de **1.234** et une
+tromperie de 35% ; celles qui démarrent à 10 pas (1 eps) voient **3.895** et
+96.5%. La différence n'est donc pas « moins de calcul » : c'est la **nature des
+exemples**. Une perte adverse de 3.9 (au-dessus de `ln 10 = 2.303`) signifie que
+les exemples adverses sont incompréhensibles pour le modèle au moment où ils sont
+présentés.
+
+**Deux façons de rater un run, et elles sont visibles sans évaluer le modèle.**
+
+1. *L'attaque interne s'éteint* (`abl_c`, pas de la taille de eps) : la tromperie
+   tombe à **2.2%** et la cross-entropie adverse rejoint la propre (0.068 contre
+   0.022). Les exemples « adverses » ne sont plus adverses ; le run dégénère en
+   entraînement propre ; robustesse finale 0%.
+2. *Le modèle sature à l'uniforme* (constant 2 eps sur KMNIST, et `v5` dont
+   l'attaque interne est un APGD) : l'attaque continue de tromper 88 à 90% du lot,
+   mais la cross-entropie adverse se **bloque exactement à `ln 10 = 2.32`** — la
+   sortie du modèle est uniforme au point adverse, donc le gradient ne lui dit
+   plus rien. Plateaux correspondants : val PGD10 9.0% et 11.6%.
+
+**Une façon de réussir : garder l'attaque informative sans saturer le modèle.**
+Les bonnes recettes maintiennent une tromperie **intermédiaire** (35 à 47%) et une
+cross-entropie adverse **modérée** (1.2 à 1.4), et leur tromperie **monte** quand
+le budget monte (35 -> 47% pour `0.2 -> 2`) : le modèle est bousculé, et il
+continue d'apprendre. À l'inverse, toutes les recettes à départ haut voient leur
+tromperie **chuter** (96.5 -> 16.4 ; 96.5 -> 44.1) — l'attaque fixe cesse d'être
+un défi, et le modèle obtient une robustesse qui ne tient que face à cette attaque
+précise.
+
+**Ce que ça change dans l'article.** Le mécanisme n'est plus une lecture vague
+(« le départ bas préserve l'information ») mais un critère mesurable, gratuit, lu
+sur les logs à chaque epoch : si la tromperie s'écroule vers 2%, le run est perdu ;
+si la cross-entropie adverse se bloque à 2.303, il est perdu aussi ; s'il reste
+dans la zone intermédiaire, il a une chance. Ce n'est toujours pas une preuve
+(un modèle masqué peut afficher un profil sain : `abl_a` finit à 41% de tromperie,
+1.21 de perte adverse et 91.3% de val PGD10 pour un pire cas officiel de 50.71%),
+mais c'est un filtre qui élimine en une ligne de log les deux dégénérescences qui
+rendent un run inutile.
+
+FIGURE 5 (`figures/fig5_trajectoires.png`) : les deux panneaux, lus directement
+dans les logs du dépôt.
+
+### 4.6 L'extension : un budget adaptatif, batch par batch
 
 Le plan déterministe est une courbe fixée à l'avance. Une variante consiste à
 viser, **pour chaque batch**, une difficulté cible et à arrêter l'attaque interne
@@ -375,7 +441,7 @@ autre modèle ne bat pas l'attaque en boîte blanche ; et le modèle s'effondre 
 à eps = 0.5 sous un PGD à pas fin (0.6%), ce qui prouve un rayon robuste réel et
 non une surface artificiellement plate.
 
-### 4.6 Deux corrections assumées
+### 4.7 Deux corrections assumées
 
 Deux intuitions ont été écrites, testées, puis abandonnées. Elles font partie du
 résultat :
@@ -634,7 +700,7 @@ Les résultats L-infini de ce document et cette garantie L2 répondent donc à
   Test peu coûteux (un run par eps), non fait.
 - **La forme de la rampe n'a pas été comparée** (linéaire contre logarithmique
   contre paliers), pas plus que la valeur de la cible du budget adaptatif
-  (S.4.5).
+  (S.4.6).
 - **Variance d'entraînement non couverte.** Chaque recette est un **run unique**
   (graine 42 pour l'ablation du pas, graine par défaut ailleurs). Les 10 000
   images d'AutoAttack donnent une incertitude d'évaluation négligeable (intervalle

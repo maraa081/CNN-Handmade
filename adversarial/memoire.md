@@ -1945,3 +1945,54 @@ recettes a depart haut chutent (abl_a 5e -> 6e, A9 4e -> 7e, inverse KMNIST dern
 Article mis a jour : resume (l'ecart officiel amplifie), S.2.3 (tableau du biais +
 separation des familles), S.4.4 (precaution n.1 -> resultat mesure), S.6 (huit
 modeles croises, deux familles). README et trame a jour. Commit a venir.
+
+### 2026-09-13 (18h25) - ANALYSE DES LOGS : deux facons de rater un run, une facon de reussir
+
+Les logs des 19 runs sont maintenant dans le depot (commit de Maraa, `git add -f`)
+et ils repondent au point n.3 de la relecture ("le mecanisme propose n'est pas
+teste") SANS aucun run supplementaire. Outil : `adversarial/torch/analyse_logs.py`
+(parseur stdlib, lit le taux de tromperie et la CE adverse par epoch).
+
+| recette (KMNIST) | tromperie debut -> fin | CE adv fin | val PGD10 fin | pire cas |
+|---|---|---|---|---|
+| plan `0.2 -> 2 eps` | 35.2% -> **47.3%** | 1.38 | 89.2% | **62.6%** |
+| plan `0.2 -> 1 eps` | 35.2% -> **40.9%** | 1.18 | 85.2% | **58.4%** |
+| plan `0.2 -> 0.5 eps` | 35.2% -> 27.6% | 0.79 | 67.2% | 31.8% |
+| plan inverse `1 -> 0.2` | 96.5% -> 16.4% | 0.50 | 47.6% | 17.0% |
+| constant 1 eps | 96.5% -> 44.1% | 1.27 | 79.1% | 15.2% |
+| constant 2 eps | 97.2% -> 90.2% | **2.322** | 9.0% | 1.2% |
+| plan `0.05 -> 0.2 eps` | 17.3% -> 14.2% | 0.41 | 3.7% | 0.0% |
+
+1. **Le budget de gauche fixe le signal d'entrainement.** Meme warm start pour
+   tous : a l'epoch 1, un depart a 2 pas (0.2 eps) donne CE adv **1.234** et
+   tromperie 35% ; un depart a 10 pas (1 eps) donne CE adv **3.895** et 96.5%.
+   Ce n'est pas "moins de calcul", c'est la NATURE des exemples : une perte de
+   3.9 (au-dessus de ln 10 = 2.303) = exemples incomprehensibles au moment ou on
+   les presente.
+2. **Deux degenerescences, toutes deux visibles dans les logs :**
+   - *l'attaque s'eteint* (`abl_c`, pas de la taille de eps) : tromperie 90.8% ->
+     **2.2%**, CE adv 0.068 ~= CE propre 0.022 -> le run devient de
+     l'entrainement PROPRE, robustesse finale 0%. **CORRECTION IMPORTANTE :** la
+     note du 12/09 attribuait a tort le plateau `ln(10)` au budget 20 eps ; le
+     plateau ln(10) appartient au contraire aux runs ou l'attaque trompe
+     ENCORE 88-90% du lot.
+   - *le modele sature a l'uniforme* (constant 2 eps KMNIST, et `v5` APGD-CE) :
+     l'attaque trompe 88-90% jusqu'au bout mais la CE adv se **bloque exactement
+     a ln 10 = 2.32** -> sortie uniforme au point adverse, gradient inutile ;
+     plateaux val PGD10 9.0% et 11.6%.
+3. **Une facon de reussir** : tromperie INTERMEDIAIRE (35-47%) et CE adv MODEREE
+   (1.2-1.4), avec une tromperie qui MONTE quand le budget monte (35 -> 47%) --
+   le modele est bouscule et continue d'apprendre. Toutes les recettes a depart
+   haut voient au contraire leur tromperie CHUTER (96.5 -> 16.4 ; 96.5 -> 44.1) :
+   l'attaque fixe cesse d'etre un defi -> robustesse specifique a cette attaque.
+4. **Statut honnete** : c'est toujours observationnel (pas d'intervention), et un
+   modele masque peut avoir un profil sain (`abl_a` finit a 41% / 1.21 / 91.3%
+   pour 50.71% officiel). Mais c'est un filtre gratuit qui elimine en une ligne de
+   log les deux degenerescences qui rendent un run inutile. L'intervention qui
+   trancherait reste le plan non monotone (`0.2 -> 2 -> 0.2` contre `2 -> 0.2 -> 2`).
+
+Nouvelle section **S.4.5 de l'article** ("Ce que racontent les logs : deux facons de
+rater, une facon de reussir") + **FIGURE 5** (`fig5_trajectoires.png`), generee
+directement depuis les logs du depot (5 courbes : bonne recette, uniforme, masque,
+depart haut, attaque eteinte). Le mecanisme d'`abl_c` au S.4.2 a ete corrige au
+passage (l'attribution erronee du plateau ln 10).
