@@ -170,11 +170,16 @@ jeu de donnees (des kana japonais)."
   plus tard ; le plan decroissant l'atteint d'emblee. Les modeles "mauvais"
   (`abl_a`, `A7`, `A9`) ont TOUS un depart haut ; les bons (`A6`, `A8`, `A1`)
   commencent tous a 2 pas (0.2 eps).
-- **Mecanisme propose** : un depart a budget court joue le role d'une
-  regularisation qui garde l'attaque interne informative ; demarrer fort place
-  l'optimisation dans le regime de verrouillage (`abl_c`). Piste theorique a
-  citer : le min-min de FAT (Wong et al., ICML 2020) - l'arret anticipe change
-  l'objectif.
+- **Mecanisme propose (MESURE le 13/09, voir 4.5 et FIGURE 5)** : un depart a
+  budget court garde l'attaque interne informative. Preuve dans les logs, sans
+  aucun run : a warm start identique, un depart a 2 pas donne CE adv **1.234** /
+  tromperie 35% contre **3.895** / 96.5% a 10 pas ; deux degenerescences sont
+  lisibles sans evaluer (attaque qui s'eteint -> 2.2% : `abl_c` ; saturation a
+  `ln 10` : constant 2 eps KMNIST et `v5`) ; les bonnes recettes gardent une
+  tromperie intermediaire (35-47%) qui MONTE avec le budget. Reste
+  observationnel : l'intervention qui trancherait est le plan non monotone
+  (`0.2 -> 2 -> 0.2` contre `2 -> 0.2 -> 2`). Piste theorique a citer : le min-min
+  de FAT (Wong et al., ICML 2020) - l'arret anticipe change l'objectif.
 - Reproduit deux fois (A6/A9 sur MNIST, plan doux/inverse sur KMNIST).
 
 ### 5.5 L'extension : budget adaptatif par batch (idee de Maraa)
