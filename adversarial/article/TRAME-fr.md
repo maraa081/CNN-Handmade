@@ -189,7 +189,33 @@ jeu de donnees (des kana japonais)."
   effondrement a eps=0.5 sous PGD a pas fin -> rayon robuste reel, pas de
   masquage. A mettre dans l'article : c'est la section qui coupe les objections.
 
-### 5.6 La lecture qui explique les modeles (outil, pas preuve)
+### 5.6 bis. La loi ne rattrape pas une perte mal reglee (TRADES)
+
+- Meme recette, meme duree, seule la perte change : TRADES (`CE + beta x KL`,
+  `beta 2`) au lieu de la cross-entropy sur l'exemple adverse.
+- TABLE 4 bis :
+
+| recette (plan `0.2 -> 2 eps`, 120 epochs) | propre | pire cas maison | **officiel** |
+|---|---|---|---|
+| PGD-AT (`A6`) | 99.2% | 85.8% | **82.40%** |
+| TRADES `beta 2` (warm start) | 96.5% | 27.2% | **22.01%** |
+
+- **-60 points a recette identique.** Conclusion : l'ordonnancement du budget est
+  un levier PUISSANT mais il ne compense pas un objectif mal reglé. A dire tel
+  quel, sans exagerer le propos de l'article.
+- Honnetete : c'est une VARIANTE (`beta 2` + warm start, compromis du 10/09 ou
+  `beta 6` faisait s'effondrer un modele deja converge : clean 69%). La reference
+  (Zhang et al. 2019) s'entraine depuis zero avec `beta 6`. Selon la decision de
+  Maraa : soit on documente la variante comme limite (assume), soit on ajoute le
+  run de reference (dernier run du projet) et la section gagne un chiffre au lieu
+  d'un paragraphe d'excuses. `A MESURER` si la decision est prise.
+- Signature a documenter : PGD-20 44.0% contre APGD-DLR 27.2% (**17 points
+  d'ecart**, profil rugueux type `abl_a`) et CW-L2 qui trompe 5% des images a une
+  distance L2 moyenne de **0.028** : quelques images sont catastrophiquement
+  fragiles. Un bon exemple de ce que la suite maison detecte et qu'un chiffre
+  unique cache.
+
+### 5.6 ter. La lecture qui explique les modeles (outil, pas preuve)
 - Sensibilite de la CE sous perturbation dans la boule (eps=0.3) : classe les 5
   modeles dans le MEME ordre que le pire cas officiel, alors que le rayon PGD
   classe a l'envers. Sert a trier et a expliquer (2 secondes de calcul).
@@ -214,6 +240,7 @@ jeu de donnees (des kana japonais)."
 | `kmnist_plan_02_2` | KMNIST, plan `0.2 -> 2 eps` | 62.6% | **58.53%** | -4.1 |
 | `kmnist_plan_doux` | KMNIST, plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
 | `abl_a` | PGD-20 constant, pas eps/10 | 63.2% | **50.71%** | -12.5 |
+| `trades_plan_02_2` | plan `0.2 -> 2 eps`, TRADES `beta 2` + warm start | 27.2% | **22.01%** | -5.2 |
 
 - **Le biais de notre suite maison est de 3 a 13 points**, jamais dans l'autre
   sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
@@ -282,10 +309,13 @@ jeu de donnees (des kana japonais)."
 - Le chiffre officiel KMNIST du plan doux porte un avertissement AutoAttack
   (2.24%) : il est lui-meme optimiste.
 - Robustesse empirique, pas certifiee : le seul resultat avec garantie est le
-  randomized smoothing (section dediee, `A MESURER` : run `--epochs 90` en cours).
-- `A MESURER` : variante TRADES (run en cours, recette identique au champion) -
-  a integrer comme piece "la recette, pas la perte" si elle confirme, comme
-  contre-exemple si elle infirme. Dans les deux cas, on publie le resultat.
+  randomized smoothing -- **rayon L2 certifie median 1.214, 98.5% des images
+  certifiees a R=0.30, 99.0% propre**. A presenter avec le piege de lecture : la
+  boule L-infini 0.30 n'est pas incluse dans la boule L2 1.214 (norme L2 jusqu'a
+  0.30 x sqrt(784) = 8.4), donc la garantie repond a une autre question que les
+  chiffres L-infini de l'article.
+- TRADES : voir 5.6 bis. Resultat publie meme s'il est mauvais pour notre
+  variante ; le run de reference (`--beta 6`, depuis zero) reste a decider.
 - Un seul dataset de replication, et une seule architecture par dataset : la loi
   est verifiee, pas demontree.
 
@@ -323,8 +353,8 @@ jeu de donnees (des kana japonais)."
 
 | # | A faire | Qui |
 |---|---|---|
-| 1 | Integrer le resultat TRADES (section 5.1 et 8) | moi, des que le run est fini |
-| 2 | Integrer le smoothing certifie (section 8) | moi |
+| 1 | ~~Integrer le resultat TRADES~~ fait (5.6 bis) ; le run de reference reste a decider | Maraa |
+| 2 | ~~Integrer le smoothing certifie~~ fait (sections 7 et 8) | moi |
 | 3 | Ecrire les sections 2 a 8 en prose FR | moi |
 | 4 | Produire FIG 2, FIG 3, FIG 4 (matplotlib, depuis les JSON) | moi |
 | 5 | Traduire en EN apres validation | moi |
