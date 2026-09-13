@@ -99,9 +99,15 @@ couches convolutives (32 puis 64 canaux), deux max-poolings, une couche dense,
 architectures.
 
 Le modèle de menace est le même du début à la fin : perturbation de norme
-L-infini au plus **eps = 0.30**, sur des images normalisées dans `[0,1]`. Toute
-attaque d'évaluation est rejouée à eps = 0.30, y compris pour les modèles dont
-l'attaque *d'entraînement* utilisait un autre budget — c'est ce qui rend les
+L-infini au plus **eps = 0.30**, sur des images normalisées dans `[0,1]`. Ce
+n'est pas une valeur choisie à l'aveugle : **c'est la valeur du banc d'essai MNIST
+de la littérature**, celle utilisée par Madry et al. (2017) et par TRADES (Zhang
+et al., 2019) — c'est exactement ce qui rend l'ancrage du S.5.1 légitime. C'est
+also le régime où un modèle non défendu s'effondre à **0.0%**, ce qui en fait un
+terrain sans ambiguïté pour observer les mécanismes de défense. La dépendance de
+la loi à eps (0.1, 0.2) n'a en revanche **pas** été testée : voir les limites.
+Toute attaque d'évaluation est rejouée à eps = 0.30, y compris pour les modèles
+dont l'attaque *d'entraînement* utilisait un autre budget — c'est ce qui rend les
 lignes du tableau final comparables entre elles.
 
 ### 2.2 Les six règles de mesure
@@ -233,6 +239,16 @@ que le modèle ne peut pas apprendre à contrer.
 
 ### 4.4 Le résultat central : c'est l'ORDRE
 
+**La forme exacte des plans.** Un plan de budget est une rampe **linéaire sur les
+epochs** : à l'epoch `t`, le budget vaut `deb + (fin - deb) x (t-1)/(epochs-1)`,
+exprimé en multiples de eps. Le pas de l'attaque interne reste **fixe** (eps/10) :
+on ne change que le **nombre de pas**, donc `budget = pas x alpha`. Concrètement,
+`--plan-budget "0.2,2"` fait passer l'attaque interne de 2 pas (0.2 eps) à l'epoch
+1 à 20 pas (2 eps) à l'epoch 120, en une seule rampe monotone. Deux plans ayant
+les mêmes bornes mais une autre forme de rampe (logarithmique, par paliers,
+loi de puissance) n'ont **pas** été testés : la forme linéaire a été fixée, pas
+comparée (voir les limites).
+
 Reste la question la plus intéressante : à budget donné, l'ordre dans lequel on
 présente les budgets au modèle compte-t-il ? L'expérience décisive tient en deux
 runs, de coût identique, avec exactement le même ensemble de budgets traversés :
@@ -257,6 +273,33 @@ théorique voisine est l'objectif **min-min** de FAT (Wong et al., ICML 2020) :
 l'arrêt anticipé de l'attaque interne change la nature du problème
 d'optimisation.
 
+**Deux précautions sur ce résultat, à écrire noir sur blanc.**
+
+1. **Les 22 points sont un écart maison contre maison.** `A6` est vérifié
+officiellement (82.40%) mais `A9` ne l'était pas encore au moment de la première
+rédaction : l'écart official-contre-officiel est en cours de mesure, et il
+pourrait être **plus grand** (le biais de notre suite atteint -12.5 points sur le
+modèle au profil le plus proche d'`A9`, `abl_a` : 63.2% maison -> 50.71% officiel).
+Prédiction écrite avant la mesure : `A9` officiel entre **48% et 58%**, donc un
+écart officiel de **25 à 35 points**. C'est l'expérience la plus importante qui
+restait à faire sur ce projet, et elle ne crée aucun modèle : c'est une mesure.
+2. **Le mécanisme proposé est une lecture, pas une hypothèse testée.** Il est
+cohérent avec la courbe en cloche et avec les logs (`abl_c` verrouille, les
+recettes à départ haut n'exploitent pas le signal utile), mais il n'a pas été
+isolé de l'alternative évidente : un ordonnancement de budget qui interagit avec
+le programme de learning rate, indépendamment du contenu informatif du gradient.
+Deux expériences le trancheraient, et elles sont peu coûteuses : (i) un plan
+**non monotone** (`0.2 -> 2 -> 0.2 eps` contre `2 -> 0.2 -> 2 eps`), qui distingue
+"croissance monotone" de "départ doux" ; (ii) une lecture des trajectoires déjà
+enregistrées dans les logs (taux de tromperie et CE adverse epoch par epoch),
+qui ne coûte aucun run. Elles sont laissées à un travail ultérieur.
+
+**Précision sur les 22 points : deux mesures indépendantes, pas une.** L'effet a
+été reproduit sur un second jeu de données avec des runs distincts (§7.3), où
+l'écart passe à 41 points. Ce n'est pas une répétition de graines sur la même
+configuration, mais c'est une répétition de l'**effet** sur d'autres données, ce
+qui répond à l'objection la plus courante.
+
 La même expérience, avec des plans moins chers, a servi de garde-fou : un plan
 `0.2 -> 0.5 eps` (6 min) ne donne que 31.8% et un plan `0.05 -> 0.2 eps` (5 min)
 0.0% — baisser le *plafond* détruit la robustesse. C'est le **départ** qui doit
@@ -267,14 +310,30 @@ FIGURE 2 : `A6` contre `A9`, mêmes budgets, ordre inversé.
 ### 4.5 L'extension : un budget adaptatif, batch par batch
 
 Le plan déterministe est une courbe fixée à l'avance. Une variante consiste à
-viser, **pour chaque batch**, une difficulté cible (par exemple une
-cross-entropie adverse cible) et à arrêter l'attaque interne dès qu'elle est
-atteinte, au pas `k*`. Le surcoût est nul : à pas fixe, la trajectoire de PGD
-contient déjà tous les candidats.
+viser, **pour chaque batch**, une difficulté cible et à arrêter l'attaque interne
+dès qu'elle est atteinte, au pas `k*`. Le surcoût est nul : à pas fixe, la
+trajectoire de PGD contient déjà tous les candidats.
+
+**Paramétrage exact**, pour que le résultat soit reproductible et critiquable :
+la cible est un **taux de tromperie** (fraction du batch que l'attaque interne
+doit avoir fait basculer), fixée à **0.5** ; l'attaque s'arrête au premier pas `k*`
+tel que le taux de tromperie atteint 0.5, et les pas restants sont économisés. La
+cible elle-même suit une rampe (0.2 au début, 0.5 à partir de la moitié du run),
+parce qu'un modèle encore faible ne peut pas tromper la moitié d'un batch à
+l'epoch 1. Un garde-fou alerte si la cible n'est atteinte qu'au plafond de pas sur
+une fraction trop grande des batchs (signe qu'on est hors de la fenêtre faisable).
 
 Résultat : **93.6% maison / 91.25% officiel**, contre 82.40% pour le meilleur
 plan déterministe. L'asservissement par batch apporte donc +7 à +9 points
 officiels pour une dizaine de minutes supplémentaires.
+
+**Ce qui n'a pas été testé sur ce point** : la valeur de la cible. Une variante de
+cible plus lisse (cross-entropie relative) et un contrôle à cible très haute (0.9,
+qui devrait dégrader) sont décrits dans la documentation de l'attaque mais n'ont
+pas été lancés : le résultat annoncé ne vaut donc que pour la cible 0.5, et sa
+sensibilité à ce paramètre reste une question ouverte. C'est le meilleur modèle du
+projet, et c'est aussi celui dont le paramétrage est le moins ablaté : à corriger
+avant toute publication qui le mettrait en avant.
 
 Un modèle plus robuste doit aussi survivre à l'audit de masquage, sans quoi le
 gain serait un artefact. Quatre vérifications, toutes passées : les sorties ne
@@ -309,9 +368,15 @@ Sur MNIST à eps = 0.30, les implémentations de référence rapportent :
 |---|---|---|
 | Madry et al. 2017, PGD-40 | 99.36% | **96.01%** |
 | TRADES, Zhang et al. 2019 (`1/lambda = 6`) | 99.48% | **95.60%** |
+| **notre** TRADES (variante non conforme, voir S.5.2) | 93.26% | 25.18% |
 | notre meilleur (`bande_cible50`), 421k paramètres, 120 epochs | 98.85% | **91.25%** |
 | notre `A6` (plan `0.2 -> 2 eps`) | 99.17% | **82.40%** |
 | notre `abl_a` (**même** architecture, budget constant 2 eps) | 99.53% | **50.71%** |
+
+Nos lignes TRADES figurent ici par transparence, mais elles ne doivent **pas** être
+lues comme un point de comparaison de méthodes : il est établi au S.5.2 que notre
+implémentation ne reproduit pas la référence, et l'écart (~70 points) est bien
+trop grand pour être un effet de méthode.
 
 Deux phrases suffisent. D'abord, notre meilleur modèle est à environ **cinq
 points** de la référence, avec une architecture beaucoup plus petite et 120
@@ -441,6 +506,19 @@ validation monte à 99.5% — mieux que le modèle de référence propre — pen
 la robustesse reste bloquée. Un modèle propre *plus* précis et simultanément
 inutile : c'est exactement le profil d'un objectif devenu hors d'atteinte.
 
+**La fenêtre de budgets faisables, et sa conséquence sur la portée de la loi.**
+L'ensemble des mesures KMNIST délimite empiriquement une fenêtre : un plan dont le
+**départ** est bas (2 pas, 0.2 eps) et dont le **plafond** atteint 1 à 2 eps donne
+58 à 63% ; un plafond sous 0.5 eps ne produit qu'une robustesse de rayon
+minuscule ; un budget **constant** de 2 eps tombe hors de portée et s'effondre à
+1.2%. La loi de l'ordre ne s'applique donc pas « dans l'absolu » : **elle
+s'applique à l'intérieur d'une fenêtre de budgets faisables, et cette fenêtre
+dépend du jeu de données** (elle est plus basse sur MNIST, plus haute sur KMNIST,
+où le budget 2 eps constant échoue alors qu'il atteint 63.2% sur MNIST). C'est
+une précision importante pour le lecteur : la loi n'est pas un théorème, c'est une
+régularité conditionnelle, dont la condition est justement le point à vérifier
+avant de transposer une recette.
+
 **Leçon méthodologique** : un sommet de courbe n'est pas un nombre, c'est un
 nombre **pour un jeu de données donné**. Toute recette publiée sans son jeu de
 validation croisée est une recette qui n'a pas été testée.
@@ -501,6 +579,25 @@ Les résultats L-infini de ce document et cette garantie L2 répondent donc à
   les deux écarts étant identifiés.
 - **Un seul jeu de réplication** et un seul plan gagnant par jeu : la loi de
   l'ordre est reproduite deux fois (MNIST, KMNIST), pas démontrée.
+- **Un seul eps** (0.30) : on ne sait pas si la loi tient à eps = 0.1 ou 0.2, où la
+  fenêtre de budgets faisables se déplace nécessairement (le verrouillage devient
+  plus difficile à provoquer, donc le départ haut pourrait devenir inoffensif).
+  Test peu coûteux (un run par eps), non fait.
+- **La forme de la rampe n'a pas été comparée** (linéaire contre logarithmique
+  contre paliers), pas plus que la valeur de la cible du budget adaptatif
+  (S.4.5).
+- **Variance d'entraînement non couverte.** Chaque recette est un **run unique**
+  (graine 42 pour l'ablation du pas, graine par défaut ailleurs). Les 10 000
+  images d'AutoAttack donnent une incertitude d'évaluation négligeable (intervalle
+  de Clopper-Pearson d'environ +/- 0.7 point à 82%, le même outil que le S.8.1
+  utilise pour le smoothing), mais **la variance de la graine n'est pas mesurée** :
+  on ne peut pas exclure qu'une partie de l'écart entre deux recettes vienne de
+  l'initialisation ou de l'ordre des mini-batchs. L'argument qui limite le risque :
+  l'effet est reproduit sur un second jeu (41 points, S.7.3), et le motif est
+  structurel — les cinq modèles sains commencent tous à 2 pas, les quatre modèles
+  faibles ont tous un départ haut. Un plan de graines (3 graines x 2 recettes,
+  l'ordre croissant contre l'ordre décroissant) reste la confirmation à faire, et
+  c'est la plus coûteuse : environ 2 à 3 heures de GPU.
 
 ---
 
