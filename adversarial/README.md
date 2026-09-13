@@ -925,7 +925,7 @@ attaque de rayon <= R ne peut passer".
 
 ---
 
-## Ce qui reste avant de publier (état au 2026-09-12)
+## Ce qui reste avant de publier (état au 2026-09-13)
 
 Les étapes listées ici auparavant (BPDA/EOT, Carlini-Wagner, black-box,
 randomized smoothing, APGD) sont **faites** : voir "La suite d'attaques" plus
@@ -933,10 +933,10 @@ haut. Ce qui reste, par ordre d'importance :
 
 | Priorité | À faire | Pourquoi |
 |---|---|---|
-| 1 | ~~**Croiser nos chiffres avec `autoattack`**~~ **FAIT le 12/09** pour `bande_cible50` et `abl_a` | notre APGD était une réimplémentation maison : AutoAttack a confirmé le classement et révélé que nos chiffres maison étaient optimistes (abl_a : 63.2% annoncé, **50.71%** officiel) |
+| 1 | ~~**Croiser nos chiffres avec `autoattack`**~~ **FAIT** : 6 modèles croisés (A1 91.25%, A6 82.40%, A8 78.25%, KMNIST `0.2->2` 58.53%, KMNIST `0.2->1` 51.03%, abl_a 50.71%) | notre APGD était une réimplémentation maison : AutoAttack a confirmé le classement et révélé que nos chiffres maison étaient optimistes (abl_a : 63.2% annoncé, **50.71%** officiel) |
 | 2 | **Attaquer l'écart gradient <-> Square** : résolu dans son principe le 12/09 (rapport gradient/aléatoire ; marges anisotropes) | reste à le documenter proprement dans le write-up |
 | 3 | **Smoothing à relancer** (`--epochs 90`) | le bug de learning rate est corrigé (commit 4f420f8) ; le run précédent s'effondrait |
-| 4 | **KMNIST** : entraîner proprement et documenter | l'ancre Japon du repo (aujourd'hui : 70.1% sur 5000 images / 3 epochs, preuve de chaîne seulement) |
+| 4 | ~~**KMNIST** : entraîner proprement et documenter~~ **FAIT le 13/09** | ancre Japon : 8 points de mesure, meilleur 62.6% maison / **58.53%** officiel, recette appariée à MNIST (voir la série KMNIST plus haut) |
 | 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
 | 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense", avec la **loi du budget de déplacement de l'attaque interne** comme pièce centrale |
 | 7 | **Model card Hugging Face + Space Gradio** | la publication elle-même (poids, recette, robustesse par eps, limites) |
@@ -971,9 +971,9 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 | # | Élément | État |
 |---|---|---|
 | 1 | Suite d'attaques (BPDA+EOT, CW-L2, black-box Square/NES, Boundary, smoothing) | OK |
-| 2 | **Chiffres croisés avec AutoAttack** | **OK depuis le 12/09** (sur `bande_cible50` et `abl_a`) |
+| 2 | **Chiffres croisés avec AutoAttack** | **OK** (12/09 puis 13/09 : 6 modèles, dont les deux paires MNIST/KMNIST à recette identique) |
 | 3 | Ablation du budget de déplacement + courbe en cloche + attaque à budget adaptatif | OK |
-| 4 | KMNIST entraîné proprement et documenté (ancre Japon) | à faire |
+| 4 | KMNIST entraîné proprement et documenté (ancre Japon) | **OK le 13/09** (8 points de mesure ; critère d'arrêt tenu) |
 | 5 | Smoothing relancé (`--epochs 90`) | à faire |
 | 6 | Variante TRADES tranchée (aligner ou documenter) | à faire |
 | 7 | Write-up de fond FR + EN | à faire |
@@ -981,11 +981,26 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 
 ### Les chiffres à annoncer (AutoAttack `standard`, 10 000 images, eps=0.30)
 
-| Modèle | Jeu | propre | robuste (pire cas officiel) |
+| Modèle | Jeu | propre | robuste (pire cas officiel) | durée |
+|---|---|---|---|---|
+| `bande_cible50` (budget adaptatif) | MNIST | 98.85% | **91.25%** | 20 min |
+| `A6` (plan `0.2 -> 2 eps`) | MNIST | 99.17% | **82.40%** | 11 min |
+| `A8` (plan `0.2 -> 1 eps`) | MNIST | 99.27% | **78.25%** | 14.3 min |
+| `kmnist_plan_02_2` (plan `0.2 -> 2 eps`) | KMNIST | 94.64% | **58.53%** | 10.7 min |
+| `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** | 9.0 min |
+| `abl_a` (PGD-20 constant, pas eps/10) | MNIST | 99.53% | 50.71% | 20 min |
+
+**Les deux paires appariées (même recette, deux jeux) — la phrase de l'article :**
+
+| recette | MNIST | KMNIST | écart |
 |---|---|---|---|
-| `bande_cible50` (attaque interne à budget adaptatif) | MNIST | 98.85% | **91.25%** |
-| `abl_a` (PGD-20, pas eps/10) | MNIST | 99.53% | 50.71% |
-| `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** |
+| plan `0.2 -> 2 eps` | 82.40% | 58.53% | **-23.9 pts** |
+| plan `0.2 -> 1 eps` | 78.25% | 51.03% | **-27.2 pts** |
+
+À recette identique, l'ordre des recettes est conservé (le plan `0.2 -> 2 eps` est le
+meilleur des deux côtés) et le niveau chute de **~25 points** : *la recette se
+transpose, le niveau non*. C'est un chiffre propre, officiel des deux côtés, et il
+remplace l'ancienne comparaison qui mélangeait 84.4% maison à 51.03% officiel.
 
 Notes :
 
@@ -993,6 +1008,19 @@ Notes :
   12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
   existait. Même direction sur KMNIST : 58.4% maison contre **51.03%** officiel
   (**+7.4 points** d'optimisme).
+- **L'optimisme de la suite maison, mesuré sur les six modèles croisés** : -3.4 pts
+  (A6), -4.1 (KMNIST `0.2->2`), -6.2 (A8), -7.4 (KMNIST `0.2->1`), -12.5 (abl_a).
+  Donc de 3 à 13 points, pas "environ 3" comme on l'écrivait : la règle de mesure
+  n°3 (AutoAttack est le juge) reste la seule façon d'annoncer un chiffre.
+- **Le classement est conservé sauf à un endroit, et c'est instructif** : les cinq
+  modèles propres (`A1`, `A6`, `A8`, KMNIST `0.2->2`, KMNIST `0.2->1`) gardent
+  exactement le même ordre en maison et en officiel. Seul `abl_a` bouge : 4e en
+  maison (63.2%), **dernier en officiel (50.71%)**. Et c'est justement le modèle
+  dont l'optimisme est le plus fort (-12.5 pts) et celui que nos diagnostics
+  classaient comme rugueux (désaccord des rayons PGD/Square, rapport
+  gradient/aléatoire 1.28). Autrement dit : **la suite maison trie bien les
+  modèles sains et se trompe en faveur des modèles suspects** — ce qui est
+  précisément le signe qu'on cherchait à documenter.
 - Sur KMNIST, AutoAttack émet un avertissement ("Square Attack has decreased the
   robust accuracy of 2.24%") : le 51.03% est lui-même légèrement optimiste. À
   écrire dans la model card — une limite annoncée honnêtement vaut mieux qu'un
@@ -1032,7 +1060,8 @@ Notes :
 
 ### Le catalogue des runs (arrêté au 2026-09-13, 01h20)
 
-Rappel : notre suite maison (500 images) est optimiste d'environ 3 points ; le
+Rappel : notre suite maison (500 images) est optimiste de **3 a 13 points**
+selon le modele ; le
 chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 
 | Run | Recette de l'attaque interne | Coût | propre | pire cas (maison) | pire cas (officiel) | marqueur rayons |

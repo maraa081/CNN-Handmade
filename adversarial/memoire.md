@@ -1724,3 +1724,45 @@ compte 8 points), on ne relance PAS de 9e run sur KMNIST. Reste l'item 1 du
 perimetre : les chiffres OFFICIELS (AutoAttack) sur `models/a8_plan_0p2_1.pt`
 (MNIST, pire cas maison 84.4%) et sur `models/kmnist_plan_02_2.pt` (62.6%), pour
 que la comparaison MNIST <-> KMNIST ne melange plus maison et officiel.
+
+### 2026-09-13 (12h31) - LES DEUX CHIFFRES OFFICIELS QUI MANQUAIENT (paires appariees)
+
+AutoAttack `standard`, 10 000 images, eps=0.30, sur les deux modeles :
+
+| modele | recette | propre | ROBUSTE officiel | duree |
+|---|---|---|---|---|
+| `models/a8_plan_0p2_1.pt` | MNIST, plan `0.2 -> 1 eps` | 99.27% | **78.25%** | 14.3 min |
+| `models/kmnist_plan_02_2.pt` | KMNIST, plan `0.2 -> 2 eps` | 94.64% | **58.53%** | 10.7 min |
+
+Avec `A6` (82.40%) et `kmnist_plan_doux` (51.03%) deja mesures, on a maintenant
+**deux paires a recette IDENTIQUE, officielles des deux cotes** :
+
+| recette | MNIST | KMNIST | ecart |
+|---|---|---|---|
+| plan `0.2 -> 2 eps` | 82.40% | 58.53% | **-23.9 pts** |
+| plan `0.2 -> 1 eps` | 78.25% | 51.03% | **-27.2 pts** |
+
+=> La phrase de l'article est propre et sourcable : **la recette se transpose
+(l'ordre est conserve : `0.2 -> 2` est le meilleur des deux cotes), le niveau
+chute de ~25 points.** L'ancienne formulation (-30 pts) melangeait un chiffre
+maison (84.4%) et un officiel (51.03%) : corrigee et desormais impossible a
+casser.
+
+OPTIMISME DE LA SUITE MAISON, mesage sur les 6 modeles croises : -3.4 (A6),
+-4.1 (KMNIST 0.2->2), -6.2 (A8), -7.4 (KMNIST 0.2->1), -12.5 (abl_a). Donc de 3
+a 13 points, pas "environ 3" : la ligne du catalogue est corrigee.
+
+LE CLASSEMENT N'EST CONSERVE QU'A MOITIE, et c'est instructif : les cinq modeles
+sains (A1, A6, A8, KMNIST 0.2->2, KMNIST 0.2->1) gardent exactement le meme ordre
+en maison et en officiel ; seul `abl_a` bouge (4e en maison a 63.2%, DERNIER en
+officiel a 50.71%) -- et c'est justement le modele que nos diagnostics
+classaient comme rugueux (desaccord des rayons PGD/Square, rapport
+gradient/aleatoire 1.28). Conclusion a garder pour le write-up : la suite maison
+trie bien les modeles sains et se trompe EN FAVEUR des modeles suspects.
+
+Note : AutoAttack n'a emis aucun avertissement sur `kmnist 0.2 -> 2` (pas de
+"Square Attack has decreased the robust accuracy"), contrairement au 51.03% du
+plan doux (2.24%). Les deux chiffres KMNIST sont donc de qualite differente.
+
+ITEM 1 DU PERIMETRE CLOS. Reste : smoothing (`--epochs 90`), TRADES, write-up,
+model card + Space, push des poids.
