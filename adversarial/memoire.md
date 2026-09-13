@@ -1852,9 +1852,14 @@ eps=0.3 L-infini, Madry et al. 2017 (`[MMS+18]`) rapportent 99.36% propre /
 Donc notre TRADES a 22-25% est a ~70 points de la reference, et sa precision
 PROPRE (93-94%) est plus BASSE que celle de nos modeles CE (99.2-99.6%), alors
 que le terme CE de TRADES est justement cense la proteger. Deux signes
-independants que l'implementation est fautive. Pistes de correction : sens de la
-KL (TRADES maximise KL(p(y|x) || p(y|x_adv))), budget de l'attaque interne du
-terme KL, rampe de beta.
+independants que l'implementation est fautive. Les deux ecarts sont IDENTIFIES et
+deja commentes dans le code (`entrainement.py`, section `--loss trades`, marquee
+`[a trancher]`) : (1) SENS DE LA KL INVERSE -- nous calculons
+KL(p_adverse || p_propre) la ou la reference (yaodongyu/TRADES) minimise
+KL(p_propre || p_adverse) ; (2) l'ATTAQUE INTERNE NE MAXIMISE PAS LA KL -- notre
+perturbation vient d'un PGD sur la cross-entropy, alors que la reference genere
+`x_adv` en maximisant le terme KL. Correction localisee (deux endroits) ; a
+decider avec Maraa (run de 12 min + eval si on corrige).
 
 **CONSEQUENCE EDITORIALE (correction de mon propre propos de 13h09)** : la phrase
 "la loi de l'ordonnancement ne rattrape pas une perte mal reglee" est RETIREE de
