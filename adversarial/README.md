@@ -925,6 +925,34 @@ comparable directement aux 91% sous PGD eps=0.30. C'est une autre forme de
 preuve : au lieu de "je n'ai pas trouve d'attaque qui passe", on affirme "aucune
 attaque de rayon <= R ne peut passer".
 
+### Résultat (13/09, sigma=0.5, 1000 images, alpha=0.001)
+
+| | valeur |
+|---|---|
+| précision du classifieur lissé | 99.0% |
+| taux d'abstention | 0.5% |
+| **rayon certifié médian** | **1.214** (L2) |
+
+| rayon L2 certifié | précision certifiée |
+|---|---|
+| 0.00 | 99.0% |
+| 0.30 | 98.5% |
+| 0.50 | 98.0% |
+| 1.00 | 83.5% |
+| 1.20 | 52.5% |
+
+Lecture : 98.5% des images restent certifiées pour tout rayon L2 <= 0.30, et
+83.5% jusqu'à R=1.00. C'est le **seul chiffre du projet qui est une garantie** et
+non une observation. À comparer, en restant dans la même norme, aux distances L2
+que nos attaques CW-L2 doivent atteindre pour tromper les modèles durcis
+(0.03 à 1.8 selon le modèle) : le modèle lissé est loin devant.
+
+[ATTENTION] Piège de lecture à ne jamais rater : la boule L-infini eps=0.30 n'est
+PAS incluse dans la boule L2 de rayon 1.214 (une perturbation de norme L-infini
+0.30 peut avoir une norme L2 jusqu'à 0.30 x sqrt(784) = 8.4). Les résultats
+L-infini de ce document et la garantie L2 ci-dessus répondent donc à DEUX
+questions différentes : ils ne se comparent pas et ne se remplacent pas.
+
 ---
 
 ## Ce qui reste avant de publier (état au 2026-09-13)
@@ -937,7 +965,7 @@ haut. Ce qui reste, par ordre d'importance :
 |---|---|---|
 | 1 | ~~**Croiser nos chiffres avec `autoattack`**~~ **FAIT** : 6 modèles croisés (A1 91.25%, A6 82.40%, A8 78.25%, KMNIST `0.2->2` 58.53%, KMNIST `0.2->1` 51.03%, abl_a 50.71%) | notre APGD était une réimplémentation maison : AutoAttack a confirmé le classement et révélé que nos chiffres maison étaient optimistes (abl_a : 63.2% annoncé, **50.71%** officiel) |
 | 2 | **Attaquer l'écart gradient <-> Square** : résolu dans son principe le 12/09 (rapport gradient/aléatoire ; marges anisotropes) | reste à le documenter proprement dans le write-up |
-| 3 | **Smoothing à relancer** (`--epochs 90`) | le bug de learning rate est corrigé (commit 4f420f8) ; le run précédent s'effondrait |
+| 3 | ~~**Smoothing à relancer** (`--epochs 90`)~~ **FAIT le 13/09** | rayons L2 certifiés (médiane 1.214 ; 98.5% à R=0.30) : seule garantie du projet |
 | 4 | ~~**KMNIST** : entraîner proprement et documenter~~ **FAIT le 13/09** | ancre Japon : 8 points de mesure, meilleur 62.6% maison / **58.53%** officiel, recette appariée à MNIST (voir la série KMNIST plus haut) |
 | 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
 | 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense", avec la **loi du budget de déplacement de l'attaque interne** comme pièce centrale |
@@ -962,7 +990,7 @@ le surcoût est **nul** par rapport à PGD-20.
 
 ---
 
-## Périmètre de fin de projet et séquence (état au 2026-09-12)
+## Périmètre de fin de projet et séquence (état au 2026-09-13)
 
 **Jalon d'arrêt = la publication**, pas un chiffre : model card Hugging Face +
 Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
@@ -976,7 +1004,7 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 | 2 | **Chiffres croisés avec AutoAttack** | **OK** (12/09 puis 13/09 : 6 modèles, dont les deux paires MNIST/KMNIST à recette identique) |
 | 3 | Ablation du budget de déplacement + courbe en cloche + attaque à budget adaptatif | OK |
 | 4 | KMNIST entraîné proprement et documenté (ancre Japon) | **OK le 13/09** (8 points de mesure ; critère d'arrêt tenu) |
-| 5 | Smoothing relancé (`--epochs 90`) | à faire |
+| 5 | ~~Smoothing relancé (`--epochs 90`)~~ | **OK le 13/09** : rayon L2 certifié médian **1.214**, 98.5% certifiés à R=0.30 |
 | 6 | Variante TRADES tranchée (aligner ou documenter) | à faire |
 | 7 | Write-up de fond FR + EN | à faire |
 | 8 | Model card Hugging Face + Space Gradio | à faire |
