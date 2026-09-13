@@ -736,6 +736,30 @@ python3 adversarial/torch/harden_torch.py --dataset kmnist --n-train 60000 \
   --warm-start models/kmnist_standard.npz --out models/kmnist_plan_inverse.pt
 ```
 
+## Lire les logs : deux facons de rater un run, en une ligne
+
+`adversarial/torch/analyse_logs.py` (stdlib pure) relit les logs d'entrainement
+(`adversarial/results/logs/*.log`, versionnes depuis le 13/09) et resume la
+trajectoire de **deux nombres par epoch** : le taux de tromperie de l'attaque
+interne et la cross-entropie adverse. Ils suffisent a diagnostiquer un run sans
+l'evaluer :
+
+| ce qu'on voit dans le log | ce que ca veut dire |
+|---|---|
+| tromperie qui tombe a ~2%, CE adv == CE propre | l'attaque s'eteint (pas trop grossier) : le run devient de l'entrainement PROPRE, robustesse nulle (`abl_c`) |
+| CE adv bloquee a **2.303 = ln 10** | le modele sature a l'uniforme au point adverse : plus aucun gradient utile (constant 2 eps KMNIST, `v5`) |
+| tromperie **intermediaire** (35-47%) et qui MONTE avec le budget, CE adv 1.2-1.4 | regime sain : le modele est bouscule et continue d'apprendre (`0.2 -> 2`, `0.2 -> 1`) |
+| tromperie qui CHUTE (96 -> 16) | l'attaque fixe cesse d'etre un defi : robustesse specifique a cette attaque (plan inverse) |
+
+Mesure directe : a l'epoch 1 et a warm start identique, un depart a 2 pas (0.2 eps)
+donne CE adv **1.234** / tromperie 35%, un depart a 10 pas (1 eps) donne **3.895** /
+96.5%. Le budget de gauche ne change pas seulement le cout, il change la **nature
+des exemples** presentes au modele.
+
+Attention : ces deux nombres ne PROUVENT rien (un modele masque peut afficher un
+profil sain : `abl_a` finit a 41% / 1.21 / 91.3% de val PGD10 pour 50.71%
+officiel). C'est un filtre, pas un juge.
+
 ## Le tableau final : le recap automatique des runs
 
 `eval_suite.py` et `eval_autoattack.py` savent écrire leurs résultats en JSON
