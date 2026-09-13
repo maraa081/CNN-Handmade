@@ -1020,6 +1020,33 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 | `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** | 9.0 min |
 | `abl_a` (PGD-20 constant, pas eps/10) | MNIST | 99.53% | 50.71% | 20 min |
 | `trades_plan_02_2` (TRADES, `beta 2` + warm start) | MNIST | 96.51% | 22.01% | 4.3 min |
+| `trades_ref_plan_02_2` (TRADES, `beta 6`, depuis zéro) | MNIST | 93.26% | 25.18% | 4.3 min |
+
+**Ancrage littérature (MNIST, eps=0.30, L-infini)** — indispensable pour situer nos
+chiffres, et sans lui on ne peut pas juger nos propres runs :
+
+| modèle | propre | robuste |
+|---|---|---|
+| Madry et al. 2017 (`[MMS+18]`), 40 pas de PGD | 99.36% | **96.01%** |
+| TRADES, Zhang et al. 2019 (`1/lambda=6`), 1 000 pas / 40 pas | 99.48% | **95.60%** / 96.07% |
+| notre meilleur (`bande_cible50`, 421k paramètres, 120 epochs) | 98.85% | **91.25%** |
+| notre `abl_a` (même architecture, budget constant 2 eps) | 99.53% | **50.71%** |
+
+Lecture : notre meilleur modèle arrive à ~5 points des implémentations de
+référence (architectures plus grosses, 100+ epochs), et la recette "départ haut"
+tombe 45 points en dessous **dans la même architecture**. C'est exactement la
+place que l'article veut occuper : pas un record, un fait de mécanisme.
+
+**[ATTENTION] Notre TRADES ne reproduit PAS la référence.** 22.01% (`beta 2` +
+warm start) et 25.18% (`beta 6`, depuis zéro) contre **95.60%** rapportés, et une
+précision propre PLUS BASSE que nos modèles CE (93-94% contre 99.2-99.6%) alors
+que le terme CE de TRADES est justement censé la protéger : deux signes qui
+disent que l'implémentation est fautive (piste : sens de la KL, budget de
+l'attaque interne du terme KL, rampe de beta). L'écart est trop grand pour être
+lu comme une comparaison de méthodes : on publie ces deux runs comme une
+**limite assumée** (implémentation à corriger), pas comme un résultat. La phrase
+"la loi ne rattrape pas une perte mal réglée" qui figurait dans la trame le
+13/09 est donc **retirée** — elle n'est pas soutenue par les faits.
 
 **Les deux paires appariées (même recette, deux jeux) — la phrase de l'article :**
 
@@ -1122,6 +1149,7 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist 7** | plan `0.2 -> 0.5 eps` (2 -> 5 pas) | 6 min 54 s | 98.0% | **31.8%** | - | - |
 | **kmnist 8** | plan `0.2 -> 2 eps` (2 -> 20 pas, copie d'`A6`) | 11 min 35 s | 96.2% | **62.6%** | **58.53%** | accord |
 | **trades** | plan `0.2 -> 2 eps` + `--loss trades --beta 2` (variante, warm start) | 12 min 20 s | 96.8% | **27.2%** | **22.01%** | désaccord (17 pts) |
+| **trades ref** | plan `0.2 -> 2 eps` + `--loss trades --beta 6`, **depuis zéro** | 12 min 7 s | 94.2% | **30.0%** | **25.18%** | désaccord |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un

@@ -1826,3 +1826,45 @@ NOTE : `--warm-start` vaut "auto" par defaut et charge
 s'il existe. La variante "reference" de TRADES (Zhang et al.) suppose un
 entrainement DEPUIS ZERO avec `--beta 6`, donc `--warm-start none` : c'est la
 seule case encore ouverte du perimetre (item 6).
+
+### 2026-09-13 (15h13) - TRADES de reference : 25.18% -> notre TRADES NE REPRODUIT PAS la reference
+
+Run de Maraa (`--loss trades --beta 6 --warm-start none`, plan `0.2 -> 2 eps`,
+120 epochs, augment, depuis zero, 12 min 7 s) :
+
+| | TRADES `beta 2` (warm start) | TRADES `beta 6` (depuis zero) |
+|---|---|---|
+| propre (500 img) | 96.8% | 94.2% |
+| pire cas maison | 27.2% (APGD-DLR) | **30.0%** (APGD-DLR) |
+| propre (10 000 img) | 96.51% | 93.26% |
+| **officiel AutoAttack** | **22.01%** | **25.18%** |
+| duree | 12 min 20 s | 12 min 7 s |
+
+=> Le passage a la configuration de reference (depuis zero, `beta 6`) ne change
+presque rien : +3.2 points officiels. Et surtout :
+
+**ANCrage LITTERATURE (verifie ce jour, PDF ICML 2019, Table 2)** : sur MNIST
+eps=0.3 L-infini, Madry et al. 2017 (`[MMS+18]`) rapportent 99.36% propre /
+**96.01%** robuste (PGD 40 pas) ; TRADES (`1/lambda=6`) 99.48% propre /
+**95.60%** robuste (PGD 1000 pas) et 96.07% (40 pas). Table 1 : MNIST robuste de
+91.09% a 95.65% selon `1/lambda`.
+
+Donc notre TRADES a 22-25% est a ~70 points de la reference, et sa precision
+PROPRE (93-94%) est plus BASSE que celle de nos modeles CE (99.2-99.6%), alors
+que le terme CE de TRADES est justement cense la proteger. Deux signes
+independants que l'implementation est fautive. Pistes de correction : sens de la
+KL (TRADES maximise KL(p(y|x) || p(y|x_adv))), budget de l'attaque interne du
+terme KL, rampe de beta.
+
+**CONSEQUENCE EDITORIALE (correction de mon propre propos de 13h09)** : la phrase
+"la loi de l'ordonnancement ne rattrape pas une perte mal reglee" est RETIREE de
+la trame. Elle pretendait comparer deux pertes alors que l'une des deux (la
+notre) n'est pas l'instance d'une methode valide. On publie ces deux runs comme
+LIMITE assumee (implementation a corriger), avec les chiffres de reference cites.
+
+**Apport positif de cette verification** : elle fournit l'ancre qui manquait. Sur
+MNIST eps=0.3, le niveau de reference est 95-96% (robuste) ; notre meilleur
+modele (91.25%, 421k parametres, 120 epochs) est a ~5 points, et `abl_a` (50.71%)
+a 45 points DANS LA MEME ARCHITECTURE. C'est la bonne facon de presenter le
+resultat : pas un record, un fait de mecanisme (une recette qui commence haut
+coute 45 points a architecture constante).
