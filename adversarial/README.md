@@ -1019,6 +1019,7 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 | `kmnist_plan_02_2` (plan `0.2 -> 2 eps`) | KMNIST | 94.64% | **58.53%** | 10.7 min |
 | `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** | 9.0 min |
 | `abl_a` (PGD-20 constant, pas eps/10) | MNIST | 99.53% | 50.71% | 20 min |
+| `trades_plan_02_2` (TRADES, `beta 2` + warm start) | MNIST | 96.51% | 22.01% | 4.3 min |
 
 **Les deux paires appariées (même recette, deux jeux) — la phrase de l'article :**
 
@@ -1039,9 +1040,10 @@ Notes :
   existait. Même direction sur KMNIST : 58.4% maison contre **51.03%** officiel
   (**+7.4 points** d'optimisme).
 - **L'optimisme de la suite maison, mesuré sur les six modèles croisés** : -3.4 pts
-  (A6), -4.1 (KMNIST `0.2->2`), -6.2 (A8), -7.4 (KMNIST `0.2->1`), -12.5 (abl_a).
-  Donc de 3 à 13 points, pas "environ 3" comme on l'écrivait : la règle de mesure
-  n°3 (AutoAttack est le juge) reste la seule façon d'annoncer un chiffre.
+  (A6), -4.1 (KMNIST `0.2->2`), -5.2 (TRADES), -6.2 (A8), -7.4 (KMNIST `0.2->1`),
+  -12.5 (abl_a). Donc de 3 à 13 points, pas "environ 3" comme on l'écrivait : la
+  règle de mesure n°3 (AutoAttack est le juge) reste la seule façon d'annoncer un
+  chiffre.
 - **Le classement est conservé sauf à un endroit, et c'est instructif** : les cinq
   modèles propres (`A1`, `A6`, `A8`, KMNIST `0.2->2`, KMNIST `0.2->1`) gardent
   exactement le même ordre en maison et en officiel. Seul `abl_a` bouge : 4e en
@@ -1118,7 +1120,8 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist 5** | plan `0.1 -> 0.5 eps` (1 -> 5 pas) | 6 min 9 s | 97.6% | **25.2%** | - | - |
 | **kmnist 6** | plan `0.05 -> 0.2 eps` (1 -> 2 pas) | 5 min 6 s | 98.0% | **0.0%** | - | - |
 | **kmnist 7** | plan `0.2 -> 0.5 eps` (2 -> 5 pas) | 6 min 54 s | 98.0% | **31.8%** | - | - |
-| **kmnist 8** | plan `0.2 -> 2 eps` (2 -> 20 pas, copie d'`A6`) | 11 min 35 s | 96.2% | **62.6%** | à mesurer | accord |
+| **kmnist 8** | plan `0.2 -> 2 eps` (2 -> 20 pas, copie d'`A6`) | 11 min 35 s | 96.2% | **62.6%** | **58.53%** | accord |
+| **trades** | plan `0.2 -> 2 eps` + `--loss trades --beta 2` (variante, warm start) | 12 min 20 s | 96.8% | **27.2%** | **22.01%** | désaccord (17 pts) |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un

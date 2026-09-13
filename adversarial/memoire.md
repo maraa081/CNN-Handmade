@@ -1766,3 +1766,63 @@ plan doux (2.24%). Les deux chiffres KMNIST sont donc de qualite differente.
 
 ITEM 1 DU PERIMETRE CLOS. Reste : smoothing (`--epochs 90`), TRADES, write-up,
 model card + Space, push des poids.
+
+### 2026-09-13 (13h09) - SMOOTHING : la seule garantie du projet (rayon L2 median 1.214)
+
+`--certifier --sigma 0.5 --n 1000` (n0=100, alpha=0.001), 40 s :
+
+| | valeur |
+|---|---|
+| precision du classifieur lisse | 99.0% |
+| taux d'abstention | 0.5% |
+| **rayon certifie median** | **1.214** (L2) |
+
+| rayon L2 | precision certifiee |
+|---|---|
+| 0.00 | 99.0% |
+| 0.30 | 98.5% |
+| 0.50 | 98.0% |
+| 1.00 | 83.5% |
+| 1.20 | 52.5% |
+
+C'est le SEUL chiffre du projet qui est une garantie ("aucune attaque de rayon
+<= R ne peut passer") et non une observation. A comparer dans la meme norme aux
+distances L2 que CW-L2 doit atteindre pour tromper les modeles durcis (0.03 a
+1.8) : le lisse est loin devant.
+
+PIEGE DOCUMENTE (README + trame) : la boule L-infini eps=0.30 n'est PAS incluse
+dans la boule L2 de rayon 1.214 (une perturbation de norme L-infini 0.30 peut
+avoir une norme L2 jusqu'a 0.30 x sqrt(784) = 8.4). Les resultats L-infini et la
+garantie L2 repondent a DEUX questions differentes.
+
+### 2026-09-13 (13h09) - TRADES : 22.01% officiel contre 82.40% pour le PGD-AT a recette identique
+
+Run de Maraa (`--loss trades --beta 2`, plan `0.2 -> 2 eps`, 120 epochs, augment,
+warm start `auto` = `models/model_weights_full.npz`, 12 min 20 s) :
+
+| | TRADES (beta 2) | PGD-AT (`A6`, meme recette) |
+|---|---|---|
+| propre (500 img) | 96.8% | 99.0% |
+| pire cas maison | **27.2%** (APGD-DLR) | 85.8% |
+| propre (10 000 img) | 96.51% | 99.17% |
+| **officiel AutoAttack** | **22.01%** | **82.40%** |
+| duree | 12 min 20 s | 11 min |
+
+=> **-60 points a recette identique** : une seule variable change (la perte). La
+loi de l'ordonnancement ne rattrape PAS une variante de perte mal reglee. C'est
+la phrase a ecrire dans le write-up -- et c'est aussi pourquoi l'item TRADES du
+perimetre disait "aligner le code OU documenter la variante".
+
+Signature du modele : PGD-20 44.0% contre APGD-DLR 27.2% (17 points d'ecart,
+profil rugueux type `abl_a`) et CW-L2 qui trompe 5.0% des images a une distance
+L2 moyenne de **0.028** (quasi nulle) : un petit paquet d'images est
+catastrophiquement fragile. A verifier/documenter.
+
+Optimisme de notre suite sur ce modele : -5.2 points (27.2 maison -> 22.01
+officiel), coherent avec la fourchette 3-13.
+
+NOTE : `--warm-start` vaut "auto" par defaut et charge
+`models/model_weights_full.npz` (MNIST) / `models/kmnist_weights.npz` (KMNIST)
+s'il existe. La variante "reference" de TRADES (Zhang et al.) suppose un
+entrainement DEPUIS ZERO avec `--beta 6`, donc `--warm-start none` : c'est la
+seule case encore ouverte du perimetre (item 6).
