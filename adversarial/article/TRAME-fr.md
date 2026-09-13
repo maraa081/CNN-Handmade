@@ -375,12 +375,26 @@ jeu de donnees (des kana japonais)."
 
 | # | A faire | Qui |
 |---|---|---|
+| 0 | ~~prose FR~~ **FAIT** (`ARTICLE-fr.md`) ; ~~FIG 1-4~~ **FAIT** (+ FIG 5, log) | moi |
 | 1 | ~~Integrer le resultat TRADES~~ fait (5.6 bis) ; le run de reference reste a decider | Maraa |
 | 2 | ~~Integrer le smoothing certifie~~ fait (sections 7 et 8) | moi |
-| 3 | Ecrire les sections 2 a 8 en prose FR | moi |
-| 4 | Produire FIG 2, FIG 3, FIG 4 (matplotlib, depuis les JSON) | moi |
+| 3 | ~~Ecrire les sections 2 a 8 en prose FR~~ fait | moi |
+| 4 | ~~Produire les figures~~ fait (5 figures, chevauchement verifie) | moi |
 | 5 | Traduire en EN apres validation | moi |
 | 6 | Relire et corriger les chiffres | Maraa |
+
+### Etat des objections de relecture (13/09)
+
+| # | Objection | Etat |
+|---|---|---|
+| 1 | les 22/41 pts n'etaient pas officiels des deux cotes | **CLOSE par la mesure** : 32.1 pts (MNIST) et 49.5 (KMNIST), officiels ; l'ecart GRANDIT |
+| 2 | run unique par recette, pas d'intervalle de confiance | **CLOSE** : 4 graines par recette -> moyennes 86.9 (1.4) contre 61.2 (3.1), ecart minimal 21.8 pts = 7 fois le plus grand ecart-type |
+| 3 | mecanisme non teste | **TRAITEE (4.5 + FIG 5)** par les logs, sans run : deux degenerescences lisibles, critere mesurable ; reste observationnel -> l'intervention (plan non monotone) est un travail futur assume |
+| 4 | eps=0.30 trop agressif | **REFUTEE** : c'est le banc d'essai MNIST de Madry et TRADES (cite) ; dependance a eps declaree en limite |
+| 5 | `bande_cible50` sous-specifie | **CORRIGE** : cible = taux de tromperie 0.5, rampe 0.2 -> 0.5 ; ablation de la cible declaree manquante |
+| 6 | forme des plans non decrite | **CORRIGE** : rampe lineaire par epoch, pas fixe eps/10 ; forme non comparee = limite |
+| 7 | TRADES dans le tableau de litterature | **CORRIGE** : ligne annote "variante non conforme" + avertissement |
+| 8 | fenetre de faisabilite non delimitee | **CORRIGE** : S.7.4, la loi est conditionnelle et la fenetre depend du jeu |
 
 Regle de redaction : pas d'emoji, pas de superlatif ("incroyable", "revolutionnaire"),
 les chiffres maison et officiels toujours etiquetes, et chaque affirmation
