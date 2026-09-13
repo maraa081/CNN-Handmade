@@ -981,14 +981,28 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 
 ### Les chiffres à annoncer (AutoAttack `standard`, 10 000 images, eps=0.30)
 
-| Modèle | propre | robuste (pire cas officiel) |
-|---|---|---|
-| `bande_cible50` (attaque interne à budget adaptatif) | 98.85% | **91.25%** |
-| `abl_a` (PGD-20, pas eps/10) | 99.53% | 50.71% |
+| Modèle | Jeu | propre | robuste (pire cas officiel) |
+|---|---|---|---|
+| `bande_cible50` (attaque interne à budget adaptatif) | MNIST | 98.85% | **91.25%** |
+| `abl_a` (PGD-20, pas eps/10) | MNIST | 99.53% | 50.71% |
+| `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** |
 
-Note : `abl_a` était annoncé à 63.2% par notre suite (500 images). L'écart de
-12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
-existait.
+Notes :
+
+- `abl_a` était annoncé à 63.2% par notre suite (500 images). L'écart de
+  12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
+  existait. Même direction sur KMNIST : 58.4% maison contre **51.03%** officiel
+  (**+7.4 points** d'optimisme).
+- Sur KMNIST, AutoAttack émet un avertissement ("Square Attack has decreased the
+  robust accuracy of 2.24%") : le 51.03% est lui-même légèrement optimiste. À
+  écrire dans la model card — une limite annoncée honnêtement vaut mieux qu'un
+  chiffre qui se fait casser plus tard.
+- **La réplication KMNIST ne se transpose pas en niveau** : la loi de l'ORDRE est
+  reproduite et même amplifiée (+41 points entre plan croissant et inverse, contre
+  +22 sur MNIST), mais le meilleur modèle KMNIST plafonne à 51% là où MNIST atteint
+  82-91%. Et la recette de référence MNIST (`constant 2 eps`) s'effondre à 1.2% sur
+  KMNIST — parce qu'à eps=0.30 l'attaque interne est relativement bien plus forte
+  sur ce jeu (détail complet : `memoire.md`, entrée du 2026-09-13).
 
 ### Les six règles de mesure (leçons du 2026-09-12)
 
@@ -1036,10 +1050,22 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **A1** | budget adaptatif (cible 0.5) | 20 min | 98.85% | 93.6% | **91.25%** | accord |
 | v5 (essai APGD) | APGD-CE, pas 2 eps | 20 min | 99.2% | 14% | - | - |
 | a6_gradient_doux | deux phases `--resume` | - | - | INVALIDE (lr restauré à 0.0005) | - | - |
+| **kmnist std** | propre (`--sans-attaque`, KMNIST) | 5 min | 98.6% | 0.0% | - | - |
+| **kmnist 1** | constant 2 eps (copie d'`abl_a`) | 20 min | 97.8% | **1.2%** | - | accord |
+| **kmnist 2** | plan `0.2 -> 1 eps` (copie d'`A8`) | 8 min | 96.6% | **58.4%** | **51.03%** | accord |
+| **kmnist 3** | plan `1 -> 0.2 eps` (copie d'`A9`) | 11 min | 97.2% | **17.0%** | - | accord |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un
 départ à bas budget (2 pas) et une croissance.
+
+**Lecture sur les 4 lignes KMNIST (13/09)** : la loi de l'ORDRE se reproduit et
+s'amplifie (+41 points entre le plan croissant et son inverse, contre +22 sur
+MNIST), mais le NIVEAU ne se transpose pas (meilleur KMNIST : 51.03% officiel
+contre 82-91% sur MNIST) et la recette de référence `constant 2 eps` s'effondre
+(1.2% contre 63.2%). Cause identifiée : à eps=0.30 l'attaque interne est
+relativement bien plus forte sur KMNIST, donc le budget 2 eps tombe après la
+bascule. Détail : `memoire.md`, entrée du 2026-09-13.
 
 Hors périmètre (décision explicite, pas en passant) : ensemble de modèles,
 entraînement contre Square, au-delà de 1.7M de paramètres, transfert

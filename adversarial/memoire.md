@@ -16,6 +16,80 @@
 
 ##  Journal
 
+## ETAT AU 2026-09-13 (02h40) - REPLICATION KMNIST : la loi tient, le sommet se deplace
+
+Serie lancee par Maraa sur sa machine (RX 7800 XT, ROCm), 4 runs de 120 epochs
+avec `--warm-start models/kmnist_standard.npz`. Memes recettes que sur MNIST,
+seul le jeu change : c'est le test "la loi est-elle propre a MNIST ?".
+
+**Suite maison (500 images, eps=0.30, Square-3000 / 2 restarts)**
+
+| Run | recette | propre | FGSM | PGD-20 | APGD-DLR | Square-3000 | NES | pire cas |
+|---|---|---|---|---|---|---|---|---|
+| std | propre (reference) | 98.6% | 23.6% | 0.0% | 0.0% | 0.0% | 60.2% | 0.0% |
+| 1 | constant 2 eps (copie d'`abl_a`) | 97.8% | 17.0% | 11.6% | 6.4% | 1.2% | 35.8% | **1.2%** |
+| 2 | plan doux `0.2 -> 1 eps` (copie d'`A8`) | 96.6% | 80.6% | 67.4% | 58.8% | 58.4% | 91.4% | **58.4%** |
+| 3 | plan inverse `1 -> 0.2 eps` (copie d'`A9`) | 97.2% | 75.0% | 50.8% | 28.4% | 17.0% | 73.8% | **17.0%** |
+
+**Le juge officiel** (AutoAttack `standard`, 10 000 images, eps=0.30) :
+`kmnist_plan_doux` -> **95.19% propre / 51.03% robuste**, 9.0 min.
+Avertissement de la lib : "Square Attack has decreased the robust accuracy of
+2.24%" -> le 51.03% est lui-meme legerement optimiste (il faudrait plus
+d'iterations/restarts a Square pour le verrouiller).
+
+**Trois lectures**
+
+1. **L'ORDRE est reproduit, et plus fort qu'a MNIST.** Memes budgets, meme cout,
+   ordre inverse : **58.4% contre 17.0%, soit +41 points** (MNIST : +22 points,
+   84.4% contre 63.8%). La direction de la loi n'est donc pas propre a MNIST.
+2. **Le NIVEAU absolu, lui, ne se transpose pas.** Plan doux : 58.4% maison /
+   51.03% officiel sur KMNIST contre 84.4% maison / 82.40% officiel sur MNIST.
+   Le meilleur modele KMNIST (51.03%) est loin derriere les 82-91% de MNIST, et
+   notre suite maison est optimiste de **+7.4 points** (contre +2.4 a +12 selon
+   les runs MNIST).
+3. **La recette de reference MNIST s'EFFONDRE ici.** `constant 2 eps` = copie
+   exacte d'`abl_a` (63.2% a MNIST) -> **1.2%** sur KMNIST, et le modele adverse
+   est meme MOINS bon que le modele propre sous FGSM (17.0% contre 23.6%).
+
+**Mechanisme du point 3 : le budget est hors de portee, pas l'attaque cassee.**
+Le log d'entrainement tranche :
+
+| Epoch | CE propre | CE adv | attaque | val clean | val PGD10 |
+|---|---|---|---|---|---|
+| 1 | 0.356 | 4.477 | 97.2% | 98.20% | 5.20% |
+| 10 | 0.059 | 2.396 | 90.3% | 99.00% | 9.00% |
+| 60 | 0.021 | 2.326 | 89.9% | 99.50% | 10.10% |
+| 120 | 0.017 | 2.322 | 90.2% | 99.50% | 9.00% |
+
+L'attaque interne trompe **90% du batch du debut a la fin** : elle n'est donc ni
+cassee ni chaotique (ce n'est PAS le verrouillage d'`abl_c`, ou l'alerte
+"l'attaque ne trompe plus" se declenchait). Le modele apprend l'attaque pendant
+120 epochs et plafonne a ~10% de robustesse, en montant sa propreté a **99.5%**,
+soit MIEUX que le referentiel propre (98.6%). Autrement dit : le budget de 2 eps
+est au-dela de ce que ce jeu peut defendre, et le modele fait le seul arbitrage
+qui lui reste (sacrifier la robustesse, gagner de la propreté).
+
+**Pourquoi : l'eps n'est pas une unite comparable d'un jeu a l'autre.** Sur le
+modele propre, PGD pousse a eps=0.10 laisse 44.4% a MNIST mais seulement **9.2%**
+KMNIST (et 61.2% contre 90.0% a eps=0.05). A eps=0.30, l'attaque interne est donc
+relativement beaucoup plus forte sur KMNIST : le budget 2 eps qui tombait pile au
+sommet de la cloche a MNIST tombe deja APRES la bascule ici. **Le sommet de la
+cloche se deplace avec la difficulte du jeu.**
+
+**Marqueur de sante en faveur du plan doux** : ecart gradient <-> sans gradient
+de **0.4 point** (APGD-DLR 58.8% contre Square-3000 58.4%), contre 22 points sur
+`abl_a` (85.4% contre 63.2%). Marges isotropes = signature d'un modele vraiment
+robuste, meme a un niveau plus bas.
+
+**Prediction ecrite AVANT les runs** (README) : ordre tient ; niveau 70-80%.
+Verdict : ordre OUI, niveau NON (58.4%, pas 70-80%). Le deuxieme a refaire.
+
+**Prochaine experience (3 runs, ~30 min au total)** : localiser le sommet sur
+KMNIST. Constant 0.5 eps (`--pgd-steps 5 --pgd-alpha 0.03`), constant 1 eps
+(`--pgd-steps 10 --pgd-alpha 0.03`), et plan `0.1,0.5`. Si le constant 1 eps
+rejoint les 58.4% du plan, c'est le budget qui commande ; s'il est nettement
+plus bas, c'est le curriculum.
+
 ## ETAT AU 2026-09-12 (21h00) - REPRENDRE ICI
 
 - **Meilleur modele : `models/abl_a_eps10.pt`** (recette PGD-20 pas eps/10,
