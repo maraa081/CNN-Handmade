@@ -114,7 +114,7 @@ L-infini au plus **eps = 0.30**, sur des images normalisées dans `[0,1]`. Ce
 n'est pas une valeur choisie à l'aveugle : **c'est la valeur du banc d'essai MNIST
 de la littérature**, celle utilisée par Madry et al. (2017) et par TRADES (Zhang
 et al., 2019) — c'est exactement ce qui rend l'ancrage du S.5.1 légitime. C'est
-also le régime où un modèle non défendu s'effondre à **0.0%**, ce qui en fait un
+aussi le régime où un modèle non défendu s'effondre à **0.0%**, ce qui en fait un
 terrain sans ambiguïté pour observer les mécanismes de défense. La dépendance de
 la loi à eps (0.1, 0.2) n'a en revanche **pas** été testée : voir les limites.
 Toute attaque d'évaluation est rejouée à eps = 0.30, y compris pour les modèles

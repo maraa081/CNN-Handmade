@@ -281,8 +281,9 @@ def main():
     print()
     print("Lecture : deux lignes ne sont comparables que si leurs colonnes portent les memes")
     print("parametres (voir les nombres entre parentheses). Un chiffre de la suite maison est")
-    print("optimiste d'environ 3 points sur 500 images ; le chiffre d'annonce est celui")
-    print("d'AutoAttack sur 10000 images (eval_autoattack.py).")
+    print("optimiste de 2 a 15 points sur 500 images selon le modele (davantage sur les")
+    print("recettes a depart haut) ; le chiffre d'annonce est celui d'AutoAttack sur 10000")
+    print("images (eval_autoattack.py). Voir README.md, section des chiffres officiels.")
 
     if args.csv:
         ecrire_csv(args.csv if os.path.isabs(args.csv) else join(ROOT_DIR, args.csv),
