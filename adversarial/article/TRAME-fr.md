@@ -189,31 +189,36 @@ jeu de donnees (des kana japonais)."
   effondrement a eps=0.5 sous PGD a pas fin -> rayon robuste reel, pas de
   masquage. A mettre dans l'article : c'est la section qui coupe les objections.
 
-### 5.6 bis. La loi ne rattrape pas une perte mal reglee (TRADES)
+### 5.6 bis. Ou se situe notre meilleur modele (ancrage litterature) -- et notre TRADES rate
 
-- Meme recette, meme duree, seule la perte change : TRADES (`CE + beta x KL`,
-  `beta 2`) au lieu de la cross-entropy sur l'exemple adverse.
-- TABLE 4 bis :
+- **Ancrage obligatoire** (MNIST, eps=0.30, L-infini) :
 
-| recette (plan `0.2 -> 2 eps`, 120 epochs) | propre | pire cas maison | **officiel** |
-|---|---|---|---|
-| PGD-AT (`A6`) | 99.2% | 85.8% | **82.40%** |
-| TRADES `beta 2` (warm start) | 96.5% | 27.2% | **22.01%** |
+| modele | propre | robuste |
+|---|---|---|
+| Madry et al. 2017, 40 pas de PGD | 99.36% | **96.01%** |
+| TRADES, Zhang et al. 2019 (`1/lambda=6`) | 99.48% | **95.60%** |
+| notre meilleur (`bande_cible50`), 421k param., 120 epochs | 98.85% | **91.25%** |
+| notre `A6` (plan `0.2 -> 2 eps`) | 99.17% | **82.40%** |
+| notre `abl_a` (meme architecture, budget constant 2 eps) | 99.53% | **50.71%** |
 
-- **-60 points a recette identique.** Conclusion : l'ordonnancement du budget est
-  un levier PUISSANT mais il ne compense pas un objectif mal reglé. A dire tel
-  quel, sans exagerer le propos de l'article.
-- Honnetete : c'est une VARIANTE (`beta 2` + warm start, compromis du 10/09 ou
-  `beta 6` faisait s'effondrer un modele deja converge : clean 69%). La reference
-  (Zhang et al. 2019) s'entraine depuis zero avec `beta 6`. Selon la decision de
-  Maraa : soit on documente la variante comme limite (assume), soit on ajoute le
-  run de reference (dernier run du projet) et la section gagne un chiffre au lieu
-  d'un paragraphe d'excuses. `A MESURER` si la decision est prise.
-- Signature a documenter : PGD-20 44.0% contre APGD-DLR 27.2% (**17 points
-  d'ecart**, profil rugueux type `abl_a`) et CW-L2 qui trompe 5% des images a une
-  distance L2 moyenne de **0.028** : quelques images sont catastrophiquement
-  fragiles. Un bon exemple de ce que la suite maison detecte et qu'un chiffre
-  unique cache.
+- Lecture : notre meilleur modele est a **~5 points** des implementations de
+  reference (architectures plus grosses, 100+ epochs), et la recette "depart haut"
+  tombe **45 points en dessous dans la MEME architecture**. L'article ne pretend
+  pas battre la reference : il explique l'ecart entre 50.71% et 91.25%.
+- **Notre TRADES ne reproduit pas la reference** : 22.01% (`beta 2` + warm start)
+  et 25.18% (`beta 6`, depuis zero) contre 95.60% rapportes, avec une precision
+  propre PLUS BASSE que nos modeles CE (93-94% contre 99.2-99.6%) alors que le
+  terme CE de TRADES est justement cense la proteger. Conclusion : l'implementation
+  est fautive (piste : sens de la KL, budget de l'attaque interne du terme KL,
+  rampe de beta).
+- **Ce qu'on en fait** : section "limites" + deux runs publies, PAS une
+  comparaison de methodes. La phrase "la loi ne rattrape pas une perte mal reglee"
+  a ete RETIREE de cette trame le 13/09 : elle pretendait comparer deux pertes
+  alors que l'une des deux n'est pas une instance valide de sa methode.
+- Signature des deux runs TRADES : PGD-20 49.4% contre APGD-DLR 30.0% (**19 points
+  d'ecart**, profil rugueux type `abl_a`) et CW-L2 qui trompe 7.2% des images a une
+  distance L2 moyenne de **0.005** : quelques images sont catastrophiquement
+  fragiles. Exemple de ce que la suite maison detecte et qu'un chiffre unique cache.
 
 ### 5.6 ter. La lecture qui explique les modeles (outil, pas preuve)
 - Sensibilite de la CE sous perturbation dans la boule (eps=0.3) : classe les 5
@@ -241,6 +246,7 @@ jeu de donnees (des kana japonais)."
 | `kmnist_plan_doux` | KMNIST, plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
 | `abl_a` | PGD-20 constant, pas eps/10 | 63.2% | **50.71%** | -12.5 |
 | `trades_plan_02_2` | plan `0.2 -> 2 eps`, TRADES `beta 2` + warm start | 27.2% | **22.01%** | -5.2 |
+| `trades_ref_plan_02_2` | idem, TRADES `beta 6` depuis zéro | 30.0% | **25.18%** | -4.8 |
 
 - **Le biais de notre suite maison est de 3 a 13 points**, jamais dans l'autre
   sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
@@ -314,8 +320,10 @@ jeu de donnees (des kana japonais)."
   boule L-infini 0.30 n'est pas incluse dans la boule L2 1.214 (norme L2 jusqu'a
   0.30 x sqrt(784) = 8.4), donc la garantie repond a une autre question que les
   chiffres L-infini de l'article.
-- TRADES : voir 5.6 bis. Resultat publie meme s'il est mauvais pour notre
-  variante ; le run de reference (`--beta 6`, depuis zero) reste a decider.
+- TRADES : voir 5.6 bis. Les deux runs (22.01% et 25.18%) sont publies comme
+  limite assumee (notre implementation ne reproduit pas la reference : 95.60%
+  rapportes chez Zhang et al. 2019). Item 6 du perimetre ferme cote "decision",
+  pas cote "alignement du code".
 - Un seul dataset de replication, et une seule architecture par dataset : la loi
   est verifiee, pas demontree.
 

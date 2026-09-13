@@ -1843,7 +1843,7 @@ Run de Maraa (`--loss trades --beta 6 --warm-start none`, plan `0.2 -> 2 eps`,
 => Le passage a la configuration de reference (depuis zero, `beta 6`) ne change
 presque rien : +3.2 points officiels. Et surtout :
 
-**ANCrage LITTERATURE (verifie ce jour, PDF ICML 2019, Table 2)** : sur MNIST
+**ANCRAGE LITTERATURE (verifie ce jour, PDF ICML 2019, Table 2)** : sur MNIST
 eps=0.3 L-infini, Madry et al. 2017 (`[MMS+18]`) rapportent 99.36% propre /
 **96.01%** robuste (PGD 40 pas) ; TRADES (`1/lambda=6`) 99.48% propre /
 **95.60%** robuste (PGD 1000 pas) et 96.07% (40 pas). Table 1 : MNIST robuste de
