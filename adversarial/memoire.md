@@ -1647,3 +1647,41 @@ pas vaut 0.1 eps, donc `"0.05,0.2"` et `"0.1,0.5"` DEMARRENT tous les deux a
 1 pas (`round(0.5) = 0` puis plancher a 1) : les deux runs ne testent que leur
 PLAFOND. Pour descendre reellement le depart il faut un pas plus fin
 (`--pgd-alpha 0.015` -> un pas = 0.05 eps) ou une echelle absolue plus basse.
+
+### 2026-09-13 (11h42) - KMNIST : les deux plans bas (0.5 et 0.2 eps de plafond)
+
+Deux runs de Maraa, suite maison (500 images, eps=0.30), criteres ecrits avant :
+
+| run | plan | duree | propre | pire cas |
+|---|---|---|---|---|
+| kmnist 5 | `0.1 -> 0.5 eps` (1 -> 5 pas) | 6 min 9 s | 97.6% | **25.2%** (APGD-CE) |
+| kmnist 6 | `0.05 -> 0.2 eps` (1 -> 2 pas) | 5 min 6 s | 98.0% | **0.0%** (APGD-CE) |
+
+Serie KMNIST complete (pire cas maison) : propre 0.0% ; constant 2 eps 1.2% ;
+constant 1 eps 15.2% ; plan inverse `1 -> 0.2` 17.0% ; `0.1 -> 0.5` 25.2% ;
+`0.05 -> 0.2` 0.0% ; **plan doux `0.2 -> 1` 58.4%** (51.03 officiel).
+
+LECTURE : baisser le PLAFOND fait s'effondrer le pire cas (0.2 eps -> 0.0% ;
+0.5 -> 25.2% ; 1 -> 58.4%), et c'est monotone et net (K5 et K6 ne different QUE
+par le plafond : meme depart a 1 pas). La branche ecrite avant ("l'echelle
+absolue est trop forte -> relancer avec --eps 0.15") est donc **FAUSSE** : sur
+KMNIST ce n'est pas le plafond qu'il faut baisser, au contraire. Le pire cas de
+`kmnist 5` est d'ailleurs donne par l'attaque a GRADIENT (APGD-CE 25.2% contre
+Square 43.2% = 18 points d'ecart, profil de `abl_a`), alors que le plan doux
+etait isotrope (0.4 point) : deuxieme marqueur dans le meme sens.
+
+FACTEUR CONFONDU a lever : `kmnist 5/6` demarrent a 1 pas (0.1 eps) alors que
+`kmnist 2` demarre a 2 pas (0.2 eps). Le prochain run `--plan-budget "0.2,0.5"`
+(meme depart que le champion, plafond plus bas, 2 -> 5 pas, ~6 min) separe les
+deux variables ; puis `--plan-budget "0.2,2"` (2 -> 20 pas, ~11 min, copie d'`A6`
++ paire MNIST/KMNIST complete). Criteres ecrits avant : si `0.2 -> 0.5` sort
+~58% c'est le DEPART qui commande (plafond secondaire) ; s'il sort ~25% c'est le
+PLAFOND et la cloche KMNIST est etroite autour de 1 eps.
+
+Detail de la diagonale de chaque run (PGD 20 pas, 1 restart) :
+- `kmnist 5` : eps 0.05 -> 94.2%, 0.1 -> 88.6%, 0.2 -> 68.4%, 0.3 -> 36.0%.
+- `kmnist 6` : eps 0.05 -> 95.2%, 0.1 -> 84.4%, 0.2 -> 38.6%, 0.3 -> 0.8%.
+- `kmnist 4` : eps 0.05 -> 62.0%, 0.1 -> 61.6%, 0.2 -> 61.6%, 0.3 -> 58.4%.
+Le budget interne trop petit ne produit qu'une robustesse a rayon minuscule
+(0.1 eps), pas une robustesse contre eps=0.30 -- evident apres coup, mais c'est
+exactement ce que la "branche basse" du critere supposait.

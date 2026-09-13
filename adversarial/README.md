@@ -1055,10 +1055,23 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist 2** | plan `0.2 -> 1 eps` (copie d'`A8`) | 8 min | 96.6% | **58.4%** | **51.03%** | accord |
 | **kmnist 3** | plan `1 -> 0.2 eps` (copie d'`A9`) | 11 min | 97.2% | **17.0%** | - | accord |
 | **kmnist 4** | constant 1 eps (10 pas de eps/10) | 10 min 28 s | 97.8% | **15.2%** | - | - |
+| **kmnist 5** | plan `0.1 -> 0.5 eps` (1 -> 5 pas) | 6 min 9 s | 97.6% | **25.2%** | - | - |
+| **kmnist 6** | plan `0.05 -> 0.2 eps` (1 -> 2 pas) | 5 min 6 s | 98.0% | **0.0%** | - | - |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un
 départ à bas budget (2 pas) et une croissance.
+
+**Lecture sur les lignes `kmnist 5` et `kmnist 6` (13/09)** : baisser le PLAFOND
+du plan fait s'effondrer le pire cas (`0.2 eps` -> 0.0% ; `0.5 eps` -> 25.2% ;
+`1 eps` -> 58.4%), et c'est monotone. La branche "l'echelle absolue est trop
+forte sur KMNIST" (ecrite avant) est donc FAUSSE : ce n'est pas le plafond qu'il
+faut baisser. Attention a un facteur confondu : `kmnist 5` et `6` demarrent a
+1 pas (0.1 eps) alors que `kmnist 2` demarre a 2 pas (0.2 eps) -- le prochain run
+`plan 0.2 -> 0.5 eps` isole ce facteur (meme depart que le champion, plafond plus
+bas). Deuxieme marqueur : sur `kmnist 5` l'attaque a gradient devient la plus
+forte (APGD-CE 25.2% contre Square 43.2%, soit 18 points d'ecart, profil de
+`abl_a`), alors que le plan doux etait isotrope (0.4 point).
 
 **Lecture sur la ligne `kmnist 4` (13/09, apres le plan inverse)** : le constant
 1 eps sort a **15.2%**, soit quasiment le meme chiffre que le plan INVERSE
@@ -1076,15 +1089,16 @@ contre 82-91% sur MNIST) et la recette de référence `constant 2 eps` s'effondr
 relativement bien plus forte sur KMNIST, donc le budget 2 eps tombe après la
 bascule. Détail : `memoire.md`, entrée du 2026-09-13.
 
-**Suite ouverte (critère écrit avant les runs)** : la marche a suivre pour
-localiser le sommet de la cloche sur KMNIST est `plan 0.1 -> 0.5 eps`
-(1 -> 5 pas, ~6 min) puis `plan 0.05 -> 0.2 eps` (~5 min). ATTENTION au
-plancher de granularite : avec `--pgd-alpha 0.03` (= eps/10), un pas vaut
-0.1 eps, donc `0.05` et `0.1` a l'entree donnent tous les deux 1 pas -- les deux
-plans ne different que par leur PLAFOND. Pour tester un depart VRAIMENT plus
-bas, il faut affiner le pas (`--pgd-alpha 0.015`, un pas = 0.05 eps) ou reduire
-l'echelle absolue (`--eps 0.15`, le budget interne etant exprime en multiples de
-l'eps d'entrainement).
+**Suite ouverte (critère écrit avant les runs)** :
+`--plan-budget "0.2,0.5"` (2 -> 5 pas, ~6 min) isole le DEPART (meme depart que
+le champion `kmnist 2`, plafond plus bas), puis `--plan-budget "0.2,2"`
+(2 -> 20 pas, ~11 min, la copie d'`A6`, qui complete au passage la paire
+MNIST/KMNIST). Critere : si `0.2 -> 0.5` sort ~58%, c'est le DEPART qui commande
+et le plafond est secondaire ; s'il sort ~25%, c'est le PLAFOND et la cloche
+KMNIST est etroite autour de 1 eps (le run `0.2 -> 2` doit alors redescendre).
+
+ATTENTION au plancher de granularite : avec `--pgd-alpha 0.03` (= eps/10), un pas
+vaut 0.1 eps, donc `0.05` et `0.1` a l'entree donnent tous les deux 1 pas.
 
 Hors périmètre (décision explicite, pas en passant) : ensemble de modèles,
 entraînement contre Square, au-delà de 1.7M de paramètres, transfert
