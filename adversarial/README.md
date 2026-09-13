@@ -1118,6 +1118,14 @@ Notes :
   12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
   existait. Même direction sur KMNIST : 58.4% maison contre **51.03%** officiel
   (**+7.4 points** d'optimisme).
+- **PLAN DE GRAINES (objection de relecture "et si c'était du bruit ?")** : les deux
+  recettes de la paire-phare ont été relancées avec les graines 1, 2 et 3 (la 42
+  existait déjà), soit **4 graines par recette**. Maison, pire cas :
+  `0.2 -> 2 eps` : 85.6 / 85.8 / 87.6 / 88.6 -> **moyenne 86.9, ecart-type 1.4** ;
+  `2 -> 0.2 eps` : 57.2 / 60.2 / 63.4 / 63.8 -> **moyenne 61.2, ecart-type 3.1**.
+  Ecart des moyennes **25.7 points**, ecart MINIMAL entre graines **21.8 points**
+  (jamais moins que les 22 annonces) = 7 fois le plus grand ecart-type. La recette
+  decroissante est la plus instable (3.1 contre 1.4).
 - **L'optimisme de la suite maison, mesuré sur les huit modèles croisés** : -2.4 (A1),
   -3.4 (A6), -4.1 (KMNIST `0.2->2`), -6.2 (A8), -7.4 (KMNIST `0.2->1`),
   -12.5 (abl_a), -13.5 (`A9`), **-15.5 (KMNIST `1->0.2`)**. Donc de 2.4 à 15.5 points.

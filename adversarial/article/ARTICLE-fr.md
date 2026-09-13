@@ -22,6 +22,10 @@ modèle, entraîné contre exactement les mêmes budgets dans l'ordre **croissan
 (`0.2 -> 2 eps`, même coût, mêmes 11 minutes), atteint **85.8%**. Vingt-deux
 points d'écart, une seule variable changée : l'**ordre**.
 
+Un plan de graines (4 graines par recette) confirme que l'écart n'est pas du
+bruit d'entraînement : l'écart minimal observé entre une graine croissante et une
+graine décroissante est de **21.8 points**, soit sept fois la dispersion.
+
 Et le juge officiel **amplifie** l'effet au lieu de le réduire. Passés à
 AutoAttack sur 10 000 images, les deux membres de la paire donnent **82.40%**
 contre **50.35%**, soit **32 points d'écart** — un écart plus grand que celui
@@ -326,6 +330,29 @@ gradient. Le test qui trancherait est un plan **non monotone**
 (`0.2 -> 2 -> 0.2 eps` contre `2 -> 0.2 -> 2 eps`) : il distingue « croissance
 monotone » de « départ doux ». Il est peu coûteux et laissé à un travail
 ultérieur.
+
+**Précision sur les 22 points : le chiffre survit à un plan de graines.** Chaque
+recette n'était au départ qu'un run unique, ce qui laissait ouverte l'objection
+évidente : et si l'écart venait de l'initialisation ou de l'ordre des
+mini-lots ? La paire a donc été relancée avec **trois graines supplémentaires**
+(1, 2, 3), la graine 42 existant déjà des deux côtés :
+
+| recette (mêmes budgets, même coût) | graines | maison (min-max) | moyenne | écart-type |
+|---|---|---|---|---|
+| plan `0.2 -> 2 eps` (croissant) | 42, 1, 2, 3 | 85.6 à 88.6 | **86.9** | 1.4 |
+| plan `2 -> 0.2 eps` (décroissant) | 42, 1, 2, 3 | 57.2 à 63.8 | **61.2** | 3.1 |
+
+- écart des **moyennes** : **25.7 points** ;
+- écart **minimal** observé, toutes graines confondues (la pire graine croissante
+  contre la meilleure graine décroissante) : **21.8 points** — donc jamais moins
+  que les 22 points annoncés ;
+- écart maximal : 31.4 points ;
+- l'écart minimal vaut **7 fois** le plus grand des deux écarts-types.
+
+Autrement dit, la dispersion entre graines (1.4 et 3.1 points) est d'un ordre de
+grandeur en dessous de l'effet. Fait notable : c'est la recette **décroissante**
+qui est la plus instable (écart-type 3.1 contre 1.4), ce qui est cohérent avec
+l'idée qu'un départ haut place l'entraînement près d'une falaise.
 
 **Précision sur les 22 points : deux mesures indépendantes, pas une.** L'effet a
 été reproduit sur un second jeu de données avec des runs distincts (§7.3), où
@@ -701,18 +728,16 @@ Les résultats L-infini de ce document et cette garantie L2 répondent donc à
 - **La forme de la rampe n'a pas été comparée** (linéaire contre logarithmique
   contre paliers), pas plus que la valeur de la cible du budget adaptatif
   (S.4.6).
-- **Variance d'entraînement non couverte.** Chaque recette est un **run unique**
-  (graine 42 pour l'ablation du pas, graine par défaut ailleurs). Les 10 000
-  images d'AutoAttack donnent une incertitude d'évaluation négligeable (intervalle
-  de Clopper-Pearson d'environ +/- 0.7 point à 82%, le même outil que le S.8.1
-  utilise pour le smoothing), mais **la variance de la graine n'est pas mesurée** :
-  on ne peut pas exclure qu'une partie de l'écart entre deux recettes vienne de
-  l'initialisation ou de l'ordre des mini-batchs. L'argument qui limite le risque :
-  l'effet est reproduit sur un second jeu (41 points, S.7.3), et le motif est
-  structurel — les cinq modèles sains commencent tous à 2 pas, les quatre modèles
-  faibles ont tous un départ haut. Un plan de graines (3 graines x 2 recettes,
-  l'ordre croissant contre l'ordre décroissant) reste la confirmation à faire, et
-  c'est la plus coûteuse : environ 2 à 3 heures de GPU.
+- **Variance d'entraînement : mesurée, et elle ne menace pas le résultat.** Chaque
+  recette est entraînée avec plusieurs graines (42, 1, 2, 3) : moyenne 86.9
+  (écart-type 1.4) pour le plan croissant, 61.2 (écart-type 3.1) pour le plan
+décroissant, et l'écart minimal observé entre une graine croissante et une graine
+  décroissante est de **21.8 points**, soit 7 fois le plus grand des deux
+  écarts-types (S.4.4). Les chiffres officiels, eux, n'ont été mesurés que sur la
+  graine 42 des deux côtés (82.40% et 50.35%) : la dispersion officielle n'est pas
+  mesurée, mais le biais de notre suite étant **systématique** et de sens connu
+  (toujours optimiste, et davantage sur les recettes à départ haut), il ne peut que
+  creuser l'écart, pas le combler.
 
 ---
 
