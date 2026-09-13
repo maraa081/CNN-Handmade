@@ -1996,3 +1996,33 @@ rater, une facon de reussir") + **FIGURE 5** (`fig5_trajectoires.png`), generee
 directement depuis les logs du depot (5 courbes : bonne recette, uniforme, masque,
 depart haut, attaque eteinte). Le mecanisme d'`abl_c` au S.4.2 a ete corrige au
 passage (l'attribution erronee du plateau ln 10).
+
+### 2026-09-13 (19h53) - PLAN DE GRAINES : l'ecart survit (25.7 pts de moyenne, 21.8 au minimum)
+
+6 runs de plus (2 recettes x 3 graines, ~70 min), memes recettes que `A6`/`A9`,
+seul `--seed` change (warm start `auto` conserve). Resultats maison (500 img) :
+
+| recette | graines | pire cas | moyenne | ecart-type |
+|---|---|---|---|---|
+| plan `0.2 -> 2 eps` | 42, 1, 2, 3 | 85.6 / 85.8 / 87.6 / 88.6 | **86.9** | 1.4 |
+| plan `2 -> 0.2 eps` | 42, 1, 2, 3 | 63.8 / 57.2 / 60.2 / 63.4 | **61.2** | 3.1 |
+
+- ecart des **moyennes** : **25.7 points** ;
+- ecart **MINIMAL** toutes graines confondues (pire croissante 85.6 contre
+  meilleure inverse 63.8) : **21.8 points** -> jamais moins que les 22 annonces ;
+- ecart maximal : 31.4 points ;
+- l'ecart minimal vaut **7 fois** le plus grand des deux ecarts-types.
+
+=> L'objection n.2 de la relecture ("un ecart de 22 points entre deux runs uniques
+peut venir de la variance") est **close** : la dispersion (1.4 et 3.1) est d'un
+ordre de grandeur sous l'effet. Observation au passage : c'est la recette
+DECROISSANTE qui est la plus instable (3.1 contre 1.4) -- coherent avec l'idee
+qu'un depart haut place l'entrainement pres d'une falaise.
+
+Note : les chiffres OFFICIELS restent mono-graine (82.40% et 50.35%, graine 42) ;
+la dispersion officielle n'est pas mesuree. Comme notre suite est biaisee de facon
+SYSTEMATIQUE et toujours dans le meme sens (optimiste, davantage sur les recettes a
+depart haut), le biais ne peut que creuser l'ecart, pas le combler.
+
+Article mis a jour : S.4.4 (tableau des graines), S.8.2 (limite remplacee par le
+resultat mesure), resume. README (notes du biais + plan de graines).
