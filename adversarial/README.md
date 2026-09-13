@@ -1041,12 +1041,21 @@ place que l'article veut occuper : pas un record, un fait de mécanisme.
 warm start) et 25.18% (`beta 6`, depuis zéro) contre **95.60%** rapportés, et une
 précision propre PLUS BASSE que nos modèles CE (93-94% contre 99.2-99.6%) alors
 que le terme CE de TRADES est justement censé la protéger : deux signes qui
-disent que l'implémentation est fautive (piste : sens de la KL, budget de
-l'attaque interne du terme KL, rampe de beta). L'écart est trop grand pour être
-lu comme une comparaison de méthodes : on publie ces deux runs comme une
-**limite assumée** (implémentation à corriger), pas comme un résultat. La phrase
-"la loi ne rattrape pas une perte mal réglée" qui figurait dans la trame le
-13/09 est donc **retirée** — elle n'est pas soutenue par les faits.
+disent que l'implémentation est fautive. Les deux écarts sont **identifiés et
+commentés dans le code** (`entrainement.py`, section `--loss trades`, marquée
+`[a trancher]`) :
+
+1. **sens de la KL inversé** — nous calculons `KL(p_adverse || p_propre)` là où la
+   référence (`yaodongyu/TRADES`) minimise `KL(p_propre || p_adverse)` ;
+2. **l'attaque interne ne maximise pas la KL** — notre perturbation vient d'un PGD
+   sur la cross-entropy, alors que la référence génère `x_adv` en maximisant le
+   terme KL.
+
+L'écart de ~70 points est trop grand pour être lu comme une comparaison de
+méthodes : on publie ces deux runs comme une **limite assumée** (implémentation à
+corriger, corrections identifiées), pas comme un résultat. La phrase "la loi ne
+rattrape pas une perte mal réglée" qui figurait dans la trame le 13/09 est donc
+**retirée** — elle n'est pas soutenue par les faits.
 
 **Les deux paires appariées (même recette, deux jeux) — la phrase de l'article :**
 
