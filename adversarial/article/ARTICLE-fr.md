@@ -246,8 +246,10 @@ modèle, la cross-entropie adverse se bloque à `ln(10) = 2.303` (le niveau du
 hasard sur dix classes), et le modèle reste à ce plateau pendant la fin du run.
 Il n'apprend plus rien, il répond uniformément.
 
-FIGURE 1 : la courbe en cloche (pire cas en fonction du budget de l'attaque
-interne).
+FIGURE 1 (`figures/fig1_budget_bell.png`, libellés en anglais) : le pire cas en
+fonction du budget de l'attaque interne. Ligne bleue : budgets constants (le sommet
+est à ~2 eps). Flèches : les deux plans de budget, vert pour un départ bas (le bon),
+rouge pour un départ haut.
 
 ### 4.3 Le pas compte autant que le budget
 
@@ -332,7 +334,10 @@ La même expérience, avec des plans moins chers, a servi de garde-fou : un plan
 0.0% — baisser le *plafond* détruit la robustesse. C'est le **départ** qui doit
 être bas, pas le plafond.
 
-FIGURE 2 : `A6` contre `A9`, mêmes budgets, ordre inversé.
+FIGURE 2 (`figures/fig2_order.png`) : les deux plans de budget, mêmes budgets, même
+coût, ordre inversé — en maison (500 images) et au juge officiel (AutoAttack,
+10 000 images). Les deux écarts, et le fait que l'écart OFFICIEL soit plus grand,
+sont annotés sur la figure.
 
 ### 4.5 L'extension : un budget adaptatif, batch par batch
 
@@ -474,7 +479,11 @@ réduit la précision robuste de 2.24% »), ce qui signifie que le 51.03% est
 lui-même légèrement optimiste. Aucun avertissement sur le 58.53%. Les deux
 chiffres KMNIST ne sont donc pas de qualité identique, et la model card le dira.
 
-FIGURE 3 : pire cas maison contre pire cas officiel, avec la diagonale.
+FIGURE 3 (`figures/fig3_inhouse_vs_official.png`) : pire cas maison (x) contre pire
+cas officiel (y), chaque point numéroté et listé en légende (`abl_a` et `A9` sont
+fusionnés : ils tombent sur le même point). Vert : recettes à départ bas, rouge :
+départ haut. Les points verts sont près de la diagonale, les rouges s'en détachent
+vers le bas.
 
 ---
 
@@ -561,7 +570,9 @@ avant de transposer une recette.
 nombre **pour un jeu de données donné**. Toute recette publiée sans son jeu de
 validation croisée est une recette qui n'a pas été testée.
 
-FIGURE 4 : les deux courbes, mêmes axes, même forme, hauteurs différentes.
+FIGURE 4 (`figures/fig4_recipe_transfers.png`) : les deux recettes présentes à
+l'identique sur les deux jeux, mesurées officiellement des deux côtés. Même recette,
+deux hauteurs : la recette se transpose, le niveau non.
 
 ---
 

@@ -36,13 +36,45 @@ ORANGE = "#c05621"
 GRIS = "#4a5568"
 
 
+def _verifier_chevauchements(fig):
+    """Controle automatique : aucun texte de la figure ne doit en recouvrir un
+    autre. C'est ce qui a fait refaire la figure 3 le 13/09 (etiquettes qui se
+    chevauchaient) ; le test est donc rejoue a chaque generation."""
+    import itertools
+    fig.tight_layout()
+    fig.canvas.draw()
+    rendu = fig.canvas.get_renderer()
+    elements = []
+    for ax in fig.axes:
+        for t in ax.texts:
+            if t.get_text().strip():
+                elements.append((t.get_text().replace("\n", " | "),
+                                 t.get_window_extent(rendu)))
+        for t in (ax.title, ax.xaxis.label, ax.yaxis.label):
+            if t.get_text().strip():
+                elements.append(("[" + t.get_text()[:16] + "]",
+                                 t.get_window_extent(rendu)))
+        leg = ax.get_legend()
+        if leg is not None:
+            elements.append(("[legende]", leg.get_window_extent(rendu)))
+    chevauchements = []
+    for (n1, b1), (n2, b2) in itertools.combinations(elements, 2):
+        inter = b1.intersection(b1, b2)
+        if inter is not None and inter.width * inter.height > 30:
+            chevauchements.append((n1, n2))
+    for n1, n2 in chevauchements:
+        print(f"       [WARN] chevauchement : {n1} <-> {n2}")
+    return len(elements), len(chevauchements)
+
+
 def _enregistrer(fig, nom):
     os.makedirs(DOSSIER, exist_ok=True)
     chemin = os.path.join(DOSSIER, nom)
-    fig.tight_layout()
+    valides, chevauchements = _verifier_chevauchements(fig)
+    etat = "OK" if chevauchements == 0 else f"{chevauchements} chevauchement(s)"
     fig.savefig(chemin, dpi=160)
     plt.close(fig)
-    print(f"[OK] {chemin}")
+    print(f"[{etat}] {chemin}  ({valides} elements de texte)")
 
 
 # ---------------------------------------------------------------------------
@@ -67,18 +99,19 @@ ORDRE = {
     "KMNIST": ("0.2 -> 1 eps", "1 -> 0.2 eps", (58.4, 51.03), (17.0, 1.49)),
 }
 
-# In-house vs official, with family: (short label, in-house, official, family)
+# In-house vs official. (legend text, in-house, official, family). `abl_a` and
+# `A9` land on the same point (63.2/50.71 and 63.8/50.35) : they are merged into
+# one marker so that nothing overlaps.
 NUAGE = [
-    ("A1 (adaptive)", 93.6, 91.25, "low"),
-    ("A6 (0.2 -> 2)", 85.8, 82.40, "low"),
-    ("A8 (0.2 -> 1)", 84.4, 78.25, "low"),
-    ("KMNIST (0.2 -> 2)", 62.6, 58.53, "low"),
-    ("KMNIST (0.2 -> 1)", 58.4, 51.03, "low"),
-    ("abl_a (constant 2 eps)", 63.2, 50.71, "high"),
-    ("A9 (2 -> 0.2)", 63.8, 50.35, "high"),
-    ("KMNIST (1 -> 0.2)", 17.0, 1.49, "high"),
-    ("TRADES beta 2", 27.2, 22.01, "other"),
-    ("TRADES beta 6", 30.0, 25.18, "other"),
+    ("A1, adaptive budget", 93.6, 91.25, "low"),
+    ("A6, plan 0.2 -> 2", 85.8, 82.40, "low"),
+    ("A8, plan 0.2 -> 1", 84.4, 78.25, "low"),
+    ("KMNIST, plan 0.2 -> 2", 62.6, 58.53, "low"),
+    ("KMNIST, plan 0.2 -> 1", 58.4, 51.03, "low"),
+    ("abl_a (63.2 -> 50.71) and A9 (63.8 -> 50.35)", 63.5, 50.5, "high"),
+    ("KMNIST, plan 1 -> 0.2", 17.0, 1.49, "high"),
+    ("TRADES, beta 2", 27.2, 22.01, "other"),
+    ("TRADES, beta 6", 30.0, 25.18, "other"),
 ]
 
 # Same recipe, two datasets (official both sides)
@@ -170,7 +203,7 @@ def figure_nuage():
         ax.annotate(str(i), xy=(maison, officiel), xytext=(0, 0),
                     textcoords="offset points", ha="center", va="center",
                     fontsize=8.5, color="white", fontweight="bold")
-        entrees.append((f"{i}. {nom}   {maison:.1f}  ->  {officiel:.2f}", couleur))
+        entrees.append((f"{i}. {nom}", couleur))
     ax.set_xlim(0, 105)
     ax.set_ylim(0, 105)
     ax.set_xlabel("in-house worst case (%), 500 images")
@@ -214,6 +247,39 @@ def figure_transposition():
     ax.grid(axis="y", alpha=0.3)
     ax.legend(fontsize=11)
     _enregistrer(fig, "fig4_recipe_transfers.png")
+
+
+def _verifier_chevauchements(fig):
+    """Controle automatique : aucune texte de la figure ne doit en recouvrir un
+    autre. C'est ce qui a fait refaire la figure 3 le 13/09 (etiquettes qui se
+    chevauchaient) ; le controle rejoue le test a chaque generation."""
+    import itertools
+    fig.tight_layout()
+    fig.canvas.draw()
+    rendu = fig.canvas.get_renderer()
+    elements = []
+    for ax in fig.axes:
+        for t in ax.texts:
+            if t.get_text().strip():
+                elements.append((t.get_text().replace("\n", " | "),
+                                 t.get_window_extent(rendu)))
+        for t in (ax.title, ax.xaxis.label, ax.yaxis.label):
+            if t.get_text().strip():
+                elements.append(("[" + t.get_text()[:16] + "]",
+                                 t.get_window_extent(rendu)))
+        leg = ax.get_legend()
+        if leg is not None:
+            elements.append(("[legende]", leg.get_window_extent(rendu)))
+    chevauchements = []
+    for (n1, b1), (n2, b2) in itertools.combinations(elements, 2):
+        inter = b1.intersection(b1, b2)
+        if inter is not None and inter.width * inter.height > 30:
+            chevauchements.append((n1, n2))
+    if chevauchements:
+        print(f"[WARN] {nom} : {len(chevauchements)} chevauchement(s) de texte")
+        for n1, n2 in chevauchements:
+            print(f"       {n1} <-> {n2}")
+    return len(elements), len(chevauchements)
 
 
 if __name__ == "__main__":
