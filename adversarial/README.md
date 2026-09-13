@@ -1210,7 +1210,7 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | A4 | PGD-5, eps/10 (0.5 eps) | 8 min | 99.4% | 49.2% | - | accord |
 | A7 | plan `1 -> 2 eps` | 14 min | 99.6% | 62.0% | - | désaccord |
 | **A6** | plan `0.2 -> 2 eps` | 11 min | 99.0% | 85.8% | **82.40%** | accord |
-| **A8** | plan `0.2 -> 1 eps` | 8 min | 99.0% | **84.4%** | à mesurer | accord |
+| **A8** | plan `0.2 -> 1 eps` | 8 min | 99.0% | **84.4%** | **78.25%** | accord |
 | **A1** | budget adaptatif (cible 0.5) | 20 min | 98.85% | 93.6% | **91.25%** | accord |
 | v5 (essai APGD) | APGD-CE, pas 2 eps | 20 min | 99.2% | 14% | - | - |
 | a6_gradient_doux | deux phases `--resume` | - | - | INVALIDE (lr restauré à 0.0005) | - | - |
@@ -1279,10 +1279,13 @@ appuyée par des recettes appariées.
 Après cette série, on ARRÊTE l'exploration du sommet sur KMNIST : la courbe
 compte 8 points et le critère d'arrêt écrit avant ("si les deux runs ne
 localisent pas le sommet, on documente la courbe telle quelle") est atteint.
-Ce qui reste à mesurer n'est pas de l'exploration mais l'item 1 du périmètre :
-le chiffre OFFICIEL (AutoAttack) sur `A8` (MNIST, pire cas maison 84.4%) et sur
-`kmnist 8` (62.6%), pour que la comparaison MNIST <-> KMNIST ne mélange plus
-maison et officiel.
+Ce qui restait à mesurer n'était pas de l'exploration mais l'item 1 du périmètre :
+le chiffre OFFICIEL (AutoAttack) sur `A8` (MNIST) et sur `kmnist 8`. **Les deux
+sont rentrés le 13/09** (`A8` : 99.27% propre / **78.25%** robuste ; `kmnist 8` :
+96.2% propre / **58.53%** robuste), donc la comparaison MNIST <-> KMNIST
+n'oppose plus un chiffre maison à un chiffre officiel : elle a ses deux paires
+appariées (`0.2 -> 2` : 82.40% contre 58.53% ; `0.2 -> 1` : 78.25% contre
+51.03%).
 
 ATTENTION au plancher de granularite : avec `--pgd-alpha 0.03` (= eps/10), un pas
 vaut 0.1 eps, donc `0.05` et `0.1` a l'entree donnent tous les deux 1 pas.
