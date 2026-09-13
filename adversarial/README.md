@@ -1057,6 +1057,8 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist 4** | constant 1 eps (10 pas de eps/10) | 10 min 28 s | 97.8% | **15.2%** | - | - |
 | **kmnist 5** | plan `0.1 -> 0.5 eps` (1 -> 5 pas) | 6 min 9 s | 97.6% | **25.2%** | - | - |
 | **kmnist 6** | plan `0.05 -> 0.2 eps` (1 -> 2 pas) | 5 min 6 s | 98.0% | **0.0%** | - | - |
+| **kmnist 7** | plan `0.2 -> 0.5 eps` (2 -> 5 pas) | 6 min 54 s | 98.0% | **31.8%** | - | - |
+| **kmnist 8** | plan `0.2 -> 2 eps` (2 -> 20 pas, copie d'`A6`) | 11 min 35 s | 96.2% | **62.6%** | à mesurer | accord |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un
@@ -1089,13 +1091,32 @@ contre 82-91% sur MNIST) et la recette de référence `constant 2 eps` s'effondr
 relativement bien plus forte sur KMNIST, donc le budget 2 eps tombe après la
 bascule. Détail : `memoire.md`, entrée du 2026-09-13.
 
-**Suite ouverte (critère écrit avant les runs)** :
-`--plan-budget "0.2,0.5"` (2 -> 5 pas, ~6 min) isole le DEPART (meme depart que
-le champion `kmnist 2`, plafond plus bas), puis `--plan-budget "0.2,2"`
-(2 -> 20 pas, ~11 min, la copie d'`A6`, qui complete au passage la paire
-MNIST/KMNIST). Critere : si `0.2 -> 0.5` sort ~58%, c'est le DEPART qui commande
-et le plafond est secondaire ; s'il sort ~25%, c'est le PLAFOND et la cloche
-KMNIST est etroite autour de 1 eps (le run `0.2 -> 2` doit alors redescendre).
+**Lecture sur les lignes `kmnist 7` et `kmnist 8` (13/09, fermeture de la série)** :
+le facteur confondu est levé et le verdict est net -- c'est le PLAFOND qui
+commande, et il faut le monter, pas le baisser. A DEPART IDENTIQUE (2 pas = 0.2
+eps), le pire cas suit le plafond : `0.5 eps` -> 31.8% ; `1 eps` -> 58.4% ;
+`2 eps` -> **62.6%** (nouveau meilleur KMNIST, et le premier modèle KMNIST dont
+le pire cas est donné par Square et non par une attaque à gradient : 62.6% contre
+69.4% en APGD-CE, profil isotrope du plan doux). La série KMNIST compte donc
+8 points de mesure du pire cas : 0.0% (propre) / 1.2% (constant 2 eps) / 15.2%
+(constant 1 eps) / 17.0% (plan inverse) / 0.0% (0.05->0.2) / 25.2%
+(0.1->0.5) / 31.8% (0.2->0.5) / **58.4% (0.2->1) / 62.6% (0.2->2)**.
+
+**Comparaison MNIST <-> KMNIST, recette identique** : le plan doux `0.2 -> 2 eps`
+garde le sommet sur les DEUX jeux (85.8% MNIST / **62.6%** KMNIST) et l'ordre des
+recettes est conservé (`0.2 -> 2` > `0.2 -> 1` > constant 1 eps > constant 2 eps
+sur les deux) ; seul le NIVEAU tombe, de ~23 points, et la perte au pire cas est
+plus brutale sur KMNIST (constant 2 eps : 63.2% -> 1.2%). **La recette se
+transpose, le niveau non.** C'est la phrase de l'article, et elle est désormais
+appuyée par des recettes appariées.
+
+Après cette série, on ARRÊTE l'exploration du sommet sur KMNIST : la courbe
+compte 8 points et le critère d'arrêt écrit avant ("si les deux runs ne
+localisent pas le sommet, on documente la courbe telle quelle") est atteint.
+Ce qui reste à mesurer n'est pas de l'exploration mais l'item 1 du périmètre :
+le chiffre OFFICIEL (AutoAttack) sur `A8` (MNIST, pire cas maison 84.4%) et sur
+`kmnist 8` (62.6%), pour que la comparaison MNIST <-> KMNIST ne mélange plus
+maison et officiel.
 
 ATTENTION au plancher de granularite : avec `--pgd-alpha 0.03` (= eps/10), un pas
 vaut 0.1 eps, donc `0.05` et `0.1` a l'entree donnent tous les deux 1 pas.

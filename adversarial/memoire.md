@@ -1685,3 +1685,42 @@ Detail de la diagonale de chaque run (PGD 20 pas, 1 restart) :
 Le budget interne trop petit ne produit qu'une robustesse a rayon minuscule
 (0.1 eps), pas une robustesse contre eps=0.30 -- evident apres coup, mais c'est
 exactement ce que la "branche basse" du critere supposait.
+
+### 2026-09-13 (12h03) - KMNIST : c'est le PLAFOND, et il faut le MONTER (nouveau meilleur 62.6%)
+
+Deux runs de Maraa, suite maison (500 images, eps=0.30) :
+
+| run | plan | duree | propre | pire cas |
+|---|---|---|---|---|
+| kmnist 7 | `0.2 -> 0.5 eps` (2 -> 5 pas) | 6 min 54 s | 98.0% | **31.8%** (APGD-CE) |
+| kmnist 8 | `0.2 -> 2 eps` (2 -> 20 pas) | 11 min 35 s | 96.2% | **62.6%** (Square) |
+
+FACTEUR CONFONDU LEVE : a DEPART IDENTIQUE (2 pas = 0.2 eps, comme le champion
+`kmnist 2`), le pire cas suit le PLAFOND : 0.5 eps -> 31.8% ; 1 eps -> 58.4% ;
+2 eps -> 62.6%. Le critere ecrit avant est a moitie confirme et a moitie faux :
+"c'est le PLAFOND" -> OUI ; "alors `0.2 -> 2` doit redescendre" -> NON, monter le
+plafond monte le pire cas. Deuxieme correction assumee du matin.
+
+`kmnist 8` est le NOUVEAU MEILLEUR KMNIST et, pour la premiere fois sur ce jeu, son
+pire cas est donne par l'attaque SANS gradient (Square 62.6% contre APGD-CE 69.4%
+et APGD-DLR 69.0%) : profil isotrope, comme le plan doux. Les deux runs a bas
+plafond avaient le profil inverse (attaque a gradient la plus forte, 18 points
+d'ecart pour `kmnist 5`).
+
+SERIE KMNIST COMPLETE (8 points de pire cas, 500 images, eps=0.30) :
+0.0% (propre) ; 1.2% (constant 2 eps) ; 15.2% (constant 1 eps) ; 17.0% (plan
+inverse `1 -> 0.2`) ; 0.0% (`0.05 -> 0.2`) ; 25.2% (`0.1 -> 0.5`) ; 31.8%
+(`0.2 -> 0.5`) ; **58.4%** (`0.2 -> 1`, 51.03% officiel) ; **62.6%** (`0.2 -> 2`).
+
+COMPARAISON MNIST <-> KMNIST A RECETTE IDENTIQUE : le plan doux `0.2 -> 2 eps`
+garde le sommet sur les deux jeux (85.8% MNIST / 62.6% KMNIST) et l'ORDRE des
+recettes est conserve (`0.2 -> 2` > `0.2 -> 1` > constant 1 eps > constant 2 eps
+sur les deux). Seul le NIVEAU tombe (~23 points) et l'effondrement du budget
+constant est plus brutal sur KMNIST (constant 2 eps : 63.2% -> 1.2%). Phrase de
+l'article : **la recette se transpose, le niveau non.**
+
+FIN DE L'EXPLORATION : le critere d'arret ecrit avant est atteint (la courbe
+compte 8 points), on ne relance PAS de 9e run sur KMNIST. Reste l'item 1 du
+perimetre : les chiffres OFFICIELS (AutoAttack) sur `models/a8_plan_0p2_1.pt`
+(MNIST, pire cas maison 84.4%) et sur `models/kmnist_plan_02_2.pt` (62.6%), pour
+que la comparaison MNIST <-> KMNIST ne melange plus maison et officiel.
