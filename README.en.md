@@ -6,10 +6,12 @@
 > - No TensorFlow, no PyTorch, no Keras: Python and NumPy only. Every layer is written by hand (im2col forward, backward, update).
 > - Clean MNIST: **98.6%** test accuracy; the optimizers (SGD, Momentum, Adam) are hand-made too.
 > - Adversarial attacks, hand-made as well: FGSM drops the full model to **1.8%**, PGD to **0.0%** at eps=0.30.
-> - Hardened model (PyTorch, augmentation): **99.4% clean** and **61.8% under the strongest attack found** (Square, gradient-free) -- the previous version, trained with a coarser inner attack (PGD-5), fell to 42.0%: strengthening the training attack (PGD-20 at step eps/10) brought **+19.8 points** of worst case.
-> - Hardening campaign A/B/C: the limiting factor is the **epoch budget**, not the recipe (run B, judged bad at 10 epochs, reaches **91.0%** at 120); TRADES (C) still needs another go.
+> - Hardened model, best recipe: **91.25%** official worst case (AutoAttack, 10,000 images, eps=0.30) at ~99% clean, with an **adaptive per-batch** inner-attack budget.
+> - **The central result: it is not the strength of the attack that hardens the network, it is its ORDERING.** With identical inner budgets and identical cost, the increasing plan `0.2 -> 2 eps` yields **85.8%** and the decreasing plan `2 -> 0.2 eps` **63.8%** (in-house suite): **22 points of gap from the order alone**.
+> - Replication on **KMNIST** (Japanese kana): the law holds and even amplifies (**+41 points** vs +22 on MNIST), but the level does not transfer (**-23.9 points** at identical recipe, official figures on both sides).
+> - Every announced figure is official (AutoAttack): our in-house suite is faster but **optimistic by 3 to 13 points** -- measured and published, along with the six measurement rules.
 > - Two engines, same maths: hand-made NumPy and PyTorch, ~9x faster on CPU, interchangeable `.npz` weights.
-> - Next: cross-check our numbers with `autoattack`, train KMNIST, then publish (model card + demo) -- details in `adversarial/README.md`.
+> - Next: certified smoothing, TRADES variant, then publication (Hugging Face model card + demo Space) -- the write-up outline is in `adversarial/article/TRAME-fr.md`.
 
 **A convolutional neural network for recognising handwritten digits (MNIST), built by hand, from A to Z.**
 

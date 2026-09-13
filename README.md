@@ -6,10 +6,12 @@
 > - Pas de TensorFlow, pas de PyTorch, pas de Keras : Python et NumPy seulement. Chaque couche est écrite à la main (forward im2col, backward, update).
 > - MNIST propre : **98.6%** d'accuracy test ; les optimiseurs (SGD, Momentum, Adam) sont faits main eux aussi.
 > - Attaques adversariales, faites main aussi : FGSM fait tomber le modèle full à **1.8%**, PGD à **0.0%** à eps=0.30.
-> - Modèle durci (PyTorch, augmentation) : **99.4% propre** et **61.8% sous la pire attaque trouvée** (Square, sans gradient) — la version précédente, entraînée avec une attaque interne plus grossière (PGD-5), tombait à 42.0% : renforcer l'attaque d'entraînement (PGD-20 au pas eps/10) a rapporté **+19.8 points** de pire cas.
-> - Campagne A/B/C : le facteur limitant est le **budget d'epochs**, pas la recette (le run B, jugé mauvais à 10 epochs, atteint **91.0%** à 120) ; TRADES (C) reste à reprendre.
+> - Meilleur modèle durci : **91.25%** de pire cas **officiel** (AutoAttack, 10 000 images, eps=0.30) pour ~99% propre, avec un budget d'attaque interne **adaptatif par batch**.
+> - **Le résultat central : ce n'est pas la force de l'attaque qui durcit le réseau, c'est son ORDONNANCEMENT.** À budgets internes identiques et à coût identique, le plan croissant `0.2 -> 2 eps` donne **85.8%** et le plan décroissant `2 -> 0.2 eps` **63.8%** (suite maison) : **22 points d'écart dus au seul ordre**.
+> - Réplication sur **KMNIST** (kana japonais, l'ancre Japon du repo) : la loi tient et s'amplifie (**+41 points** contre +22 sur MNIST), mais le niveau ne se transpose pas (**-23.9 points** à recette identique, chiffres officiels des deux côtés).
+> - Tous les chiffres annoncés sont officiels (AutoAttack) : notre suite maison est plus rapide mais **optimiste de 3 à 13 points** — chiffré et publié, comme les six règles de mesure.
 > - Deux moteurs, mêmes maths : NumPy fait main et PyTorch, ~9x plus rapide sur CPU, poids `.npz` interchangeables.
-> - La suite : croiser nos chiffres avec `autoattack`, entraîner KMNIST, puis publier (model card + démo) — le détail est dans `adversarial/README.md`.
+> - Suite immédiate : smoothing certifié, variante TRADES, puis publication (model card Hugging Face + Space de démo) — la trame du write-up est dans `adversarial/article/TRAME-fr.md`.
 
 **Un réseau de neurones convolutionnel pour reconnaître les chiffres manuscrits (MNIST), fait à la main, de A à Z.**
 
