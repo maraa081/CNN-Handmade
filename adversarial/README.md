@@ -967,7 +967,7 @@ haut. Ce qui reste, par ordre d'importance :
 | 2 | **Attaquer l'écart gradient <-> Square** : résolu dans son principe le 12/09 (rapport gradient/aléatoire ; marges anisotropes) | reste à le documenter proprement dans le write-up |
 | 3 | ~~**Smoothing à relancer** (`--epochs 90`)~~ **FAIT le 13/09** | rayons L2 certifiés (médiane 1.214 ; 98.5% à R=0.30) : seule garantie du projet |
 | 4 | ~~**KMNIST** : entraîner proprement et documenter~~ **FAIT le 13/09** | ancre Japon : 8 points de mesure, meilleur 62.6% maison / **58.53%** officiel, recette appariée à MNIST (voir la série KMNIST plus haut) |
-| 5 | **Trancher la variante TRADES** | écart avec l'implémentation de référence (voir `defenses.md` 6.5) : aligner le code ou documenter la variante |
+| 5 | ~~**Trancher la variante TRADES**~~ **FAIT le 13/09 (documenter)** | notre TRADES ne reproduit pas la référence (25.18% contre 95.60% chez Zhang et al. 2019) : deux écarts identifies dans le code (sens de la KL, attaque interne sur la CE). Publie comme limite assume |
 | 6 | **Write-up de fond** (FR + EN) | le récit complet "construire -> attaquer -> défendre -> casser sa propre défense", avec la **loi du budget de déplacement de l'attaque interne** comme pièce centrale |
 | 7 | **Model card Hugging Face + Space Gradio** | la publication elle-même (poids, recette, robustesse par eps, limites) |
 
@@ -993,7 +993,7 @@ le surcoût est **nul** par rapport à PGD-20.
 ## Périmètre de fin de projet et séquence (état au 2026-09-13)
 
 **Jalon d'arrêt = la publication**, pas un chiffre : model card Hugging Face +
-Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
+Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 -> janv
 2027), CNN-Handmade doit être terminé en janvier.
 
 ### Où on en est
@@ -1005,7 +1005,7 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 → janv
 | 3 | Ablation du budget de déplacement + courbe en cloche + attaque à budget adaptatif | OK |
 | 4 | KMNIST entraîné proprement et documenté (ancre Japon) | **OK le 13/09** (8 points de mesure ; critère d'arrêt tenu) |
 | 5 | ~~Smoothing relancé (`--epochs 90`)~~ | **OK le 13/09** : rayon L2 certifié médian **1.214**, 98.5% certifiés à R=0.30 |
-| 6 | Variante TRADES tranchée (aligner ou documenter) | à faire |
+| 6 | Variante TRADES tranchée (aligner ou documenter) | **OK le 13/09, cote DOCUMENTER** : notre TRADES (22.01% puis 25.18%) ne reproduit pas la référence (95.60%) ; les deux écarts sont identifiés dans le code. Publié comme limite, pas comme comparaison de méthodes |
 | 7 | Write-up de fond FR + EN | à faire |
 | 8 | Model card Hugging Face + Space Gradio | à faire |
 
@@ -1103,7 +1103,7 @@ Notes :
 ### Les six règles de mesure (leçons du 2026-09-12)
 
 1. **Annoncer sur 10 000 images.** Sur les 500 mêmes images de test, tous les
-   modèles étaient tirés vers le haut (APGD-CE d'A1 : 95.6% → 93.8%).
+   modèles étaient tirés vers le haut (APGD-CE d'A1 : 95.6% -> 93.8%).
 2. **Sélectionner sur la validation, annoncer sur le test.**
 3. **Le juge, c'est AutoAttack.** Notre suite sert de diagnostic rapide et
    d'explication, pas de chiffre final.
@@ -1198,7 +1198,7 @@ eps), le pire cas suit le plafond : `0.5 eps` -> 31.8% ; `1 eps` -> 58.4% ;
 `2 eps` -> **62.6%** (nouveau meilleur KMNIST, et le premier modèle KMNIST dont
 le pire cas est donné par Square et non par une attaque à gradient : 62.6% contre
 69.4% en APGD-CE, profil isotrope du plan doux). La série KMNIST compte donc
-8 points de mesure du pire cas : 0.0% (propre) / 1.2% (constant 2 eps) / 15.2%
+8 modeles entraines, 9 points de mesure du pire cas : 0.0% (propre) / 1.2% (constant 2 eps) / 15.2%
 (constant 1 eps) / 17.0% (plan inverse) / 0.0% (0.05->0.2) / 25.2%
 (0.1->0.5) / 31.8% (0.2->0.5) / **58.4% (0.2->1) / 62.6% (0.2->2)**.
 
