@@ -174,6 +174,12 @@ utilisable.
     python3 adversarial/torch/eval_suite.py --weights models/....pt --label "mon run" \
         --json adversarial/results/logs/mon_run.json
 
+    # 9b bis. Run dont on ne peut RIEN conclure : on le trace quand meme, mais
+    # hors du tableau final (ex: reprise --resume avec lr restaure du checkpoint)
+    python3 adversarial/torch/eval_suite.py --weights models/....pt \
+        --label "mon run invalide" --invalide \
+        --json adversarial/results/logs/mon_run_invalide.json
+
     # 9c. Le tableau recapitulatif, pret a coller (lit tous les JSON du dossier)
     python3 adversarial/torch/tableau_recap.py
     python3 adversarial/torch/tableau_recap.py --csv adversarial/results/logs/recap.csv

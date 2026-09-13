@@ -22,6 +22,16 @@ Usage
     # Regarder un autre budget que le plus grand (par defaut : le max des eps)
     python3 adversarial/torch/tableau_recap.py --eps 0.2
 
+    # Revoir aussi les runs marques INVALIDE (exclus par defaut)
+    python3 adversarial/torch/tableau_recap.py --avec-invalides
+
+Deux pieges evites ici. Un JSON marque `"valide": false` (ecrit par
+`eval_suite.py --invalide`) est EXCLU du tableau final : un run dont on ne peut
+rien conclure ne doit pas cotoyer les champions. Et si deux lignes portent le
+MEME libelle (JSON copie, run rejoue sous un autre nom), elles sont
+desambiguees par leur fichier de poids -- sinon le tableau affiche deux fois le
+meme nom avec des chiffres differents, et il raconte une autre histoire.
+
 Aucune dependance a torch : ce script ne lit que du JSON.
 """
 
@@ -138,6 +148,16 @@ def construire(lignes, eps):
             "pire": pire_val,
             "pire_attaque": pire_att,
         })
+    # Desambigue deux libelles identiques par le fichier de poids : deux runs
+    # differents peuvent porter le meme nom (JSON copie ou rejoue sous un autre
+    # fichier), et deux lignes identiques avec des chiffres differents rendent le
+    # tableau illisible -- voire faux (un run invalide passant pour le champion).
+    doublons = {}
+    for r in tableau:
+        doublons[r["libelle"]] = doublons.get(r["libelle"], 0) + 1
+    for r in tableau:
+        if doublons[r["libelle"]] > 1:
+            r["libelle"] = f"{r['libelle']} [{basename(r['modele'])}]"
     # Tri : jeu de donnees, puis pire cas decroissant (le meilleur en haut).
     tableau.sort(key=lambda r: (r["dataset"], -(r["pire"] if r["pire"] is not None else -1)))
     for i, r in enumerate(tableau, 1):
@@ -198,6 +218,9 @@ def main():
     p.add_argument("--eps", type=float, default=None,
                    help="budget L-infini a lire (defaut : le plus grand de chaque fichier)")
     p.add_argument("--csv", default="", help="exporte aussi le tableau en CSV")
+    p.add_argument("--avec-invalides", action="store_true",
+                   help="inclut les JSON marques invalides (valide=false) ; par "
+                        "defaut ils sont exclus du tableau final")
     p.add_argument("--titre", default="", help="titre affiche au-dessus du tableau")
     args = p.parse_args()
 
@@ -217,6 +240,10 @@ def main():
             continue
         etat = lire(chemin)
         if etat is None:
+            continue
+        if etat.get("valide") is False and not args.avec_invalides:
+            print(f"[EXCLU] {basename(chemin)} : run marque INVALIDE "
+                  f"(valide=false ; voir memoire) -- --avec-invalides pour l'inclure")
             continue
         if etat["source"] == "autoattack":
             officiels[cle_modele(etat)] = etat

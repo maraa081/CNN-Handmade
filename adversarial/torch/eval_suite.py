@@ -106,6 +106,11 @@ def main():
                    help="nom lisible du run dans le tableau de recap "
                         "(defaut : le nom du fichier de poids)")
     p.add_argument("--quick", action="store_true", help="budget reduit (verification de la chaine)")
+    p.add_argument("--invalide", action="store_true",
+                   help="marque le run comme INVALIDE dans le JSON (valide=false) ; "
+                        "tableau_recap.py l'exclut alors du tableau final. A utiliser "
+                        "quand le run ne dit rien de ce qu'on voulait tester (ex: reprise "
+                        "--resume dont le lr a ete restaure du checkpoint)")
 
     # budgets (surchargeables)
     p.add_argument("--pgd-steps", type=int, default=20)
@@ -252,6 +257,9 @@ def main():
             "libelle": args.label or basename(args.weights).replace(".pt", ""),
             "n_images": args.n,
             "eps": list(args.eps),
+            # Present seulement si le run est marque invalide : un run dont on ne
+            # peut RIEN conclure doit rester trace mais hors du tableau final.
+            **({} if not args.invalide else {"valide": False}),
             "propre": propre,
             "attaques": {},   # nom d'attaque -> {eps: accuracy}
             "l2": {},         # nom d'attaque -> {eps: taux de succes}
@@ -279,6 +287,9 @@ def main():
         with open(chemin_json, "w", encoding="utf-8") as f:
             json.dump(etat, f, indent=2, ensure_ascii=False)
             f.write("\n")
+        if args.invalide:
+            print("[ATTENTION] run marque INVALIDE dans le JSON : exclu du tableau "
+                  "final (tableau_recap.py), utiliser --avec-invalides pour le revoir")
         print(f"[JSON] resultats ecrits -> {args.json}")
 
     m, s = divmod(time.time() - t_total, 60)

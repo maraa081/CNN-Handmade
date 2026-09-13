@@ -793,6 +793,19 @@ dans l'en-tête, donc on voit immédiatement si deux lignes sont comparables), l
 qui est le chiffre d'annonce. Le tableau est du Markdown brut : copier-coller
 vers le README ou la model card, rien à reformater.
 
+Deux garde-fous dans `tableau_recap.py`, appris à la dure le 13/09 :
+
+- **Un run peut être marqué invalide.** `eval_suite.py --invalide` écrit
+  `"valide": false` dans le JSON, et le tableau l'EXCLUT (il reste sur le disque,
+  affiché en `[EXCLU]`, et `--avec-invalides` le ramène). Cas réel : la reprise
+  `--resume` d'A6 en deux phases, dont le lr restauré du checkpoint rend le run
+  muet (voir le catalogue ci-dessus).
+- **Deux lignes peuvent porter le même libellé**, si un JSON est copié ou rejoué
+  sous un autre nom de poids. Le script les désambiguïse alors par le nom du
+  fichier de poids (`[a6_plan_budget.pt]`), au lieu d'afficher deux fois le même
+  nom avec des chiffres différents — exactement le scénario où un run invalide
+  se fait passer pour le champion.
+
 Prédiction/extrapolation, écrite AVANT de lancer les runs : le départ dur
 (série 1) plafonne vers 60-65% de pire cas, la recette douce (série 2) monte
 vers ~84%, et l'ordre inverse (série 3) perd ~20 points. Si KMNIST ne se

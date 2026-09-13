@@ -2026,3 +2026,44 @@ depart haut), le biais ne peut que creuser l'ecart, pas le combler.
 
 Article mis a jour : S.4.4 (tableau des graines), S.8.2 (limite remplacee par le
 resultat mesure), resume. README (notes du biais + plan de graines).
+
+### 2026-09-13 (20h35) - LE TABLEAU FINAL AVAIT UNE LIGNE INVALIDE SOUS LE NOM DU CHAMPION
+
+Maraa a relance l'evaluation maison d'`a6_plan_budget.pt` (le vrai `A6`, plan
+`0.2 -> 2 eps`) : **99.0% propre / 85.8% de pire cas** (Square-3000, 500 images),
+c'est-a-dire exactement le chiffre du catalogue -> il est **reproduit** (85.8%
+maison -> 82.40% officiel). Rien a corriger sur A6.
+
+En revanche, le renommage de l'ancien `mnist_a6.json` en `a6_gradient_doux.json`
+(sa vraie identite : le run deux phases INVALIDE du 00h10) a rendu visible un
+piege : le tableau affichait **deux lignes sous le meme libelle**
+"MNIST A6 plan 0.2->2" :
+
+| libelle affiche | propre | pire cas | poids |
+|---|---|---|---|
+| MNIST A6 plan 0.2->2 | 99.0% | **85.8%** | `a6_plan_budget.pt` (le champion) |
+| MNIST A6 plan 0.2->2 | 98.8% | **58.2%** | `a6_gradient_doux.pt` (INVALIDE) |
+
+Le run invalide portait donc le nom du champion avec un pire cas de 58.2% (PGD-20
+= 71.2%, la signature du modele quasi gele par le lr restaure). C'est precisement
+le scenario que l'outil devait empecher : un chiffre qui raconte une autre
+histoire. Aucun chiffre invalide n'etait entre dans le README ni dans l'article
+(verifie : 58.2 / 71.2 n'y apparaissent pas), mais le tableau pret a coller
+l'aurait fait entrer.
+
+Deux garde-fous ajoutes (jamais de correction a la main dans le tableau) :
+
+- `eval_suite.py --invalide` ecrit `"valide": false` dans le JSON : le run reste
+  trace mais **hors du tableau final** ;
+- `tableau_recap.py` exclut par defaut les `valide=false` (les affiche en
+  `[EXCLU]`, `--avec-invalides` pour les revoir) et **desambigue deux libelles
+  identiques** par le nom du fichier de poids (`[a6_plan_budget.pt]`).
+
+Pour nettoyer le dossier de Maraa (30 s, une ligne) :
+
+```python
+python3 -c "import json,pathlib; p=pathlib.Path('adversarial/results/logs/a6_gradient_doux.json'); \
+d=json.loads(p.read_text()); d['valide']=False; p.write_text(json.dumps(d,indent=2,ensure_ascii=False)+'\n')"
+```
+
+Le catalogue des runs ne bouge pas : `a6_gradient_doux` y est deja note INVALIDE.
