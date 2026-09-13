@@ -49,7 +49,7 @@ jeu de donnees (des kana japonais)."
 - LE resultat central : a budgets internes identiques et a cout identique, le plan
   croissant `0.2 -> 2 eps` donne **85.8%** et le plan decroissant `2 -> 0.2 eps`
   **63.8%** (maison) - **22 points d'ecart, dus au seul ORDRE**.
-- Publier honnetement coute : notre suite maison est optimiste de 3 a 13 points
+- Publier honnetement coute : notre suite maison est optimiste de 2 a 15.5 points
   selon le modele, et le classement qu'elle donne reste bon sur les modeles sains
   mais se trompe en faveur du seul modele suspect (`abl_a`).
 - Replication sur KMNIST (kana japonais, ancre Japon) : la loi tient et
@@ -74,7 +74,7 @@ jeu de donnees (des kana japonais)."
   2. sa replication sur un deuxieme jeu (KMNIST) avec ce qui se transpose et ce
      qui ne se transpose pas ;
   3. une methode de mesure honnete : le juge est AutoAttack, notre suite maison
-     sert de diagnostic rapide, et on chiffre notre propre biais (3 a 13 points) ;
+     sert de diagnostic rapide, et on chiffre notre propre biais (2 a 15.5 points) ;
   4. une extension : rendre le budget adaptatif par batch ajoute +7 a +9 points,
      au prix de ~9 minutes de plus.
 - **Ce que l'article ne pretend pas** : pas d'etat de l'art CIFAR-10, pas de
@@ -244,18 +244,24 @@ jeu de donnees (des kana japonais)."
 | `A8` | plan `0.2 -> 1 eps` | 84.4% | **78.25%** | -6.2 |
 | `kmnist_plan_02_2` | KMNIST, plan `0.2 -> 2 eps` | 62.6% | **58.53%** | -4.1 |
 | `kmnist_plan_doux` | KMNIST, plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
+| `kmnist_plan_inverse` | KMNIST, plan `1 -> 0.2 eps` | 17.0% | **1.49%** | **-15.5** |
 | `abl_a` | PGD-20 constant, pas eps/10 | 63.2% | **50.71%** | -12.5 |
 | `trades_plan_02_2` | plan `0.2 -> 2 eps`, TRADES `beta 2` + warm start | 27.2% | **22.01%** | -5.2 |
 | `trades_ref_plan_02_2` | idem, TRADES `beta 6` depuis zéro | 30.0% | **25.18%** | -4.8 |
 
-- **Le biais de notre suite maison est de 3 a 13 points**, jamais dans l'autre
-  sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
+- **Le biais de notre suite maison est de 2 a 15.5 points**, jamais dans l'autre  sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
   credibles.
-- **Le classement : les 5 modeles sains gardent EXACTEMENT le meme ordre en maison
-  et en officiel ; seul `abl_a` bouge** (4e maison -> dernier officiel). Et c'est
-  precisement le modele que nos diagnostics classaient comme rugueux. Phrase a
-  ecrire telle quelle : *notre suite maison trie bien les modeles sains et se
-  trompe en faveur des suspects*.
+- **L'ECART D'ORDRE, OFFICIEL DES DEUX COTES (le chiffre-phare)** : la paire
+  KMNIST `0.2 -> 1 eps` contre `1 -> 0.2 eps` est la seule dont les DEUX cotes sont
+  passes au juge : **51.03% contre 1.49%, soit +49.5 points officiels** a budgets
+  et cout identiques (contre 41 en maison). Le chiffre-phare de l'article ne depend
+  donc plus d'un instrument biaise. Reste a mesurer : `A9` (MNIST, plan
+  `2 -> 0.2 eps`, fichier `models/a9_plan_inverse.pt`), prediction ecrite avant :
+  entre 48% et 58% -> ecart officiel de 25 a 35 points.
+- **Le classement : les modeles sains gardent le meme ordre**, et les deux plus
+  grosses surestimations de la serie sont exactement les deux recettes a DEPART HAUT
+  (`abl_a` -12.5, plan inverse KMNIST -15.5) : notre suite est optimiste precisement
+  sur la famille que la loi declare mauvaise.
 - Honnetete sur les chiffres officiels eux-memes : AutoAttack a emis un
   avertissement sur `kmnist_plan_doux` ("Square Attack has decreased the robust
   accuracy of 2.24%") -> 51.03% est lui-meme legerement optimiste, on le dit.
@@ -310,7 +316,7 @@ jeu de donnees (des kana japonais)."
 - Petits modeles (421 642 parametres), petites images (28x28), un seul eps
   (0.30) : la loi est etablie sur ce regime, pas au-dela (pas d'ensemble, pas de
   CIFAR, pas au-dela de 1.7M de parametres - decisions explicites, cf. README).
-- Notre suite maison est optimiste de 3 a 13 points ; elle est utilisee pour
+- Notre suite maison est optimiste de 2 a 15.5 points ; elle est utilisee pour
   TRIER, pas pour annoncer.
 - Le chiffre officiel KMNIST du plan doux porte un avertissement AutoAttack
   (2.24%) : il est lui-meme optimiste.

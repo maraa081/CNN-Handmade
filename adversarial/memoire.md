@@ -1873,3 +1873,32 @@ modele (91.25%, 421k parametres, 120 epochs) est a ~5 points, et `abl_a` (50.71%
 a 45 points DANS LA MEME ARCHITECTURE. C'est la bonne facon de presenter le
 resultat : pas un record, un fait de mecanisme (une recette qui commence haut
 coute 45 points a architecture constante).
+
+### 2026-09-13 (17h47) - KMNIST plan inverse : 1.49% OFFICIEL -> l'ecart d'ORDRE officiel = 49.5 points
+
+AutoAttack `standard`, 10 000 images, eps=0.30, sur `models/kmnist_plan_inverse.pt`
+(plan `1 -> 0.2 eps`, run de 11 min) : propre 97.02%, **robuste 1.49%** (2.1 min,
+avertissement "Square Attack has decreased the robust accuracy of 1.63%" -> le
+chiffre est encore optimiste).
+
+| | maison | officiel | ecart |
+|---|---|---|---|
+| KMNIST `1 -> 0.2 eps` | 17.0% | **1.49%** | **-15.5** |
+
+- **-15.5 points : la plus grosse surestimation de toute la serie** (record
+  precedent : `abl_a`, -12.5). Le biais etait donc de 2 a 15.5 points, pas "3 a 13".
+- **PAIRE APPARIEE OFFICIELLE COMPLETE POUR LA LOI DE L'ORDRE (KMNIST)** : plan doux
+  `0.2 -> 1 eps` **51.03%** contre plan inverse `1 -> 0.2 eps` **1.49%**, a budgets
+  et cout identiques -> **+49.5 points d'ecart en OFFICIEL** (contre +41 en maison).
+  C'est le chiffre-phare de l'article, et il ne depend plus de notre suite biaisee.
+- PREDICTION ECRITE AVANT LA MESURE : "10 a 15% officiel". Direction juste (bien
+  plus bas que 17.0%), magnitude FAUSSE de presque un ordre de grandeur : le biais
+  maison est plus agressif que prevu sur les recettes a depart haut. Assumé.
+- COROLLAIRE STRUCTUREL (a ecrire dans l'article) : les deux plus grosses
+  surestimations de la serie sont exactement les deux recettes a DEPART HAUT
+  (`abl_a` -12.5, plan inverse KMNIST -15.5). Notre suite maison est optimiste
+  precisement sur la famille que la loi declare mauvaise -> "la suite maison trie
+  bien les modeles sains et se trompe en faveur des suspects" (phrase enrichie).
+- ENCORE MANQUANT : AutoAttack sur `models/a9_plan_inverse.pt` (MNIST, plan
+  `2 -> 0.2 eps`). ERREUR DE MA PART : le fichier ne s'appelle PAS
+  `a9_plan_2_0p2.pt` -> FileNotFoundError. Prediction maintenue : 48 a 58%.

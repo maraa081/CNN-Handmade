@@ -1018,6 +1018,7 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 -> janv
 | `A8` (plan `0.2 -> 1 eps`) | MNIST | 99.27% | **78.25%** | 14.3 min |
 | `kmnist_plan_02_2` (plan `0.2 -> 2 eps`) | KMNIST | 94.64% | **58.53%** | 10.7 min |
 | `kmnist_plan_doux` (plan `0.2 -> 1 eps`) | KMNIST | 95.19% | **51.03%** | 9.0 min |
+| `kmnist_plan_inverse` (plan `1 -> 0.2 eps`) | KMNIST | 97.02% | **1.49%** | 2.1 min |
 | `abl_a` (PGD-20 constant, pas eps/10) | MNIST | 99.53% | 50.71% | 20 min |
 | `trades_plan_02_2` (TRADES, `beta 2` + warm start) | MNIST | 96.51% | 22.01% | 4.3 min |
 | `trades_ref_plan_02_2` (TRADES, `beta 6`, depuis zéro) | MNIST | 93.26% | 25.18% | 4.3 min |
@@ -1057,7 +1058,19 @@ corriger, corrections identifiées), pas comme un résultat. La phrase "la loi n
 rattrape pas une perte mal réglée" qui figurait dans la trame le 13/09 est donc
 **retirée** — elle n'est pas soutenue par les faits.
 
-**Les deux paires appariées (même recette, deux jeux) — la phrase de l'article :**
+**L'ECART D'ORDRE, OFFICIEL DES DEUX COTES (le chiffre-phare),** maintenant
+mesurable sur les deux jeux a recette appariée :
+
+| jeu | plan croissant | plan inverse | écart officiel |
+|---|---|---|---|
+| MNIST | `0.2 -> 2 eps` : 82.40% | `2 -> 0.2 eps` (`A9`) : a mesurer | a mesurer |
+| KMNIST | `0.2 -> 1 eps` : **51.03%** | `1 -> 0.2 eps` : **1.49%** | **+49.5 points** |
+
+Sur KMNIST, meme ensemble de budgets, meme cout, ordre inverse : **49.5 points
+d'ecart en officiel** (contre 41 en maison). Le chiffre-phare de l'article cesse
+donc de dependre d'un instrument biaise.
+
+**Les deux paires appariees (meme recette, deux jeux)** — la phrase de l'article :
 
 | recette | MNIST | KMNIST | écart |
 |---|---|---|---|
@@ -1075,11 +1088,13 @@ Notes :
   12 points est le prix de nos attaques maison — c'est exactement pourquoi l'item 2
   existait. Même direction sur KMNIST : 58.4% maison contre **51.03%** officiel
   (**+7.4 points** d'optimisme).
-- **L'optimisme de la suite maison, mesuré sur les six modèles croisés** : -3.4 pts
+- **L'optimisme de la suite maison, mesuré sur les sept modèles croisés** : -3.4 pts
   (A6), -4.1 (KMNIST `0.2->2`), -5.2 (TRADES), -6.2 (A8), -7.4 (KMNIST `0.2->1`),
-  -12.5 (abl_a). Donc de 3 à 13 points, pas "environ 3" comme on l'écrivait : la
-  règle de mesure n°3 (AutoAttack est le juge) reste la seule façon d'annoncer un
-  chiffre.
+  -12.5 (abl_a), **-15.5 (KMNIST `1->0.2`)**. Donc de 2 à 15.5 points, pas
+  "environ 3" comme on l'écrivait : la règle de mesure n°3 (AutoAttack est le
+  juge) reste la seule façon d'annoncer un chiffre. Le biais est le plus fort sur
+  les modèles "départ haut" (abl_a, plan inverse KMNIST), c'est-à-dire exactement
+  la famille que l'article déclare mauvaise.
 - **Le classement est conservé sauf à un endroit, et c'est instructif** : les cinq
   modèles propres (`A1`, `A6`, `A8`, KMNIST `0.2->2`, KMNIST `0.2->1`) gardent
   exactement le même ordre en maison et en officiel. Seul `abl_a` bouge : 4e en
@@ -1151,7 +1166,7 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist std** | propre (`--sans-attaque`, KMNIST) | 5 min | 98.6% | 0.0% | - | - |
 | **kmnist 1** | constant 2 eps (copie d'`abl_a`) | 20 min | 97.8% | **1.2%** | - | accord |
 | **kmnist 2** | plan `0.2 -> 1 eps` (copie d'`A8`) | 8 min | 96.6% | **58.4%** | **51.03%** | accord |
-| **kmnist 3** | plan `1 -> 0.2 eps` (copie d'`A9`) | 11 min | 97.2% | **17.0%** | - | accord |
+| **kmnist 3** | plan `1 -> 0.2 eps` (copie d'`A9`) | 11 min | 97.2% | **17.0%** | **1.49%** | accord |
 | **kmnist 4** | constant 1 eps (10 pas de eps/10) | 10 min 28 s | 97.8% | **15.2%** | - | - |
 | **kmnist 5** | plan `0.1 -> 0.5 eps` (1 -> 5 pas) | 6 min 9 s | 97.6% | **25.2%** | - | - |
 | **kmnist 6** | plan `0.05 -> 0.2 eps` (1 -> 2 pas) | 5 min 6 s | 98.0% | **0.0%** | - | - |

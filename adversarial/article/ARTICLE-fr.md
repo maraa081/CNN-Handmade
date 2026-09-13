@@ -30,7 +30,7 @@ formulation retenue est donc : *la recette se transpose, le niveau non*.
 
 Trois choix méthodologiques structurent le reste : tous les chiffres annoncés
 sont ceux d'**AutoAttack** sur 10 000 images ; notre propre suite d'attaques est
-présentée comme un outil de diagnostic, avec son biais mesuré (3 à 13 points
+présentée comme un outil de diagnostic, avec son biais mesuré (2 à 15.5 points
 d'optimisme selon le modèle) ; et le critère d'adoption de chaque recette est
 écrit **avant** le run correspondant, y compris quand il se révèle faux.
 
@@ -138,7 +138,7 @@ sont toutes nées d'une erreur concrète :
 ### 2.3 Le prix de l'honnêteté, chiffré
 
 Notre suite maison (500 images, Square poussé à 3000 pas) est **optimiste de 3 à
-13 points** selon le modèle, comparée à AutoAttack sur 10 000 images :
+15.5 points** selon le modèle, comparée à AutoAttack sur 10 000 images :
 
 | modèle | pire cas maison | pire cas officiel | écart |
 |---|---|---|---|
@@ -146,6 +146,7 @@ Notre suite maison (500 images, Square poussé à 3000 pas) est **optimiste de 3
 | KMNIST `0.2 -> 2 eps` | 62.6% | 58.53% | -4.1 |
 | `A8` (plan `0.2 -> 1 eps`) | 84.4% | 78.25% | -6.2 |
 | KMNIST `0.2 -> 1 eps` | 58.4% | 51.03% | -7.4 |
+| KMNIST `1 -> 0.2 eps` (plan inverse) | 17.0% | 1.49% | **-15.5** |
 | `abl_a` (budget constant 2 eps) | 63.2% | 50.71% | -12.5 |
 
 Ce biais n'est pas une anecdote : il est **plus grand sur le modèle le plus
@@ -408,7 +409,7 @@ compense une perte mal réglée » serait non soutenue par ces mesures.
 
 Tous les chiffres annoncés dans ce document viennent d'AutoAttack (version
 `standard` : APGD-CE, APGD-T, FAB-T, Square), sur 10 000 images, à eps = 0.30.
-Six modèles ont été croisés :
+Sept modèles ont été croisés :
 
 | modèle | recette | maison | officiel | écart |
 |---|---|---|---|---|
@@ -418,20 +419,23 @@ Six modèles ont été croisés :
 | KMNIST `0.2 -> 2 eps` | plan `0.2 -> 2 eps` | 62.6% | **58.53%** | -4.1 |
 | KMNIST `0.2 -> 1 eps` | plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
 | `abl_a` | budget constant 2 eps | 63.2% | **50.71%** | -12.5 |
+| KMNIST `1 -> 0.2 eps` | plan inverse | 17.0% | **1.49%** | **-15.5** |
 
 Trois observations.
 
-**Le biais de notre suite est toujours dans le même sens**, de 3 à 13 points, et
-il est plus grand sur les modèles faibles. C'est un biais de méthode, pas un
-biais de chance.
+**Le biais de notre suite est toujours dans le même sens**, de 2 à 15.5 points, et
+il est le plus grand sur les modèles à **départ haut** (`abl_a` : -12.5 ; plan
+inverse KMNIST : -15.5). C'est un biais de méthode, pas un biais de chance.
 
-**Le classement est conservé sur les modèles sains.** Les cinq modèles dont la
-recette est saine gardent exactement le même ordre en maison et en officiel. Un
-seul modèle change de rang : `abl_a`, quatrième en maison (63.2%) et **dernier**
-en officiel (50.71%). C'est précisément le modèle que nos diagnostics
-classaient comme rugueux (règle 4 : désaccord entre le rayon PGD et le rayon
-Square). Formulation à retenir : *la suite maison trie bien les modèles sains et
-se trompe en faveur des suspects*.
+**Le classement est conservé sur les modèles sains, et il se dégrade exactement
+sur la famille que l'article déclare mauvaise.** Les modèles dont la recette
+démarre bas gardent le même ordre en maison et en officiel. `abl_a` passe de
+quatrième en maison (63.2%) à **sixième sur sept** en officiel (50.71%), et le
+plan inverse KMNIST tombe de 17.0% maison à **1.49%** officiel : les deux recettes
+à départ haut, et les deux plus grosses surestimations de toute la série (-12.5 et
+-15.5). Autrement dit, notre suite est optimiste précisément sur la famille que la
+loi désigne comme mauvaise — formulation à retenir : *la suite maison trie bien
+les modèles sains et se trompe en faveur des suspects*.
 
 **Les chiffres officiels eux-mêmes ont des qualités différentes.** AutoAttack a
 émis un avertissement sur le modèle KMNIST `0.2 -> 1 eps` (« Square Attack a
@@ -464,7 +468,7 @@ d'*ordre* était juste.
 |---|---|---|---|
 | modèle propre (aucune attaque) | - | 0.0% | - |
 | constant 2 eps | 20 pas | 1.2% | - |
-| plan inverse `1 -> 0.2 eps` | 20 .. 2 pas | 17.0% | - |
+| plan inverse `1 -> 0.2 eps` | 20 .. 2 pas | 17.0% | **1.49%** |
 | constant 1 eps | 10 pas | 15.2% | - |
 | plan `0.05 -> 0.2 eps` | 1 .. 2 pas | 0.0% | - |
 | plan `0.1 -> 0.5 eps` | 1 .. 5 pas | 25.2% | - |
@@ -475,10 +479,13 @@ d'*ordre* était juste.
 ### 7.3 Ce qui se transpose
 
 **La loi de l'ordre, et elle s'amplifie.** Le plan croissant `0.2 -> 1 eps` donne
-58.4% et son inverse `1 -> 0.2 eps` 17.0% : **41 points d'écart**, contre 22 sur
-MNIST. Mieux : les deux modèles à bas plafond (`0.1 -> 0.5` : 25.2% et
-`0.05 -> 0.2` : 0.0%) confirment, sur un second jeu, que c'est le *départ* qu'il
-faut baisser et non le plafond. Le meilleur plan est aussi le même qu'à MNIST.
+58.4% et son inverse `1 -> 0.2 eps` 17.0% : **41 points d'écart** en maison,
+contre 22 sur MNIST. Et surtout, cette paire est la seule du projet dont les deux
+côtés sont passés au juge officiel : **51.03% contre 1.49%, soit 49.5 points
+d'écart officiel** — un écart plus grand encore que celui mesuré par notre suite.
+Mieux : les deux modèles à bas plafond (`0.1 -> 0.5` : 25.2% et `0.05 -> 0.2` :
+0.0%) confirment, sur un second jeu, que c'est le *départ* qu'il faut baisser et
+non le plafond. Le meilleur plan est aussi le même qu'à MNIST.
 
 ### 7.4 Ce qui ne se transpose pas
 
@@ -569,7 +576,7 @@ Les résultats L-infini de ce document et cette garantie L2 répondent donc à
   explicitement hors périmètre : les ensembles de modèles, l'entraînement
   *contre* Square, les modèles au-delà de 1.7M de paramètres, et le transfert
   entre jeux de données.
-- **Notre suite maison est optimiste de 3 à 13 points** et se trompe en faveur
+- **Notre suite maison est optimiste de 2 à 15.5 points** et se trompe en faveur
   des modèles suspects. Elle sert à trier et à expliquer, jamais à annoncer.
 - **Le chiffre officiel KMNIST `0.2 -> 1 eps` (51.03%) est lui-même optimiste**,
   AutoAttack signalant une amélioration possible de 2.24% sous Square. Limite
