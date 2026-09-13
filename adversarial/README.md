@@ -1043,8 +1043,8 @@ Space Gradio de démo + article de fond. Dans la roadmap S1 (sept 2026 -> janv
 | 4 | KMNIST entraîné proprement et documenté (ancre Japon) | **OK le 13/09** (8 points de mesure ; critère d'arrêt tenu) |
 | 5 | ~~Smoothing relancé (`--epochs 90`)~~ | **OK le 13/09** : rayon L2 certifié médian **1.214**, 98.5% certifiés à R=0.30 |
 | 6 | Variante TRADES tranchée (aligner ou documenter) | **OK le 13/09, cote DOCUMENTER** : notre TRADES (22.01% puis 25.18%) ne reproduit pas la référence (95.60%) ; les deux écarts sont identifiés dans le code. Publié comme limite, pas comme comparaison de méthodes |
-| 7 | Write-up de fond FR + EN | à faire |
-| 8 | Model card Hugging Face + Space Gradio | à faire |
+| 7 | Write-up de fond FR + EN | **rediges** : `article/ARTICLE-fr.md` (795 lignes) et `article/ARTICLE-en.md` (789 lignes) - relecture FR par Maraa |
+| 8 | Model card Hugging Face + Space Gradio | **ecrits et testes hors ligne** (`adversarial/huggingface/`) : carte du modele, espace Gradio, script d'envoi idempotent. Reste : la cle HF, le compte et les noms de poids (voir `huggingface/REGLAGES.md`) |
 
 ### Les chiffres à annoncer (AutoAttack `standard`, 10 000 images, eps=0.30)
 
