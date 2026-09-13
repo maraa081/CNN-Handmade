@@ -245,23 +245,26 @@ jeu de donnees (des kana japonais)."
 | `kmnist_plan_02_2` | KMNIST, plan `0.2 -> 2 eps` | 62.6% | **58.53%** | -4.1 |
 | `kmnist_plan_doux` | KMNIST, plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
 | `kmnist_plan_inverse` | KMNIST, plan `1 -> 0.2 eps` | 17.0% | **1.49%** | **-15.5** |
+| `A9` | MNIST, plan `2 -> 0.2 eps` | 63.8% | **50.35%** | **-13.5** |
 | `abl_a` | PGD-20 constant, pas eps/10 | 63.2% | **50.71%** | -12.5 |
 | `trades_plan_02_2` | plan `0.2 -> 2 eps`, TRADES `beta 2` + warm start | 27.2% | **22.01%** | -5.2 |
 | `trades_ref_plan_02_2` | idem, TRADES `beta 6` depuis zéro | 30.0% | **25.18%** | -4.8 |
 
-- **Le biais de notre suite maison est de 2 a 15.5 points**, jamais dans l'autre  sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
+- **Le biais de notre suite maison est de 2 a 15.5 points**, jamais dans l'autre
+  sens. On l'annonce dans l'article : c'est ce qui rend les autres chiffres
   credibles.
-- **L'ECART D'ORDRE, OFFICIEL DES DEUX COTES (le chiffre-phare)** : la paire
-  KMNIST `0.2 -> 1 eps` contre `1 -> 0.2 eps` est la seule dont les DEUX cotes sont
-  passes au juge : **51.03% contre 1.49%, soit +49.5 points officiels** a budgets
-  et cout identiques (contre 41 en maison). Le chiffre-phare de l'article ne depend
-  donc plus d'un instrument biaise. Reste a mesurer : `A9` (MNIST, plan
-  `2 -> 0.2 eps`, fichier `models/a9_plan_inverse.pt`), prediction ecrite avant :
-  entre 48% et 58% -> ecart officiel de 25 a 35 points.
-- **Le classement : les modeles sains gardent le meme ordre**, et les deux plus
-  grosses surestimations de la serie sont exactement les deux recettes a DEPART HAUT
-  (`abl_a` -12.5, plan inverse KMNIST -15.5) : notre suite est optimiste precisement
-  sur la famille que la loi declare mauvaise.
+- **L'ECART D'ORDRE, OFFICIEL DES DEUX COTES (le chiffre-phare) : MESURE SUR LES
+  DEUX JEUX.** MNIST : `A6` **82.40%** contre `A9` **50.35%** = **+32.1 points**
+  (22 en maison). KMNIST : `0.2 -> 1` **51.03%** contre `1 -> 0.2` **1.49%** =
+  **+49.5 points** (41 en maison). Dans les deux cas, le juge non biaise AMPLIFIE
+  l'effet au lieu de le reduire. La prediction ecrite avant la mesure d'`A9`
+  (48 a 58%) est tombee juste (50.35%).
+- **Le classement : les modeles sains gardent le meme ordre**, et les TROIS plus
+  grosses surestimations de la serie sont exactement les TROIS recettes a DEPART HAUT
+  (`abl_a` -12.5, `A9` -13.5, plan inverse KMNIST -15.5), contre 2.4 a 7.4 pour les
+  cinq recettes a depart bas : les intervalles ne se recouvrent pas. Notre suite est
+  optimiste precisement sur la famille que la loi declare mauvaise -- argument EN
+  FAVEUR de la loi.
 - Honnetete sur les chiffres officiels eux-memes : AutoAttack a emis un
   avertissement sur `kmnist_plan_doux` ("Square Attack has decreased the robust
   accuracy of 2.24%") -> 51.03% est lui-meme legerement optimiste, on le dit.

@@ -22,11 +22,18 @@ modèle, entraîné contre exactement les mêmes budgets dans l'ordre **croissan
 (`0.2 -> 2 eps`, même coût, mêmes 11 minutes), atteint **85.8%**. Vingt-deux
 points d'écart, une seule variable changée : l'**ordre**.
 
+Et le juge officiel **amplifie** l'effet au lieu de le réduire. Passés à
+AutoAttack sur 10 000 images, les deux membres de la paire donnent **82.40%**
+contre **50.35%**, soit **32 points d'écart** — un écart plus grand que celui
+mesuré par notre propre suite d'attaques. C'est la première fois dans ce travail
+qu'une mesure non biaisée va dans le sens de la mesure biaisée, en plus fort.
+
 Le résultat se reproduit sur un second jeu de données (KMNIST, kana japonais) où
-l'écart entre les deux ordres passe même à **41 points**. En revanche, le
-*niveau* ne se transpose pas : à recette identique, les chiffres officiels
-passent de 82.40% (MNIST) à 58.53% (KMNIST), soit **-23.9 points**. La
-formulation retenue est donc : *la recette se transpose, le niveau non*.
+l'écart officiel entre les deux ordres atteint **49.5 points** (51.03% contre
+1.49%, mêmes budgets, même coût). En revanche, le *niveau* ne se transpose pas : à
+recette identique, les chiffres officiels passent de 82.40% (MNIST) à 58.53%
+(KMNIST), soit **-23.9 points**. La formulation retenue est donc : *la recette se
+transpose, le niveau non*.
 
 Trois choix méthodologiques structurent le reste : tous les chiffres annoncés
 sont ceux d'**AutoAttack** sur 10 000 images ; notre propre suite d'attaques est
@@ -147,6 +154,20 @@ Notre suite maison (500 images, Square poussé à 3000 pas) est **optimiste de 3
 | `A8` (plan `0.2 -> 1 eps`) | 84.4% | 78.25% | -6.2 |
 | KMNIST `0.2 -> 1 eps` | 58.4% | 51.03% | -7.4 |
 | KMNIST `1 -> 0.2 eps` (plan inverse) | 17.0% | 1.49% | **-15.5** |
+| `A9` (plan `2 -> 0.2 eps`) | 63.8% | 50.35% | **-13.5** |
+
+Et ce biais n'est pas dispersé au hasard : il **sépare les deux familles de
+recettes**. Les cinq modèles dont la recette démarre bas sont surestimés de 2.4 à
+7.4 points ; les trois recettes à **départ haut** (`abl_a` -12.5, `A9` -13.5, plan
+inverse KMNIST -15.5) sont surestimées de 12.5 à 15.5 points. Les deux intervalles
+ne se recouvrent pas.
+
+**Ce que ça signifie.** Notre suite d'attaques n'est pas biaisée « en moyenne » :
+elle est optimiste **précisément sur la famille que la loi désigne comme
+mauvaise**. C'est un argument en faveur de la loi, pas contre elle : les modèles à
+départ haut sont exactement ceux dont la robustesse apparente ne survit pas à une
+attaque plus forte. C'est aussi la raison technique de la règle de mesure n°3 : le
+seul chiffre annonçable est celui du juge.
 | `abl_a` (budget constant 2 eps) | 63.2% | 50.71% | -12.5 |
 
 Ce biais n'est pas une anecdote : il est **plus grand sur le modèle le plus
@@ -276,14 +297,19 @@ d'optimisation.
 
 **Deux précautions sur ce résultat, à écrire noir sur blanc.**
 
-1. **Les 22 points sont un écart maison contre maison.** `A6` est vérifié
-officiellement (82.40%) mais `A9` ne l'était pas encore au moment de la première
-rédaction : l'écart official-contre-officiel est en cours de mesure, et il
-pourrait être **plus grand** (le biais de notre suite atteint -12.5 points sur le
-modèle au profil le plus proche d'`A9`, `abl_a` : 63.2% maison -> 50.71% officiel).
-Prédiction écrite avant la mesure : `A9` officiel entre **48% et 58%**, donc un
-écart officiel de **25 à 35 points**. C'est l'expérience la plus importante qui
-restait à faire sur ce projet, et elle ne crée aucun modèle : c'est une mesure.
+1. **Le chiffre-phare, désormais officiel des deux côtés.** `A6` et `A9` sont
+tous les deux passés au juge officiel :
+
+| jeu | plan croissant | plan inverse | écart maison | **écart officiel** |
+|---|---|---|---|---|
+| MNIST | `0.2 -> 2 eps` : **82.40%** | `2 -> 0.2 eps` : **50.35%** | 22.0 | **32.1** |
+| KMNIST | `0.2 -> 1 eps` : **51.03%** | `1 -> 0.2 eps` : **1.49%** | 41.0 | **49.5** |
+
+Les deux écarts **grandissent** sous le juge non biaisé. L'objection naturelle
+("et si l'écart de 22 points n'était qu'un artefact de votre suite optimiste ?")
+se retourne donc : c'est le contraire, et de 10 points sur MNIST comme de 8.5 points
+sur KMNIST. Une prédiction avait été écrite avant la mesure d'`A9` (48 à 58%) :
+50.35% tombe dedans.
 2. **Le mécanisme proposé est une lecture, pas une hypothèse testée.** Il est
 cohérent avec la courbe en cloche et avec les logs (`abl_c` verrouille, les
 recettes à départ haut n'exploitent pas le signal utile), mais il n'a pas été
@@ -409,7 +435,8 @@ compense une perte mal réglée » serait non soutenue par ces mesures.
 
 Tous les chiffres annoncés dans ce document viennent d'AutoAttack (version
 `standard` : APGD-CE, APGD-T, FAB-T, Square), sur 10 000 images, à eps = 0.30.
-Sept modèles ont été croisés :
+Huit modèles ont été croisés (les deux paires à recette appariée y figurent,
+c'est ce qui rend le résultat phare vérifiable) :
 
 | modèle | recette | maison | officiel | écart |
 |---|---|---|---|---|
@@ -419,23 +446,27 @@ Sept modèles ont été croisés :
 | KMNIST `0.2 -> 2 eps` | plan `0.2 -> 2 eps` | 62.6% | **58.53%** | -4.1 |
 | KMNIST `0.2 -> 1 eps` | plan `0.2 -> 1 eps` | 58.4% | **51.03%** | -7.4 |
 | `abl_a` | budget constant 2 eps | 63.2% | **50.71%** | -12.5 |
+| `A9` | plan `2 -> 0.2 eps` | 63.8% | **50.35%** | -13.5 |
 | KMNIST `1 -> 0.2 eps` | plan inverse | 17.0% | **1.49%** | **-15.5** |
 
 Trois observations.
 
-**Le biais de notre suite est toujours dans le même sens**, de 2 à 15.5 points, et
-il est le plus grand sur les modèles à **départ haut** (`abl_a` : -12.5 ; plan
-inverse KMNIST : -15.5). C'est un biais de méthode, pas un biais de chance.
+**Le biais de notre suite est toujours dans le même sens, et il sépare les deux
+familles de recettes.** Les cinq modèles à départ bas sont surestimés de 2.4 à 7.4
+points ; les trois recettes à **départ haut** (`abl_a` : -12.5, `A9` : -13.5, plan
+inverse KMNIST : -15.5) le sont de 12.5 à 15.5 points. Les deux intervalles ne se
+recouvrent pas. Notre suite n'est donc pas biaisée « en moyenne » : elle est
+optimiste **précisément sur la famille que la loi désigne comme mauvaise**. C'est
+un argument en faveur de la loi : les recettes à départ haut sont exactement celles
+dont la robustesse apparente ne survit pas à une attaque plus forte.
 
 **Le classement est conservé sur les modèles sains, et il se dégrade exactement
-sur la famille que l'article déclare mauvaise.** Les modèles dont la recette
-démarre bas gardent le même ordre en maison et en officiel. `abl_a` passe de
-quatrième en maison (63.2%) à **sixième sur sept** en officiel (50.71%), et le
-plan inverse KMNIST tombe de 17.0% maison à **1.49%** officiel : les deux recettes
-à départ haut, et les deux plus grosses surestimations de toute la série (-12.5 et
--15.5). Autrement dit, notre suite est optimiste précisément sur la famille que la
-loi désigne comme mauvaise — formulation à retenir : *la suite maison trie bien
-les modèles sains et se trompe en faveur des suspects*.
+sur la famille que l'article déclare mauvaise.** `abl_a` passe de cinquième en
+maison à **sixième** en officiel, `A9` de quatrième à **septième**, et le plan
+inverse KMNIST tombe de 17.0% à **1.49%**. À l'inverse, les recettes à départ bas
+(`A1`, `A6`, `A8`, et les deux KMNIST) gardent exactement le même ordre.
+Formulation à retenir : *la suite maison trie bien les modèles sains et se trompe
+en faveur des suspects*.
 
 **Les chiffres officiels eux-mêmes ont des qualités différentes.** AutoAttack a
 émis un avertissement sur le modèle KMNIST `0.2 -> 1 eps` (« Square Attack a

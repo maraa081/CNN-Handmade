@@ -1902,3 +1902,46 @@ chiffre est encore optimiste).
 - ENCORE MANQUANT : AutoAttack sur `models/a9_plan_inverse.pt` (MNIST, plan
   `2 -> 0.2 eps`). ERREUR DE MA PART : le fichier ne s'appelle PAS
   `a9_plan_2_0p2.pt` -> FileNotFoundError. Prediction maintenue : 48 a 58%.
+
+### 2026-09-13 (18h05) - A9 (MNIST, plan 2 -> 0.2 eps) : 50.35% OFFICIEL -> l'ecart d'ORDRE officiel = 32.1 points
+
+AutoAttack `standard`, 10 000 images, eps=0.30, sur `models/a9_plan_inverse.pt` :
+propre 99.50%, **robuste 50.35%** (13.7 min).
+
+**LES DEUX PAIRES APPARIEES SONT MAINTENANT OFFICIELLES DES DEUX COTES :**
+
+| jeu | plan croissant | plan inverse | ecart maison | **ecart officiel** |
+|---|---|---|---|---|
+| MNIST | `0.2 -> 2 eps` (`A6`) : **82.40%** | `2 -> 0.2 eps` (`A9`) : **50.35%** | 22.0 | **32.1** |
+| KMNIST | `0.2 -> 1 eps` : **51.03%** | `1 -> 0.2 eps` : **1.49%** | 41.0 | **49.5** |
+
+=> **Le juge non biaise AMPLIFIE l'effet** (+10 points sur MNIST, +8.5 sur KMNIST).
+L'objection de relecture ("et si les 22 points n'etaient qu'un artefact de votre
+suite optimiste ?") est donc retournee par la mesure, et non par un argument.
+
+Prediction ecrite AVANT la mesure : "A9 officiel entre 48% et 58%" -> 50.35%, tombe
+dedans (contraste avec la prediction KMNIST pour le plan inverse, fausse de presque
+un ordre de grandeur).
+
+**LE BIAIS DE NOTRE SUITE SEPARE LES DEUX FAMILLES (resultat non prevu, et fort) :**
+
+| famille | modeles | biais maison -> officiel |
+|---|---|---|
+| depart bas (5) | A1, A6, A8, KMNIST 0.2->2, KMNIST 0.2->1 | -2.4 a -7.4 |
+| **depart haut (3)** | **abl_a, A9, KMNIST 1->0.2** | **-12.5 a -15.5** |
+
+Les deux intervalles NE se recouvrent pas. Notre suite n'est donc pas biaisee "en
+moyenne" : elle est optimiste precisement sur la famille que la loi declare
+mauvaise. C'est un argument EN FAVEUR de la loi (ces modeles sont exactement ceux
+dont la robustesse apparente ne survit pas a une attaque plus forte) et une
+justification technique supplementaire de la regle de mesure n.3.
+
+Recapitulatif des 8 modeles croises (maison -> officiel) : A1 93.6 -> 91.25 ;
+A6 85.8 -> 82.40 ; A8 84.4 -> 78.25 ; KMNIST 0.2->2 62.6 -> 58.53 ; KMNIST 0.2->1
+58.4 -> 51.03 ; abl_a 63.2 -> 50.71 ; A9 63.8 -> 50.35 ; KMNIST 1->0.2 17.0 -> 1.49.
+Classement : les recettes a depart bas gardent exactement le meme ordre ; les trois
+recettes a depart haut chutent (abl_a 5e -> 6e, A9 4e -> 7e, inverse KMNIST dernier).
+
+Article mis a jour : resume (l'ecart officiel amplifie), S.2.3 (tableau du biais +
+separation des familles), S.4.4 (precaution n.1 -> resultat mesure), S.6 (huit
+modeles croises, deux familles). README et trame a jour. Commit a venir.
