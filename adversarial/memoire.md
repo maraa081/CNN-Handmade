@@ -1606,3 +1606,44 @@ Attendu honnete : KMNIST est plus dur (kana cursifs, classes proches) -> propre
 plus bas (~96-98%) et robustesse plus basse ; l'ecart entre recettes devrait se
 reproduire, peut-etre en plus petit. PORTE : si l'ecart ne se reproduit pas, on
 fait de KMNIST une extension "Japon" et MNIST reste le recit principal.
+
+### 2026-09-13 (11h29) - KMNIST : constant 1 eps = 15.2% (le depart haut, pas le niveau)
+
+Run `kmnist_eps1` (budget constant 10 pas de eps/10, warm start
+`models/kmnist_standard.npz`, 120 epochs, augment) termine en **10 min 28 s**
+par Maraa. Suite maison (500 images, eps=0.30) :
+
+| | budget interne | pire cas |
+|---|---|---|
+| kmnist std (propre) | aucune | 0.0% |
+| fixe 2 eps (= copie d'abl_a) | 20 pas | 1.2% |
+| **eps1 (nouveau)** | **10 pas** | **15.2%** |
+| plan inverse `1 -> 0.2` (= copie d'A9) | 20 -> 2 pas | 17.0% |
+| plan doux `0.2 -> 1` (= copie d'A8) | 2 -> 10 pas | 58.4% (51.03 officiel) |
+
+DIAGONALE du run (PGD 20 pas, 1 restart) : eps 0.05 -> 62.0%, 0.1 -> 61.6%,
+0.2 -> 61.6%, 0.3 -> 58.4%. Precision propre 97.8%. Square-3000 = 15.2% et
+APGD-CE 44.4% / APGD-DLR 40.2% : le modele n'est pas mort comme le modele propre
+(0.0%) -- c'est un modele mediocre qui resiste un peu a petit eps puis lache.
+
+LECTURE : un budget CONSTANT reste mauvais sur KMNIST quelle que soit sa valeur
+(2 eps -> 1.2%, 1 eps -> 15.2%), et 1 eps rejoint le plan INVERSE (15.2 contre
+17.0%) : c'est le DEPART HAUT qui condamne le run, pas le niveau du budget. Le
+critere ecrit avant le run (pire cas <= 30% -> c'est le CURRICULUM) est donc
+atteint : la branche a suivre est celle des plans a depart BAS.
+
+PROCHAINS RUNS (criteres ecrits avant) : `--plan-budget "0.1,0.5"` (1 -> 5 pas,
+~6 min) puis `--plan-budget "0.05,0.2"` (~5 min).
+- si le premier sort >= 45-50% -> la FORME (depart bas + croissance) suffit et le
+  plafond n'importe pas (comme sur MNIST : 84.4% a plafond 1 eps contre 85.8% a
+  plafond 2 eps) ; le levier suivant est alors un depart vraiment plus bas ;
+- si le premier sort <= 25% -> le depart bas ne suffit pas non plus et c'est
+  l'ECHELLE ABSOLUE qui est trop forte sur KMNIST -> relancer le plan doux avec
+  `--eps 0.15` (le budget interne est en multiples de l'eps d'entrainement, donc
+  `0.2 -> 1` y vaut 0.03 -> 0.15 en absolu).
+
+PIEGE DE GRANULARITE (a ne pas oublier) : avec `--pgd-alpha 0.03` (= eps/10), un
+pas vaut 0.1 eps, donc `"0.05,0.2"` et `"0.1,0.5"` DEMARRENT tous les deux a
+1 pas (`round(0.5) = 0` puis plancher a 1) : les deux runs ne testent que leur
+PLAFOND. Pour descendre reellement le depart il faut un pas plus fin
+(`--pgd-alpha 0.015` -> un pas = 0.05 eps) ou une echelle absolue plus basse.

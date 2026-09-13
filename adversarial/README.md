@@ -1054,10 +1054,19 @@ chiffre d'annonce est celui d'AutoAttack sur 10 000 images.
 | **kmnist 1** | constant 2 eps (copie d'`abl_a`) | 20 min | 97.8% | **1.2%** | - | accord |
 | **kmnist 2** | plan `0.2 -> 1 eps` (copie d'`A8`) | 8 min | 96.6% | **58.4%** | **51.03%** | accord |
 | **kmnist 3** | plan `1 -> 0.2 eps` (copie d'`A9`) | 11 min | 97.2% | **17.0%** | - | accord |
+| **kmnist 4** | constant 1 eps (10 pas de eps/10) | 10 min 28 s | 97.8% | **15.2%** | - | - |
 
 Lecture : aucun budget CONSTANT ne dépasse 63% de pire cas, quelles que soient sa
 valeur et sa finesse. Les trois recettes qui fonctionnent (84-91%) ont toutes un
 départ à bas budget (2 pas) et une croissance.
+
+**Lecture sur la ligne `kmnist 4` (13/09, apres le plan inverse)** : le constant
+1 eps sort a **15.2%**, soit quasiment le meme chiffre que le plan INVERSE
+(17.0%) et tres loin du plan doux (58.4%). Un budget constant reste mauvais sur
+KMNIST quelle que soit sa valeur (2 eps -> 1.2%, 1 eps -> 15.2%), et 1 eps ne se
+distingue plus de `1 -> 0.2 eps` : c'est le DEPART haut qui commande, pas le
+niveau. Sa diagonale propre (PGD pire cas 62.0% a eps=0.05 -> 58.4% a eps=0.30)
+montre qu'il n'est pas mort comme le modele propre (0.0%) : simplement mediocre.
 
 **Lecture sur les 4 lignes KMNIST (13/09)** : la loi de l'ORDRE se reproduit et
 s'amplifie (+41 points entre le plan croissant et son inverse, contre +22 sur
@@ -1066,6 +1075,16 @@ contre 82-91% sur MNIST) et la recette de référence `constant 2 eps` s'effondr
 (1.2% contre 63.2%). Cause identifiée : à eps=0.30 l'attaque interne est
 relativement bien plus forte sur KMNIST, donc le budget 2 eps tombe après la
 bascule. Détail : `memoire.md`, entrée du 2026-09-13.
+
+**Suite ouverte (critère écrit avant les runs)** : la marche a suivre pour
+localiser le sommet de la cloche sur KMNIST est `plan 0.1 -> 0.5 eps`
+(1 -> 5 pas, ~6 min) puis `plan 0.05 -> 0.2 eps` (~5 min). ATTENTION au
+plancher de granularite : avec `--pgd-alpha 0.03` (= eps/10), un pas vaut
+0.1 eps, donc `0.05` et `0.1` a l'entree donnent tous les deux 1 pas -- les deux
+plans ne different que par leur PLAFOND. Pour tester un depart VRAIMENT plus
+bas, il faut affiner le pas (`--pgd-alpha 0.015`, un pas = 0.05 eps) ou reduire
+l'echelle absolue (`--eps 0.15`, le budget interne etant exprime en multiples de
+l'eps d'entrainement).
 
 Hors périmètre (décision explicite, pas en passant) : ensemble de modèles,
 entraînement contre Square, au-delà de 1.7M de paramètres, transfert
