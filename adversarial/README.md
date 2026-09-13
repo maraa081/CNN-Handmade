@@ -18,6 +18,8 @@ adversarial/
 |-- attacks.md         <- les ATTAQUES en détail : théorie, algorithmes, implémentation
 |-- defenses.md        <- les DÉFENSES en détail : min-max, adversarial training, limites
 |-- memoire.md         <- carnet de bord : chaque expérience tracée (date, paramètres, résultat)
+|-- article/
+|   |-- TRAME-fr.md    <- TRAME DU WRITE-UP : structure, chiffres en place, figures à produire
 |-- scripts/
 |   |-- fgsm.py        <- attaque FGSM (1 étape de gradient)        OK opérationnel
 |   |-- pgd.py         <- attaque PGD (itérative, plus forte)       OK opérationnel
@@ -1056,7 +1058,8 @@ Notes :
   plus à la recette.
 - **Phase validation** : AutoAttack sur l'artefact gelé (c'est ce qui va dans la
   model card), puis KMNIST, smoothing, TRADES.
-- **Phase rédaction** : write-up, model card, Space.
+- **Phase rédaction** : write-up (trame en cours dans `article/TRAME-fr.md`), model
+  card, Space.
 
 ### Le catalogue des runs (arrêté au 2026-09-13, 01h20)
 
