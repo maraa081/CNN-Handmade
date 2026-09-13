@@ -1,0 +1,46 @@
+========================================================================
+  SUITE D'ATTAQUES - evaluation multi-familles
+========================================================================
+[LOAD] models/kmnist_fixe_2eps.pt
+  [OK] kmnist-train-imgs.npz  shape=(60000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-train-labels.npz  shape=(60000,)  dtype=uint8  ndim=1  valeurs 0-9
+  [OK] kmnist-test-imgs.npz  shape=(10000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-test-labels.npz  shape=(10000,)  dtype=uint8  ndim=1  valeurs 0-9
+[OK] Donnees KMNIST deja presentes dans data/kmnist/
+[DATA] 500 images de test | peripherique : cuda
+[EVAL] precision propre : 97.8%
+
+[1/3] ATTAQUES A GRADIENT (white-box)
+  attaque                |  eps=0.3
+  ----------------------------------
+    -> eps=0.3 termine en 1.7 s
+  FGSM (1 pas)           |    17.0%
+  PGD-20 (3 rest.)       |    11.6%
+  APGD-CE (100)          |    11.2%
+  APGD-DLR (100)         |     6.4%
+
+[2/3] ATTAQUES SANS GRADIENT (black-box, score-based)
+  attaque                |  eps=0.3
+  ----------------------------------
+    -> eps=0.3 termine en 10.1 s
+  Square (3000)          |     1.2%
+  NES (20x10)            |    35.8%
+
+[3/3] ATTAQUES L2 (distance minimale pour tromper le modele)
+  attaque                |   succes |  distance L2 moyenne
+  --------------------------------------------------------
+  CW-L2                  |    33.8% |                1.468
+    -> CW-L2 termine en 2.1 s
+  Boundary               |    87.8% |                4.366
+    -> Boundary termine en 0.8 s
+
+  Note : ces deux attaques mesurent une DISTANCE, pas une precision.
+  Le taux de succes est la part des images trompees par l'attaque.
+
+========================================================================
+  PIRE CAS a eps=0.3 : 1.2%   (attaque : Square (3000))
+  Precision propre                : 97.8%
+========================================================================
+[JSON] resultats ecrits -> adversarial/results/logs/kmnist_fixe_2eps.json
+
+[TEMPS] suite terminee en 0 min 14 s

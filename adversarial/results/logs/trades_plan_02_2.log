@@ -1,0 +1,209 @@
+====================================================================
+  HARDEN TORCH (autograd)
+====================================================================
+Peripherique : cuda
+GPU          : AMD Radeon RX 7800 XT
+[DATA] 59000 train / 1000 val / 500 test
+[LR] defaut pour trades -> lr 0.002
+[AUG] rotation=12.0, translation=2, zoom=0.1, bruit_p=0.02, bruit_intensite=(0.5, 1.0), cutout=6, epaisseur=0.3, epaisseur_melange=0.6, prob=0.5
+[CONF] attack=pgd steps=5 eps=0.3 loss=trades mix=0.5 lr=0.002 clip=1.0 batch=256 epochs=120 augment=True
+[PLAN] curriculum deterministe : budget de 0.2,2 eps (pas fixe 0.0300 = 0.10 eps, donc 2 pas a l'epoch 1 -> 20 pas a la fin)
+[MODEL] 421 642 parametres
+[WARM] auto -> models/model_weights_full.npz
+[WARM] clean test : 98.60%
+[OPT] momentum
+  [LR] paliers aux epochs [60, 96]
+  [TRADES] beta effectif : 0.00 -> 2.00 (rampe sur 30% du run)
+  [PLAN] budget attaque interne -> 2 pas (0.20 eps)
+  Epoch  1/120 | loss 0.2586 | CE propre 0.259 | CE adv 2.685 | attaque  73.3% | val clean 99.20% | val PGD10  0.00% |   0.1 min | reste ~  12 min
+           -> meilleur modele sauvegarde (val PGD10 0.00%)
+  Epoch  2/120 | loss 0.3302 | CE propre 0.223 | CE adv 2.069 | attaque  61.5% | val clean 99.40% | val PGD10  0.00% |   0.1 min | reste ~   6 min
+  Epoch  3/120 | loss 0.3753 | CE propre 0.216 | CE adv 1.744 | attaque  54.2% | val clean 99.40% | val PGD10  0.00% |   0.1 min | reste ~   6 min
+  Epoch  4/120 | loss 0.3972 | CE propre 0.213 | CE adv 1.485 | attaque  48.2% | val clean 98.90% | val PGD10  0.00% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 48% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 3 pas (0.30 eps)
+  Epoch  5/120 | loss 0.5669 | CE propre 0.267 | CE adv 2.095 | attaque  63.6% | val clean 99.30% | val PGD10  1.00% |   0.1 min | reste ~  11 min
+           -> meilleur modele sauvegarde (val PGD10 1.00%)
+  Epoch  6/120 | loss 0.5779 | CE propre 0.295 | CE adv 1.888 | attaque  60.2% | val clean 98.50% | val PGD10  2.00% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 2.00%)
+  Epoch  7/120 | loss 0.5884 | CE propre 0.304 | CE adv 1.731 | attaque  56.7% | val clean 98.10% | val PGD10  2.60% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 2.60%)
+  Epoch  8/120 | loss 0.5707 | CE propre 0.292 | CE adv 1.535 | attaque  51.3% | val clean 98.50% | val PGD10  3.20% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 3.20%)
+  Epoch  9/120 | loss 0.6098 | CE propre 0.325 | CE adv 1.533 | attaque  51.2% | val clean 98.60% | val PGD10  5.10% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 5.10%)
+  Epoch 10/120 | loss 0.5976 | CE propre 0.316 | CE adv 1.400 | attaque  47.3% | val clean 98.70% | val PGD10  6.20% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 47% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+           -> meilleur modele sauvegarde (val PGD10 6.20%)
+  [PLAN] budget attaque interne -> 4 pas (0.40 eps)
+  Epoch 11/120 | loss 0.7541 | CE propre 0.385 | CE adv 1.767 | attaque  58.5% | val clean 98.40% | val PGD10  9.20% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 9.20%)
+  Epoch 12/120 | loss 0.7372 | CE propre 0.389 | CE adv 1.634 | attaque  55.5% | val clean 98.40% | val PGD10 13.30% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 13.30%)
+  Epoch 13/120 | loss 0.7638 | CE propre 0.418 | CE adv 1.626 | attaque  55.4% | val clean 98.30% | val PGD10 12.80% |   0.1 min | reste ~  10 min
+  Epoch 14/120 | loss 0.7798 | CE propre 0.435 | CE adv 1.594 | attaque  54.5% | val clean 98.10% | val PGD10 15.60% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 15.60%)
+  Epoch 15/120 | loss 0.7793 | CE propre 0.436 | CE adv 1.532 | attaque  52.8% | val clean 98.20% | val PGD10 18.50% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 18.50%)
+  Epoch 16/120 | loss 0.7895 | CE propre 0.445 | CE adv 1.502 | attaque  52.1% | val clean 98.10% | val PGD10 20.90% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 20.90%)
+  Epoch 17/120 | loss 0.8081 | CE propre 0.462 | CE adv 1.499 | attaque  51.6% | val clean 98.20% | val PGD10 19.40% |   0.1 min | reste ~   7 min
+  [PLAN] budget attaque interne -> 5 pas (0.50 eps)
+  Epoch 18/120 | loss 0.9345 | CE propre 0.529 | CE adv 1.743 | attaque  59.7% | val clean 98.10% | val PGD10 24.70% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 24.70%)
+  Epoch 19/120 | loss 0.9300 | CE propre 0.546 | CE adv 1.687 | attaque  58.1% | val clean 97.60% | val PGD10 24.00% |   0.1 min | reste ~   8 min
+  Epoch 20/120 | loss 0.9657 | CE propre 0.580 | CE adv 1.718 | attaque  58.8% | val clean 97.60% | val PGD10 25.10% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 25.10%)
+  Epoch 21/120 | loss 0.9456 | CE propre 0.566 | CE adv 1.638 | attaque  56.0% | val clean 97.30% | val PGD10 25.60% |   0.1 min | reste ~  10 min
+           -> meilleur modele sauvegarde (val PGD10 25.60%)
+  Epoch 22/120 | loss 0.9552 | CE propre 0.575 | CE adv 1.621 | attaque  55.7% | val clean 97.50% | val PGD10 29.00% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 29.00%)
+  Epoch 23/120 | loss 0.9796 | CE propre 0.601 | CE adv 1.640 | attaque  55.9% | val clean 97.40% | val PGD10 29.60% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 29.60%)
+  Epoch 24/120 | loss 0.9755 | CE propre 0.598 | CE adv 1.596 | attaque  54.3% | val clean 97.30% | val PGD10 27.80% |   0.1 min | reste ~   7 min
+  [PLAN] budget attaque interne -> 6 pas (0.60 eps)
+  Epoch 25/120 | loss 1.1162 | CE propre 0.693 | CE adv 1.862 | attaque  63.3% | val clean 97.20% | val PGD10 31.60% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 31.60%)
+  Epoch 26/120 | loss 1.1075 | CE propre 0.705 | CE adv 1.818 | attaque  61.8% | val clean 97.70% | val PGD10 30.50% |   0.1 min | reste ~   7 min
+  Epoch 27/120 | loss 1.0954 | CE propre 0.697 | CE adv 1.764 | attaque  60.3% | val clean 97.20% | val PGD10 33.70% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 33.70%)
+  Epoch 28/120 | loss 1.1195 | CE propre 0.722 | CE adv 1.783 | attaque  60.6% | val clean 97.00% | val PGD10 33.40% |   0.1 min | reste ~   7 min
+  Epoch 29/120 | loss 1.1385 | CE propre 0.742 | CE adv 1.793 | attaque  60.9% | val clean 97.00% | val PGD10 32.90% |   0.1 min | reste ~   9 min
+  Epoch 30/120 | loss 1.1359 | CE propre 0.743 | CE adv 1.766 | attaque  59.9% | val clean 97.10% | val PGD10 34.40% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 34.40%)
+  [PLAN] budget attaque interne -> 7 pas (0.70 eps)
+  Epoch 31/120 | loss 1.2270 | CE propre 0.812 | CE adv 1.933 | attaque  66.0% | val clean 96.40% | val PGD10 37.10% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 37.10%)
+  Epoch 32/120 | loss 1.2259 | CE propre 0.822 | CE adv 1.904 | attaque  64.9% | val clean 97.00% | val PGD10 35.20% |   0.1 min | reste ~   7 min
+  Epoch 33/120 | loss 1.2175 | CE propre 0.817 | CE adv 1.865 | attaque  63.6% | val clean 96.50% | val PGD10 37.50% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 37.50%)
+  Epoch 34/120 | loss 1.2370 | CE propre 0.835 | CE adv 1.879 | attaque  63.7% | val clean 97.20% | val PGD10 37.20% |   0.1 min | reste ~   7 min
+  Epoch 35/120 | loss 1.2580 | CE propre 0.864 | CE adv 1.901 | attaque  64.6% | val clean 96.90% | val PGD10 36.00% |   0.1 min | reste ~   7 min
+  Epoch 36/120 | loss 1.2665 | CE propre 0.867 | CE adv 1.894 | attaque  64.1% | val clean 97.10% | val PGD10 39.60% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 39.60%)
+  Epoch 37/120 | loss 1.2606 | CE propre 0.863 | CE adv 1.865 | attaque  63.1% | val clean 96.80% | val PGD10 37.70% |   0.1 min | reste ~   7 min
+  [PLAN] budget attaque interne -> 8 pas (0.80 eps)
+  Epoch 38/120 | loss 1.3226 | CE propre 0.917 | CE adv 1.993 | attaque  68.3% | val clean 96.80% | val PGD10 37.90% |   0.1 min | reste ~   7 min
+  Epoch 39/120 | loss 1.3153 | CE propre 0.915 | CE adv 1.979 | attaque  67.5% | val clean 96.70% | val PGD10 40.00% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 40.00%)
+  Epoch 40/120 | loss 1.3306 | CE propre 0.937 | CE adv 2.007 | attaque  68.7% | val clean 96.20% | val PGD10 39.60% |   0.1 min | reste ~   7 min
+  Epoch 41/120 | loss 1.3207 | CE propre 0.926 | CE adv 1.988 | attaque  68.0% | val clean 95.90% | val PGD10 40.60% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 40.60%)
+  Epoch 42/120 | loss 1.3189 | CE propre 0.926 | CE adv 1.985 | attaque  68.1% | val clean 95.70% | val PGD10 39.70% |   0.1 min | reste ~   9 min
+  Epoch 43/120 | loss 1.3071 | CE propre 0.914 | CE adv 1.962 | attaque  67.0% | val clean 96.90% | val PGD10 41.90% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 41.90%)
+  [PLAN] budget attaque interne -> 9 pas (0.90 eps)
+  Epoch 44/120 | loss 1.3606 | CE propre 0.959 | CE adv 2.071 | attaque  71.6% | val clean 97.20% | val PGD10 39.80% |   0.1 min | reste ~   7 min
+  Epoch 45/120 | loss 1.3540 | CE propre 0.958 | CE adv 2.059 | attaque  70.7% | val clean 96.60% | val PGD10 42.00% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 42.00%)
+  Epoch 46/120 | loss 1.3707 | CE propre 0.978 | CE adv 2.092 | attaque  72.4% | val clean 96.60% | val PGD10 43.00% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 43.00%)
+  Epoch 47/120 | loss 1.3693 | CE propre 0.976 | CE adv 2.091 | attaque  72.5% | val clean 96.30% | val PGD10 42.40% |   0.1 min | reste ~   6 min
+  Epoch 48/120 | loss 1.3544 | CE propre 0.963 | CE adv 2.061 | attaque  71.3% | val clean 96.60% | val PGD10 41.50% |   0.1 min | reste ~   8 min
+  Epoch 49/120 | loss 1.3375 | CE propre 0.943 | CE adv 2.028 | attaque  70.0% | val clean 96.20% | val PGD10 43.70% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 43.70%)
+  Epoch 50/120 | loss 1.3506 | CE propre 0.958 | CE adv 2.050 | attaque  70.8% | val clean 97.00% | val PGD10 43.80% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 43.80%)
+  [PLAN] budget attaque interne -> 10 pas (1.00 eps)
+  Epoch 51/120 | loss 1.3937 | CE propre 0.997 | CE adv 2.141 | attaque  74.1% | val clean 96.20% | val PGD10 42.90% |   0.1 min | reste ~   6 min
+  Epoch 52/120 | loss 1.3957 | CE propre 1.002 | CE adv 2.146 | attaque  74.6% | val clean 97.00% | val PGD10 43.80% |   0.1 min | reste ~   6 min
+  Epoch 53/120 | loss 1.3823 | CE propre 0.988 | CE adv 2.122 | attaque  73.9% | val clean 96.60% | val PGD10 44.30% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 44.30%)
+  Epoch 54/120 | loss 1.3769 | CE propre 0.982 | CE adv 2.110 | attaque  73.1% | val clean 96.10% | val PGD10 44.60% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 44.60%)
+  Epoch 55/120 | loss 1.3794 | CE propre 0.986 | CE adv 2.116 | attaque  73.7% | val clean 96.80% | val PGD10 44.90% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 44.90%)
+  Epoch 56/120 | loss 1.3538 | CE propre 0.956 | CE adv 2.066 | attaque  71.8% | val clean 96.80% | val PGD10 45.00% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 45.00%)
+  Epoch 57/120 | loss 1.3623 | CE propre 0.969 | CE adv 2.082 | attaque  72.2% | val clean 96.90% | val PGD10 45.00% |   0.1 min | reste ~   6 min
+  [PLAN] budget attaque interne -> 11 pas (1.10 eps)
+  Epoch 58/120 | loss 1.3997 | CE propre 1.002 | CE adv 2.159 | attaque  75.2% | val clean 96.60% | val PGD10 46.70% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 46.70%)
+  Epoch 59/120 | loss 1.4003 | CE propre 1.008 | CE adv 2.159 | attaque  75.2% | val clean 96.50% | val PGD10 45.70% |   0.1 min | reste ~   6 min
+  [LR] epoch 60 : lr -> 0.00020
+  Epoch 60/120 | loss 1.4244 | CE propre 1.034 | CE adv 2.204 | attaque  76.6% | val clean 96.90% | val PGD10 45.30% |   0.1 min | reste ~   8 min
+  Epoch 61/120 | loss 1.3906 | CE propre 0.998 | CE adv 2.146 | attaque  74.6% | val clean 97.30% | val PGD10 47.30% |   0.1 min | reste ~   6 min
+           -> meilleur modele sauvegarde (val PGD10 47.30%)
+  Epoch 62/120 | loss 1.3988 | CE propre 1.005 | CE adv 2.158 | attaque  75.1% | val clean 97.10% | val PGD10 46.80% |   0.1 min | reste ~   6 min
+  Epoch 63/120 | loss 1.4125 | CE propre 1.020 | CE adv 2.186 | attaque  76.2% | val clean 97.10% | val PGD10 46.70% |   0.1 min | reste ~   5 min
+  [PLAN] budget attaque interne -> 12 pas (1.20 eps)
+  Epoch 64/120 | loss 1.4094 | CE propre 1.008 | CE adv 2.188 | attaque  76.4% | val clean 96.90% | val PGD10 46.50% |   0.1 min | reste ~   6 min
+  Epoch 65/120 | loss 1.4125 | CE propre 1.012 | CE adv 2.193 | attaque  76.6% | val clean 97.20% | val PGD10 47.10% |   0.1 min | reste ~   6 min
+  Epoch 66/120 | loss 1.3992 | CE propre 0.999 | CE adv 2.171 | attaque  76.0% | val clean 97.20% | val PGD10 46.90% |   0.1 min | reste ~   7 min
+  Epoch 67/120 | loss 1.4308 | CE propre 1.033 | CE adv 2.225 | attaque  77.7% | val clean 97.10% | val PGD10 46.70% |   0.1 min | reste ~   5 min
+  Epoch 68/120 | loss 1.4271 | CE propre 1.031 | CE adv 2.220 | attaque  77.6% | val clean 97.20% | val PGD10 46.40% |   0.1 min | reste ~   5 min
+  Epoch 69/120 | loss 1.4146 | CE propre 1.023 | CE adv 2.196 | attaque  76.6% | val clean 97.00% | val PGD10 47.30% |   0.1 min | reste ~   5 min
+  Epoch 70/120 | loss 1.4112 | CE propre 1.014 | CE adv 2.188 | attaque  76.1% | val clean 96.90% | val PGD10 46.90% |   0.1 min | reste ~   5 min
+  [PLAN] budget attaque interne -> 13 pas (1.30 eps)
+  Epoch 71/120 | loss 1.4218 | CE propre 1.017 | CE adv 2.215 | attaque  77.2% | val clean 97.20% | val PGD10 48.20% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 48.20%)
+  Epoch 72/120 | loss 1.4470 | CE propre 1.047 | CE adv 2.261 | attaque  78.9% | val clean 97.20% | val PGD10 47.20% |   0.1 min | reste ~   5 min
+  Epoch 73/120 | loss 1.4337 | CE propre 1.034 | CE adv 2.239 | attaque  78.1% | val clean 97.00% | val PGD10 47.50% |   0.1 min | reste ~   5 min
+  Epoch 74/120 | loss 1.4394 | CE propre 1.042 | CE adv 2.248 | attaque  78.6% | val clean 97.10% | val PGD10 47.70% |   0.1 min | reste ~   5 min
+  Epoch 75/120 | loss 1.4244 | CE propre 1.025 | CE adv 2.224 | attaque  77.6% | val clean 97.20% | val PGD10 47.10% |   0.1 min | reste ~   5 min
+  Epoch 76/120 | loss 1.4353 | CE propre 1.040 | CE adv 2.238 | attaque  78.1% | val clean 96.80% | val PGD10 47.90% |   0.1 min | reste ~   6 min
+  Epoch 77/120 | loss 1.4401 | CE propre 1.042 | CE adv 2.249 | attaque  78.8% | val clean 97.10% | val PGD10 47.30% |   0.1 min | reste ~   4 min
+  [PLAN] budget attaque interne -> 14 pas (1.40 eps)
+  Epoch 78/120 | loss 1.4479 | CE propre 1.045 | CE adv 2.270 | attaque  79.4% | val clean 97.20% | val PGD10 46.70% |   0.1 min | reste ~   5 min
+  Epoch 79/120 | loss 1.4506 | CE propre 1.051 | CE adv 2.273 | attaque  79.3% | val clean 97.10% | val PGD10 48.00% |   0.1 min | reste ~   4 min
+  Epoch 80/120 | loss 1.4474 | CE propre 1.049 | CE adv 2.266 | attaque  79.0% | val clean 97.40% | val PGD10 47.10% |   0.1 min | reste ~   4 min
+  Epoch 81/120 | loss 1.4726 | CE propre 1.076 | CE adv 2.314 | attaque  81.1% | val clean 97.10% | val PGD10 48.80% |   0.1 min | reste ~   5 min
+           -> meilleur modele sauvegarde (val PGD10 48.80%)
+  Epoch 82/120 | loss 1.4500 | CE propre 1.053 | CE adv 2.271 | attaque  79.2% | val clean 97.30% | val PGD10 47.30% |   0.1 min | reste ~   4 min
+  Epoch 83/120 | loss 1.4692 | CE propre 1.075 | CE adv 2.308 | attaque  80.7% | val clean 97.40% | val PGD10 47.10% |   0.1 min | reste ~   4 min
+  [PLAN] budget attaque interne -> 15 pas (1.50 eps)
+  Epoch 84/120 | loss 1.4404 | CE propre 1.036 | CE adv 2.262 | attaque  78.9% | val clean 97.00% | val PGD10 47.80% |   0.1 min | reste ~   4 min
+  Epoch 85/120 | loss 1.4558 | CE propre 1.056 | CE adv 2.286 | attaque  80.0% | val clean 97.30% | val PGD10 49.20% |   0.1 min | reste ~   4 min
+           -> meilleur modele sauvegarde (val PGD10 49.20%)
+  Epoch 86/120 | loss 1.4435 | CE propre 1.044 | CE adv 2.264 | attaque  79.3% | val clean 97.20% | val PGD10 47.50% |   0.1 min | reste ~   5 min
+  Epoch 87/120 | loss 1.4556 | CE propre 1.056 | CE adv 2.288 | attaque  80.1% | val clean 97.40% | val PGD10 49.60% |   0.1 min | reste ~   4 min
+           -> meilleur modele sauvegarde (val PGD10 49.60%)
+  Epoch 88/120 | loss 1.4600 | CE propre 1.063 | CE adv 2.297 | attaque  80.4% | val clean 97.00% | val PGD10 47.90% |   0.1 min | reste ~   4 min
+  Epoch 89/120 | loss 1.4516 | CE propre 1.054 | CE adv 2.278 | attaque  79.8% | val clean 97.30% | val PGD10 47.20% |   0.1 min | reste ~   3 min
+  Epoch 90/120 | loss 1.4516 | CE propre 1.054 | CE adv 2.277 | attaque  79.6% | val clean 97.10% | val PGD10 47.90% |   0.1 min | reste ~   3 min
+  [PLAN] budget attaque interne -> 16 pas (1.60 eps)
+  Epoch 91/120 | loss 1.4563 | CE propre 1.053 | CE adv 2.292 | attaque  80.5% | val clean 97.30% | val PGD10 48.10% |   0.1 min | reste ~   4 min
+  Epoch 92/120 | loss 1.4704 | CE propre 1.073 | CE adv 2.314 | attaque  81.1% | val clean 97.40% | val PGD10 48.30% |   0.1 min | reste ~   3 min
+  Epoch 93/120 | loss 1.4900 | CE propre 1.096 | CE adv 2.351 | attaque  82.3% | val clean 97.10% | val PGD10 48.80% |   0.1 min | reste ~   3 min
+  Epoch 94/120 | loss 1.4840 | CE propre 1.090 | CE adv 2.342 | attaque  82.0% | val clean 97.00% | val PGD10 48.70% |   0.1 min | reste ~   3 min
+  Epoch 95/120 | loss 1.4752 | CE propre 1.080 | CE adv 2.321 | attaque  81.2% | val clean 97.30% | val PGD10 48.40% |   0.2 min | reste ~   4 min
+  [LR] epoch 96 : lr -> 0.00002
+  Epoch 96/120 | loss 1.4764 | CE propre 1.082 | CE adv 2.325 | attaque  81.3% | val clean 97.40% | val PGD10 48.80% |   0.1 min | reste ~   3 min
+  [PLAN] budget attaque interne -> 17 pas (1.70 eps)
+  Epoch 97/120 | loss 1.4831 | CE propre 1.079 | CE adv 2.343 | attaque  82.1% | val clean 97.40% | val PGD10 49.00% |   0.1 min | reste ~   3 min
+  Epoch 98/120 | loss 1.4797 | CE propre 1.079 | CE adv 2.336 | attaque  81.9% | val clean 97.40% | val PGD10 48.90% |   0.1 min | reste ~   3 min
+  Epoch 99/120 | loss 1.4817 | CE propre 1.082 | CE adv 2.340 | attaque  82.0% | val clean 97.40% | val PGD10 48.80% |   0.2 min | reste ~   3 min
+  Epoch 100/120 | loss 1.4773 | CE propre 1.081 | CE adv 2.329 | attaque  81.5% | val clean 97.40% | val PGD10 49.00% |   0.1 min | reste ~   2 min
+  Epoch 101/120 | loss 1.4758 | CE propre 1.075 | CE adv 2.331 | attaque  81.8% | val clean 97.40% | val PGD10 48.80% |   0.1 min | reste ~   2 min
+  Epoch 102/120 | loss 1.4819 | CE propre 1.085 | CE adv 2.340 | attaque  81.9% | val clean 97.40% | val PGD10 48.60% |   0.1 min | reste ~   2 min
+  Epoch 103/120 | loss 1.4805 | CE propre 1.082 | CE adv 2.337 | attaque  81.8% | val clean 97.40% | val PGD10 48.80% |   0.1 min | reste ~   2 min
+  [PLAN] budget attaque interne -> 18 pas (1.80 eps)
+  Epoch 104/120 | loss 1.5028 | CE propre 1.099 | CE adv 2.381 | attaque  83.5% | val clean 97.40% | val PGD10 49.20% |   0.2 min | reste ~   3 min
+  Epoch 105/120 | loss 1.4885 | CE propre 1.091 | CE adv 2.351 | attaque  82.3% | val clean 97.40% | val PGD10 48.20% |   0.1 min | reste ~   2 min
+  Epoch 106/120 | loss 1.4763 | CE propre 1.075 | CE adv 2.332 | attaque  81.9% | val clean 97.20% | val PGD10 48.00% |   0.1 min | reste ~   2 min
+  Epoch 107/120 | loss 1.4913 | CE propre 1.092 | CE adv 2.358 | attaque  82.6% | val clean 97.40% | val PGD10 48.80% |   0.1 min | reste ~   2 min
+  Epoch 108/120 | loss 1.4825 | CE propre 1.083 | CE adv 2.344 | attaque  82.2% | val clean 97.40% | val PGD10 48.70% |   0.2 min | reste ~   2 min
+  Epoch 109/120 | loss 1.4854 | CE propre 1.086 | CE adv 2.347 | attaque  82.2% | val clean 97.40% | val PGD10 48.70% |   0.1 min | reste ~   1 min
+  Epoch 110/120 | loss 1.4892 | CE propre 1.089 | CE adv 2.355 | attaque  82.4% | val clean 97.30% | val PGD10 48.70% |   0.1 min | reste ~   1 min
+  [PLAN] budget attaque interne -> 19 pas (1.90 eps)
+  Epoch 111/120 | loss 1.4874 | CE propre 1.085 | CE adv 2.355 | attaque  82.5% | val clean 97.40% | val PGD10 48.60% |   0.1 min | reste ~   1 min
+  Epoch 112/120 | loss 1.4887 | CE propre 1.085 | CE adv 2.358 | attaque  82.9% | val clean 97.40% | val PGD10 48.50% |   0.2 min | reste ~   1 min
+  Epoch 113/120 | loss 1.4905 | CE propre 1.090 | CE adv 2.359 | attaque  82.7% | val clean 97.40% | val PGD10 48.70% |   0.1 min | reste ~   1 min
+  Epoch 114/120 | loss 1.4906 | CE propre 1.094 | CE adv 2.358 | attaque  82.6% | val clean 97.30% | val PGD10 49.00% |   0.1 min | reste ~   1 min
+  Epoch 115/120 | loss 1.4894 | CE propre 1.089 | CE adv 2.358 | attaque  82.6% | val clean 97.40% | val PGD10 48.90% |   0.1 min | reste ~   1 min
+  Epoch 116/120 | loss 1.4856 | CE propre 1.085 | CE adv 2.353 | attaque  82.8% | val clean 97.40% | val PGD10 49.40% |   0.2 min | reste ~   1 min
+  [PLAN] budget attaque interne -> 20 pas (2.00 eps)
+  Epoch 117/120 | loss 1.4832 | CE propre 1.077 | CE adv 2.352 | attaque  82.5% | val clean 97.40% | val PGD10 48.90% |   0.1 min | reste ~   0 min
+  Epoch 118/120 | loss 1.4740 | CE propre 1.069 | CE adv 2.334 | attaque  82.1% | val clean 97.40% | val PGD10 49.10% |   0.1 min | reste ~   0 min
+  Epoch 119/120 | loss 1.4813 | CE propre 1.080 | CE adv 2.344 | attaque  81.8% | val clean 97.40% | val PGD10 49.20% |   0.1 min | reste ~   0 min
+  Epoch 120/120 | loss 1.5202 | CE propre 1.119 | CE adv 2.412 | attaque  84.6% | val clean 97.40% | val PGD10 48.50% |   0.2 min | reste ~   0 min
+
+[TRAIN] termine en 12 min 20 s
+
+[EVAL] harden_torch (trades, eps=0.3) (500 images, PGD 20 pas, 1 restart(s))
+   eps |     FGSM |  PGD (pire cas)
+------------------------------------
+  0.05 |    95.2% |           94.4%
+   0.1 |    91.2% |           88.2%
+   0.2 |    83.4% |           72.6%
+   0.3 |    73.4% |           44.0%

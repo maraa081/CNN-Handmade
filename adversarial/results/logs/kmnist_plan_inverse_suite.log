@@ -1,0 +1,46 @@
+========================================================================
+  SUITE D'ATTAQUES - evaluation multi-familles
+========================================================================
+[LOAD] models/kmnist_plan_inverse.pt
+  [OK] kmnist-train-imgs.npz  shape=(60000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-train-labels.npz  shape=(60000,)  dtype=uint8  ndim=1  valeurs 0-9
+  [OK] kmnist-test-imgs.npz  shape=(10000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-test-labels.npz  shape=(10000,)  dtype=uint8  ndim=1  valeurs 0-9
+[OK] Donnees KMNIST deja presentes dans data/kmnist/
+[DATA] 500 images de test | peripherique : cuda
+[EVAL] precision propre : 97.2%
+
+[1/3] ATTAQUES A GRADIENT (white-box)
+  attaque                |  eps=0.3
+  ----------------------------------
+    -> eps=0.3 termine en 1.7 s
+  FGSM (1 pas)           |    75.0%
+  PGD-20 (3 rest.)       |    50.8%
+  APGD-CE (100)          |    35.2%
+  APGD-DLR (100)         |    28.4%
+
+[2/3] ATTAQUES SANS GRADIENT (black-box, score-based)
+  attaque                |  eps=0.3
+  ----------------------------------
+    -> eps=0.3 termine en 10.2 s
+  Square (3000)          |    17.0%
+  NES (20x10)            |    73.8%
+
+[3/3] ATTAQUES L2 (distance minimale pour tromper le modele)
+  attaque                |   succes |  distance L2 moyenne
+  --------------------------------------------------------
+  CW-L2                  |    39.4% |                1.359
+    -> CW-L2 termine en 2.2 s
+  Boundary               |    89.2% |                7.833
+    -> Boundary termine en 0.7 s
+
+  Note : ces deux attaques mesurent une DISTANCE, pas une precision.
+  Le taux de succes est la part des images trompees par l'attaque.
+
+========================================================================
+  PIRE CAS a eps=0.3 : 17.0%   (attaque : Square (3000))
+  Precision propre                : 97.2%
+========================================================================
+[JSON] resultats ecrits -> adversarial/results/logs/kmnist_plan_inverse.json
+
+[TEMPS] suite terminee en 0 min 14 s

@@ -1,0 +1,281 @@
+====================================================================
+  HARDEN TORCH (autograd)
+====================================================================
+Peripherique : cuda
+GPU          : AMD Radeon RX 7800 XT
+  [OK] kmnist-train-imgs.npz  shape=(60000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-train-labels.npz  shape=(60000,)  dtype=uint8  ndim=1  valeurs 0-9
+  [OK] kmnist-test-imgs.npz  shape=(10000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-test-labels.npz  shape=(10000,)  dtype=uint8  ndim=1  valeurs 0-9
+[OK] Donnees KMNIST deja presentes dans data/kmnist/
+  [OK] kmnist-train-imgs.npz  shape=(60000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-train-labels.npz  shape=(60000,)  dtype=uint8  ndim=1  valeurs 0-9
+  [OK] kmnist-test-imgs.npz  shape=(10000, 28, 28)  dtype=uint8  ndim=3  valeurs 0-255
+  [OK] kmnist-test-labels.npz  shape=(10000,)  dtype=uint8  ndim=1  valeurs 0-9
+[OK] Donnees KMNIST deja presentes dans data/kmnist/
+[DATA] 59000 train / 1000 val / 500 test
+[LR] defaut pour pgdat -> lr 0.05
+[AUG] rotation=12.0, translation=2, zoom=0.1, bruit_p=0.02, bruit_intensite=(0.5, 1.0), cutout=6, epaisseur=0.3, epaisseur_melange=0.6, prob=0.5
+[CONF] attack=pgd steps=5 eps=0.3 loss=pgdat mix=0.5 lr=0.05 clip=1.0 batch=256 epochs=120 augment=True
+[PLAN] curriculum deterministe : budget de 1,0.2 eps (pas fixe 0.0300 = 0.10 eps, donc 10 pas a l'epoch 1 -> 2 pas a la fin)
+[MODEL] 421 642 parametres
+[WARM] clean test : 98.60%
+[OPT] momentum
+  [LR] paliers aux epochs [60, 96]
+  [PLAN] budget attaque interne -> 10 pas (1.00 eps)
+  Epoch  1/120 | loss 1.4598 | CE propre 0.242 | CE adv 3.895 | attaque  96.5% | val clean 98.70% | val PGD10  8.00% |   0.1 min | reste ~  11 min
+           -> meilleur modele sauvegarde (val PGD10 8.00%)
+  Epoch  2/120 | loss 0.8863 | CE propre 0.090 | CE adv 2.479 | attaque  91.3% | val clean 98.80% | val PGD10  8.80% |   0.1 min | reste ~  10 min
+           -> meilleur modele sauvegarde (val PGD10 8.80%)
+  Epoch  3/120 | loss 0.8574 | CE propre 0.071 | CE adv 2.430 | attaque  90.7% | val clean 98.80% | val PGD10  8.50% |   0.1 min | reste ~  10 min
+  Epoch  4/120 | loss 0.8371 | CE propre 0.058 | CE adv 2.396 | attaque  90.5% | val clean 99.10% | val PGD10 10.20% |   0.1 min | reste ~  10 min
+           -> meilleur modele sauvegarde (val PGD10 10.20%)
+  Epoch  5/120 | loss 0.8337 | CE propre 0.055 | CE adv 2.392 | attaque  90.7% | val clean 99.10% | val PGD10 11.00% |   0.1 min | reste ~  10 min
+           -> meilleur modele sauvegarde (val PGD10 11.00%)
+  Epoch  6/120 | loss 0.8312 | CE propre 0.053 | CE adv 2.387 | attaque  90.8% | val clean 99.10% | val PGD10 10.40% |   0.1 min | reste ~  10 min
+  Epoch  7/120 | loss 0.8298 | CE propre 0.052 | CE adv 2.385 | attaque  90.6% | val clean 99.20% | val PGD10 10.20% |   0.1 min | reste ~  10 min
+  Epoch  8/120 | loss 0.8316 | CE propre 0.049 | CE adv 2.397 | attaque  90.8% | val clean 99.40% | val PGD10 10.30% |   0.1 min | reste ~  10 min
+  [PLAN] budget attaque interne -> 9 pas (0.90 eps)
+  Epoch  9/120 | loss 0.8429 | CE propre 0.060 | CE adv 2.408 | attaque  91.3% | val clean 99.10% | val PGD10 10.10% |   0.1 min | reste ~   9 min
+  Epoch 10/120 | loss 0.8393 | CE propre 0.066 | CE adv 2.387 | attaque  87.1% | val clean 99.00% | val PGD10 15.00% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 15.00%)
+  Epoch 11/120 | loss 0.8141 | CE propre 0.077 | CE adv 2.288 | attaque  81.8% | val clean 98.90% | val PGD10 19.60% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 19.60%)
+  Epoch 12/120 | loss 0.7715 | CE propre 0.081 | CE adv 2.152 | attaque  77.2% | val clean 98.90% | val PGD10 25.10% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 25.10%)
+  Epoch 13/120 | loss 0.7440 | CE propre 0.090 | CE adv 2.053 | attaque  73.8% | val clean 99.20% | val PGD10 29.00% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 29.00%)
+  Epoch 14/120 | loss 0.7199 | CE propre 0.092 | CE adv 1.976 | attaque  70.6% | val clean 99.00% | val PGD10 32.20% |   0.1 min | reste ~   9 min
+           -> meilleur modele sauvegarde (val PGD10 32.20%)
+  Epoch 15/120 | loss 0.6936 | CE propre 0.088 | CE adv 1.906 | attaque  69.0% | val clean 98.70% | val PGD10 38.00% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 38.00%)
+  Epoch 16/120 | loss 0.6695 | CE propre 0.089 | CE adv 1.830 | attaque  66.2% | val clean 99.10% | val PGD10 43.50% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 43.50%)
+  Epoch 17/120 | loss 0.6558 | CE propre 0.090 | CE adv 1.787 | attaque  64.0% | val clean 98.90% | val PGD10 47.40% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 47.40%)
+  Epoch 18/120 | loss 0.6308 | CE propre 0.087 | CE adv 1.718 | attaque  61.8% | val clean 98.90% | val PGD10 53.90% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 53.90%)
+  Epoch 19/120 | loss 0.6004 | CE propre 0.081 | CE adv 1.639 | attaque  59.0% | val clean 98.90% | val PGD10 54.70% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 54.70%)
+  Epoch 20/120 | loss 0.6154 | CE propre 0.090 | CE adv 1.666 | attaque  59.5% | val clean 98.70% | val PGD10 52.40% |   0.1 min | reste ~   8 min
+  Epoch 21/120 | loss 0.5735 | CE propre 0.082 | CE adv 1.556 | attaque  55.0% | val clean 98.90% | val PGD10 61.40% |   0.1 min | reste ~   8 min
+           -> meilleur modele sauvegarde (val PGD10 61.40%)
+  Epoch 22/120 | loss 0.5721 | CE propre 0.082 | CE adv 1.551 | attaque  55.0% | val clean 98.90% | val PGD10 60.60% |   0.1 min | reste ~   8 min
+  Epoch 23/120 | loss 0.5703 | CE propre 0.084 | CE adv 1.542 | attaque  54.7% | val clean 98.90% | val PGD10 60.60% |   0.1 min | reste ~   8 min
+  [PLAN] budget attaque interne -> 8 pas (0.80 eps)
+  Epoch 24/120 | loss 0.5256 | CE propre 0.079 | CE adv 1.418 | attaque  50.2% | val clean 99.20% | val PGD10 64.40% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 64.40%)
+  Epoch 25/120 | loss 0.5363 | CE propre 0.080 | CE adv 1.450 | attaque  51.4% | val clean 99.00% | val PGD10 68.20% |   0.1 min | reste ~   7 min
+           -> meilleur modele sauvegarde (val PGD10 68.20%)
+  Epoch 26/120 | loss 0.5263 | CE propre 0.082 | CE adv 1.416 | attaque  49.6% | val clean 98.90% | val PGD10 62.60% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 50% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 27/120 | loss 0.4986 | CE propre 0.071 | CE adv 1.353 | attaque  47.8% | val clean 98.80% | val PGD10 66.30% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 48% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 28/120 | loss 0.5111 | CE propre 0.076 | CE adv 1.381 | attaque  48.4% | val clean 98.80% | val PGD10 59.30% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 48% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 29/120 | loss 0.5134 | CE propre 0.076 | CE adv 1.388 | attaque  48.8% | val clean 99.00% | val PGD10 64.50% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 49% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 30/120 | loss 0.4984 | CE propre 0.073 | CE adv 1.350 | attaque  47.7% | val clean 98.80% | val PGD10 71.30% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 48% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+           -> meilleur modele sauvegarde (val PGD10 71.30%)
+  Epoch 31/120 | loss 0.4962 | CE propre 0.070 | CE adv 1.349 | attaque  47.5% | val clean 99.20% | val PGD10 59.80% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 48% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 32/120 | loss 0.4863 | CE propre 0.069 | CE adv 1.320 | attaque  46.5% | val clean 99.30% | val PGD10 69.20% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 46% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 33/120 | loss 0.4747 | CE propre 0.068 | CE adv 1.289 | attaque  45.0% | val clean 98.90% | val PGD10 65.70% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 45% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 34/120 | loss 0.4759 | CE propre 0.067 | CE adv 1.294 | attaque  44.8% | val clean 99.10% | val PGD10 72.30% |   0.1 min | reste ~   7 min
+           [ALERTE] l'attaque interne ne trompe plus que 45% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+           -> meilleur modele sauvegarde (val PGD10 72.30%)
+  Epoch 35/120 | loss 0.4855 | CE propre 0.065 | CE adv 1.326 | attaque  46.7% | val clean 98.70% | val PGD10 65.50% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 47% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 36/120 | loss 0.4878 | CE propre 0.066 | CE adv 1.332 | attaque  46.9% | val clean 99.00% | val PGD10 68.20% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 47% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 37/120 | loss 0.4761 | CE propre 0.064 | CE adv 1.301 | attaque  45.5% | val clean 99.10% | val PGD10 73.20% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 46% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+           -> meilleur modele sauvegarde (val PGD10 73.20%)
+  Epoch 38/120 | loss 0.4701 | CE propre 0.064 | CE adv 1.282 | attaque  44.9% | val clean 99.20% | val PGD10 65.20% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 45% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 7 pas (0.70 eps)
+  Epoch 39/120 | loss 0.4354 | CE propre 0.056 | CE adv 1.193 | attaque  41.8% | val clean 98.90% | val PGD10 66.10% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 40/120 | loss 0.4527 | CE propre 0.063 | CE adv 1.231 | attaque  43.2% | val clean 99.30% | val PGD10 65.00% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 43% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 41/120 | loss 0.4467 | CE propre 0.059 | CE adv 1.222 | attaque  43.0% | val clean 98.90% | val PGD10 67.50% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 43% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 42/120 | loss 0.4472 | CE propre 0.058 | CE adv 1.226 | attaque  42.9% | val clean 99.10% | val PGD10 72.70% |   0.1 min | reste ~   6 min
+           [ALERTE] l'attaque interne ne trompe plus que 43% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 43/120 | loss 0.4361 | CE propre 0.058 | CE adv 1.193 | attaque  41.8% | val clean 99.40% | val PGD10 63.00% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 44/120 | loss 0.4324 | CE propre 0.055 | CE adv 1.188 | attaque  41.7% | val clean 99.20% | val PGD10 69.50% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 45/120 | loss 0.4268 | CE propre 0.053 | CE adv 1.175 | attaque  41.0% | val clean 99.10% | val PGD10 68.20% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 41% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 46/120 | loss 0.4475 | CE propre 0.060 | CE adv 1.223 | attaque  42.9% | val clean 99.30% | val PGD10 63.80% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 43% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 47/120 | loss 0.4456 | CE propre 0.060 | CE adv 1.217 | attaque  42.5% | val clean 99.20% | val PGD10 70.90% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 48/120 | loss 0.4343 | CE propre 0.057 | CE adv 1.189 | attaque  41.5% | val clean 99.00% | val PGD10 70.80% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 49/120 | loss 0.4212 | CE propre 0.052 | CE adv 1.159 | attaque  40.4% | val clean 99.00% | val PGD10 64.00% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 40% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 50/120 | loss 0.4343 | CE propre 0.054 | CE adv 1.195 | attaque  42.0% | val clean 98.90% | val PGD10 63.40% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 51/120 | loss 0.4310 | CE propre 0.052 | CE adv 1.189 | attaque  41.4% | val clean 99.10% | val PGD10 73.50% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 41% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+           -> meilleur modele sauvegarde (val PGD10 73.50%)
+  Epoch 52/120 | loss 0.4388 | CE propre 0.054 | CE adv 1.209 | attaque  42.3% | val clean 99.20% | val PGD10 62.40% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 42% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 53/120 | loss 0.4176 | CE propre 0.052 | CE adv 1.149 | attaque  40.5% | val clean 99.30% | val PGD10 70.70% |   0.1 min | reste ~   5 min
+           [ALERTE] l'attaque interne ne trompe plus que 40% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 6 pas (0.60 eps)
+  Epoch 54/120 | loss 0.3837 | CE propre 0.050 | CE adv 1.051 | attaque  36.5% | val clean 99.40% | val PGD10 69.70% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 37% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 55/120 | loss 0.3908 | CE propre 0.050 | CE adv 1.073 | attaque  37.6% | val clean 99.20% | val PGD10 59.50% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 38% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 56/120 | loss 0.3725 | CE propre 0.045 | CE adv 1.027 | attaque  35.6% | val clean 99.30% | val PGD10 56.90% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 36% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 57/120 | loss 0.3795 | CE propre 0.044 | CE adv 1.050 | attaque  36.9% | val clean 99.50% | val PGD10 64.00% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 37% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 58/120 | loss 0.3836 | CE propre 0.047 | CE adv 1.057 | attaque  36.8% | val clean 99.30% | val PGD10 63.70% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 37% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 59/120 | loss 0.3921 | CE propre 0.048 | CE adv 1.079 | attaque  37.6% | val clean 99.30% | val PGD10 71.20% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 38% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [LR] epoch 60 : lr -> 0.00500
+  Epoch 60/120 | loss 0.3907 | CE propre 0.043 | CE adv 1.086 | attaque  37.9% | val clean 99.50% | val PGD10 67.50% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 38% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 61/120 | loss 0.3579 | CE propre 0.035 | CE adv 1.003 | attaque  34.6% | val clean 99.40% | val PGD10 69.10% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 35% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 62/120 | loss 0.3640 | CE propre 0.035 | CE adv 1.022 | attaque  35.3% | val clean 99.40% | val PGD10 70.10% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 35% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 63/120 | loss 0.3746 | CE propre 0.036 | CE adv 1.051 | attaque  36.8% | val clean 99.40% | val PGD10 69.20% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 37% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 64/120 | loss 0.3463 | CE propre 0.032 | CE adv 0.975 | attaque  34.0% | val clean 99.40% | val PGD10 68.40% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 34% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 65/120 | loss 0.3520 | CE propre 0.034 | CE adv 0.988 | attaque  34.3% | val clean 99.40% | val PGD10 68.70% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 34% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 66/120 | loss 0.3383 | CE propre 0.032 | CE adv 0.951 | attaque  33.1% | val clean 99.40% | val PGD10 70.40% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 33% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 67/120 | loss 0.3674 | CE propre 0.036 | CE adv 1.029 | attaque  35.8% | val clean 99.40% | val PGD10 69.00% |   0.1 min | reste ~   4 min
+           [ALERTE] l'attaque interne ne trompe plus que 36% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 5 pas (0.50 eps)
+  Epoch 68/120 | loss 0.3256 | CE propre 0.035 | CE adv 0.907 | attaque  31.5% | val clean 99.50% | val PGD10 66.90% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 69/120 | loss 0.3119 | CE propre 0.033 | CE adv 0.869 | attaque  30.0% | val clean 99.40% | val PGD10 66.30% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 70/120 | loss 0.3141 | CE propre 0.033 | CE adv 0.877 | attaque  30.9% | val clean 99.40% | val PGD10 65.70% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 71/120 | loss 0.3067 | CE propre 0.032 | CE adv 0.857 | attaque  29.7% | val clean 99.40% | val PGD10 69.10% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 72/120 | loss 0.3289 | CE propre 0.036 | CE adv 0.915 | attaque  31.7% | val clean 99.50% | val PGD10 66.10% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 32% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 73/120 | loss 0.3150 | CE propre 0.034 | CE adv 0.877 | attaque  30.4% | val clean 99.50% | val PGD10 67.60% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 74/120 | loss 0.3201 | CE propre 0.033 | CE adv 0.894 | attaque  30.9% | val clean 99.50% | val PGD10 67.20% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 75/120 | loss 0.3081 | CE propre 0.030 | CE adv 0.864 | attaque  30.0% | val clean 99.40% | val PGD10 66.30% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 76/120 | loss 0.3176 | CE propre 0.032 | CE adv 0.888 | attaque  30.5% | val clean 99.50% | val PGD10 64.20% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 77/120 | loss 0.3203 | CE propre 0.034 | CE adv 0.893 | attaque  31.1% | val clean 99.50% | val PGD10 64.90% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 78/120 | loss 0.3119 | CE propre 0.033 | CE adv 0.869 | attaque  30.2% | val clean 99.40% | val PGD10 67.80% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 30% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 79/120 | loss 0.3165 | CE propre 0.032 | CE adv 0.885 | attaque  30.8% | val clean 99.40% | val PGD10 65.40% |   0.1 min | reste ~   3 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 80/120 | loss 0.3141 | CE propre 0.033 | CE adv 0.876 | attaque  30.6% | val clean 99.50% | val PGD10 66.40% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 81/120 | loss 0.3358 | CE propre 0.035 | CE adv 0.936 | attaque  33.0% | val clean 99.50% | val PGD10 67.80% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 33% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 82/120 | loss 0.3182 | CE propre 0.033 | CE adv 0.889 | attaque  30.9% | val clean 99.40% | val PGD10 67.20% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 31% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 4 pas (0.40 eps)
+  Epoch 83/120 | loss 0.2888 | CE propre 0.036 | CE adv 0.795 | attaque  27.2% | val clean 99.40% | val PGD10 63.00% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 27% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 84/120 | loss 0.2593 | CE propre 0.028 | CE adv 0.721 | attaque  24.8% | val clean 99.40% | val PGD10 62.30% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 25% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 85/120 | loss 0.2710 | CE propre 0.031 | CE adv 0.751 | attaque  25.7% | val clean 99.40% | val PGD10 63.60% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 86/120 | loss 0.2580 | CE propre 0.030 | CE adv 0.714 | attaque  24.4% | val clean 99.40% | val PGD10 63.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 24% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 87/120 | loss 0.2681 | CE propre 0.031 | CE adv 0.742 | attaque  25.8% | val clean 99.40% | val PGD10 63.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 88/120 | loss 0.2723 | CE propre 0.032 | CE adv 0.753 | attaque  26.1% | val clean 99.40% | val PGD10 62.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 89/120 | loss 0.2641 | CE propre 0.030 | CE adv 0.732 | attaque  25.1% | val clean 99.40% | val PGD10 64.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 25% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 90/120 | loss 0.2659 | CE propre 0.033 | CE adv 0.732 | attaque  25.4% | val clean 99.40% | val PGD10 62.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 25% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 91/120 | loss 0.2573 | CE propre 0.031 | CE adv 0.709 | attaque  24.2% | val clean 99.40% | val PGD10 64.70% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 24% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 92/120 | loss 0.2731 | CE propre 0.033 | CE adv 0.753 | attaque  26.0% | val clean 99.30% | val PGD10 63.60% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 93/120 | loss 0.2859 | CE propre 0.032 | CE adv 0.794 | attaque  27.8% | val clean 99.30% | val PGD10 62.50% |   0.1 min | reste ~   2 min
+           [ALERTE] l'attaque interne ne trompe plus que 28% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 94/120 | loss 0.2829 | CE propre 0.034 | CE adv 0.780 | attaque  26.9% | val clean 99.40% | val PGD10 64.70% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 27% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 95/120 | loss 0.2747 | CE propre 0.033 | CE adv 0.758 | attaque  26.3% | val clean 99.30% | val PGD10 62.60% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [LR] epoch 96 : lr -> 0.00050
+  Epoch 96/120 | loss 0.2727 | CE propre 0.032 | CE adv 0.753 | attaque  26.1% | val clean 99.30% | val PGD10 64.60% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 97/120 | loss 0.2755 | CE propre 0.031 | CE adv 0.765 | attaque  26.4% | val clean 99.30% | val PGD10 65.00% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 26% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 3 pas (0.30 eps)
+  Epoch 98/120 | loss 0.2264 | CE propre 0.031 | CE adv 0.617 | attaque  21.0% | val clean 99.40% | val PGD10 59.40% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 99/120 | loss 0.2250 | CE propre 0.030 | CE adv 0.614 | attaque  20.8% | val clean 99.40% | val PGD10 59.40% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 100/120 | loss 0.2252 | CE propre 0.031 | CE adv 0.614 | attaque  21.0% | val clean 99.40% | val PGD10 57.40% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 101/120 | loss 0.2234 | CE propre 0.030 | CE adv 0.610 | attaque  20.8% | val clean 99.40% | val PGD10 57.80% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 102/120 | loss 0.2283 | CE propre 0.035 | CE adv 0.616 | attaque  20.9% | val clean 99.40% | val PGD10 58.00% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 103/120 | loss 0.2263 | CE propre 0.031 | CE adv 0.616 | attaque  21.1% | val clean 99.40% | val PGD10 57.10% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 104/120 | loss 0.2354 | CE propre 0.031 | CE adv 0.644 | attaque  22.0% | val clean 99.40% | val PGD10 57.00% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 22% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 105/120 | loss 0.2282 | CE propre 0.033 | CE adv 0.619 | attaque  21.1% | val clean 99.40% | val PGD10 56.80% |   0.0 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 106/120 | loss 0.2184 | CE propre 0.029 | CE adv 0.597 | attaque  20.3% | val clean 99.40% | val PGD10 56.30% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 20% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 107/120 | loss 0.2268 | CE propre 0.031 | CE adv 0.619 | attaque  21.2% | val clean 99.40% | val PGD10 57.60% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 108/120 | loss 0.2222 | CE propre 0.031 | CE adv 0.605 | attaque  20.7% | val clean 99.40% | val PGD10 56.90% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 109/120 | loss 0.2257 | CE propre 0.031 | CE adv 0.614 | attaque  20.8% | val clean 99.40% | val PGD10 58.60% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 110/120 | loss 0.2244 | CE propre 0.030 | CE adv 0.613 | attaque  20.8% | val clean 99.40% | val PGD10 56.90% |   0.1 min | reste ~   1 min
+           [ALERTE] l'attaque interne ne trompe plus que 21% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 111/120 | loss 0.2211 | CE propre 0.031 | CE adv 0.600 | attaque  20.5% | val clean 99.40% | val PGD10 57.90% |   0.1 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 20% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 112/120 | loss 0.2188 | CE propre 0.029 | CE adv 0.598 | attaque  20.4% | val clean 99.40% | val PGD10 55.70% |   0.1 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 20% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  [PLAN] budget attaque interne -> 2 pas (0.20 eps)
+  Epoch 113/120 | loss 0.1792 | CE propre 0.032 | CE adv 0.474 | attaque  15.7% | val clean 99.40% | val PGD10 53.00% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 16% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 114/120 | loss 0.1776 | CE propre 0.031 | CE adv 0.471 | attaque  15.8% | val clean 99.40% | val PGD10 49.80% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 16% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 115/120 | loss 0.1782 | CE propre 0.031 | CE adv 0.472 | attaque  15.5% | val clean 99.40% | val PGD10 49.70% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 16% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 116/120 | loss 0.1745 | CE propre 0.031 | CE adv 0.461 | attaque  15.3% | val clean 99.40% | val PGD10 50.40% |   0.1 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 15% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 117/120 | loss 0.1689 | CE propre 0.029 | CE adv 0.448 | attaque  14.8% | val clean 99.40% | val PGD10 48.30% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 15% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 118/120 | loss 0.1665 | CE propre 0.028 | CE adv 0.444 | attaque  15.0% | val clean 99.40% | val PGD10 47.70% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 15% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 119/120 | loss 0.1704 | CE propre 0.030 | CE adv 0.452 | attaque  14.9% | val clean 99.40% | val PGD10 47.70% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 15% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+  Epoch 120/120 | loss 0.1887 | CE propre 0.034 | CE adv 0.498 | attaque  16.4% | val clean 99.40% | val PGD10 47.60% |   0.0 min | reste ~   0 min
+           [ALERTE] l'attaque interne ne trompe plus que 16% du batch adverse : la robustesse apprise est en train de disparaitre (voir memoire.md, 2026-09-12).
+
+[TRAIN] termine en 7 min 59 s
+
+[EVAL] harden_torch (pgdat, eps=0.3) (500 images, PGD 20 pas, 1 restart(s))
+   eps |     FGSM |  PGD (pire cas)
+------------------------------------
+  0.05 |    83.4% |           68.2%
+   0.1 |    81.2% |           64.4%
+   0.2 |    78.8% |           60.6%
+   0.3 |    75.0% |           50.8%
