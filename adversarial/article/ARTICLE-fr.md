@@ -324,6 +324,17 @@ et le voisin négatif, à savoir qu'un budget de départ élevé (constant ou
 décroissant) ne se contente pas de moins bien marcher, il dégénère (S.4.5,
 `abl_c`).
 
+**Tableau de positionnement** (les travaux voisins, et ce qui est repris ou
+ajouté ici) :
+
+| famille de travaux | mécanisme | repris ici | ajouté ici |
+|---|---|---|---|
+| PGD-AT, Madry et al. 2017 | budget d'attaque interne **fixe** (PGD-40) | le banc d'essai (eps = 0.30) et la référence de niveau | le budget de l'attaque interne traité comme variable, pas comme constante |
+| TRADES, Zhang et al. 2019 | régularisation KL | la référence de niveau officielle | une variante **non conforme** publiée comme limite (S.5.2), pas comme méthode |
+| FAT, Wong et al. 2020 | arrêt anticipé de l'attaque (min-min) | l'idée que l'arrêt change l'objectif d'optimisation | la lecture par les logs et le rôle du **départ** (S.4.5) |
+| **CAT, Cai et al., IJCAI 2018** | **epsilon croissant au fil des epochs** | **le principe même de la rampe croissante** | **le miroir de la recette (même jeu de budgets, ordre inverse, même coût) et le diagnostic par les logs** |
+| SAAT, Yu et al. 2022 | budget piloté par la perte adverse | l'idée d'un budget non fixe | la cible de difficulté par batch et le garde-fou de lisibilité (<= 2 eps), S.4.6 |
+
 **Deux précautions sur ce résultat, à écrire noir sur blanc.**
 
 1. **Le chiffre-phare, désormais officiel des deux côtés.** `A6` et `A9` sont
@@ -821,10 +832,34 @@ de niveau fausse sur KMNIST ; phrase « l'ordre compense une perte mal réglée 
 retirée faute de soutien expérimental.
 
 **B. Glossaire.** FGSM, PGD, APGD, CW-L2, Square, NES, Boundary, BPDA+EOT,
-AutoAttack, budget de déplacement, curriculum, min-min (FAT), masquage de
-gradient, randomized smoothing, rayon certifié.
+AutoAttack, budget de déplacement, curriculum (et *Curriculum Adversarial
+Training*, Cai et al., IJCAI 2018), min-min (FAT), masquage de gradient,
+randomized smoothing, rayon certifié.
 
 **C. État du document.** Chiffres vérifiés et datés ; cinq figures produites depuis
 une source unique de chiffres (`figures.py`, chevauchements vérifiés
 automatiquement) ; version anglaise écrite (`ARTICLE-en.md`). Le plan détaillé et
 les points ouverts sont dans `TRAME-fr.md`.
+
+**D. Tableau expérimental complet.** Tous les runs annoncés dans ce document,
+mesurés par AutoAttack `standard` sur 10 000 images à eps = 0.30 :
+
+| run | jeu | recette | propre | robuste (officiel) | durée |
+|---|---|---|---|---|---|
+| `bande_cible50` | MNIST | budget adaptatif par batch (cible de difficulté 0.5) | 98.85% | **91.25%** | 20 min |
+| `A6` | MNIST | plan `0.2 -> 2 eps` | 99.17% | **82.40%** | 11 min |
+| `A8` | MNIST | plan `0.2 -> 1 eps` | 99.27% | **78.25%** | 14.3 min |
+| `kmnist_plan_02_2` | KMNIST | plan `0.2 -> 2 eps` | 94.64% | **58.53%** | 10.7 min |
+| `kmnist_plan_doux` | KMNIST | plan `0.2 -> 1 eps` | 95.19% | **51.03%** | 9.0 min |
+| `abl_a` | MNIST | budget constant 2 eps, pas eps/10 | 99.53% | **50.71%** | 20 min |
+| `a9_plan_inverse` | MNIST | plan `2 -> 0.2 eps` | 99.50% | **50.35%** | 13.7 min |
+| `trades_ref_plan_02_2` | MNIST | TRADES `beta 6`, depuis zéro (non conforme, S.5.2) | 93.26% | 25.18% | 4.3 min |
+| `trades_plan_02_2` | MNIST | TRADES `beta 2` + warm start (non conforme, S.5.2) | 96.51% | 22.01% | 4.3 min |
+| `kmnist_plan_inverse` | KMNIST | plan `1 -> 0.2 eps` | 97.02% | **1.49%** | 2.1 min |
+
+Huit de ces dix runs sont passés au juge officiel et figurent dans le tableau de
+S.6 ; les deux lignes TRADES viennent de S.5.2. Le plan de graines (4 graines par
+recette sur la paire-phare) et les ablations du budget (courbe en cloche) ne sont
+pas dans ce tableau : ils sont dans S.4.2 et S.4.4. Table régénérable par
+`adversarial/torch/tableau_recap.py` depuis les JSON d'évaluation ; toute
+correction se fait dans les JSON, jamais dans ce tableau.

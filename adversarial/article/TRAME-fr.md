@@ -402,3 +402,27 @@ jeu de donnees (des kana japonais)."
 Regle de redaction : pas d'emoji, pas de superlatif ("incroyable", "revolutionnaire"),
 les chiffres maison et officiels toujours etiquetes, et chaque affirmation
 adverse verifiable par une commande.
+
+## Intervention non monotone (preparee le 14/09)
+
+Le test qui separe "croissance monotone" et "depart doux" (voir S.4.4 de
+l'article) est pret a etre lance. Support ajoute : `--plan-budget` accepte
+maintenant **plusieurs segments** (`0.2,2,0.2` = montee sur la premiere moitie,
+descente sur la seconde ; algorithmique generique : N bornes = N-1 segments).
+
+- `P1` = `--plan-budget "0.2,2,0.2"` -> `models/p1_plan_0p2_2_0p2.pt`
+- `P2` = `--plan-budget "2,0.2,2"` -> `models/p2_plan_2_0p2_2.pt`
+
+Les deux parcourent le meme jeu de budgets (2 a 20 pas), a cout identique.
+
+**Critere ecrit AVANT les runs** (pire cas maison, 500 images, Square 3000) :
+
+| P1 | P2 | lecture |
+|---|---|---|
+| >= 80% | <= 68% | le **DEPART** commande : la lecture "regularisation par depart doux" tient |
+| <= 68% | >= 80% | la **FIN** commande (budget au moment ou le lr chute), pas le depart |
+| 69-79% | 69-79% | les deux jouent : l'intervention ne tranche pas, on documente la courbe |
+
+Prevision ecrite : P1 >= 80% et P2 <= 68% (le verrouillage se joue tot, a
+l'epoch 1, pas a la fin). Cout : 2 runs x 11 min, puis 2 evaluations maison.
+AutoAttack (2 x 9 min) seulement si le verdict maison est net.

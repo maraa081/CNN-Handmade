@@ -235,6 +235,11 @@ def pas_planifies(args, epoch):
     run, lineairement. Le pas reste FIXE (eps/10), on ne change QUE le nombre
     de pas -- donc le budget vaut `nombre de pas x pas`.
 
+    Plusieurs points sont acceptes : `--plan-budget "0.2,2"` (montee simple) ou
+    `--plan-budget "0.2,2,0.2"` (montee puis descente, segments egaux). Le plan a
+    plusieurs segments sert a separer "croissance monotone" et "depart doux"
+    (memoire du 2026-09-14).
+
     Pourquoi une option, alors qu'on peut relancer en deux phases avec
     `--resume` : la reprise RESTAURE le learning rate du checkpoint, et les
     paliers du lr sont calcules sur la duree de la phase. Une phase courte
@@ -246,13 +251,29 @@ def pas_planifies(args, epoch):
     if not getattr(args, "plan_budget", ""):
         return args.pgd_steps
     try:
-        deb, fin = (float(v) for v in args.plan_budget.split(","))
+        bornes = [float(v) for v in args.plan_budget.split(",") if v.strip()]
     except ValueError:
         print(f"  [PLAN] [warn] --plan-budget mal forme ({args.plan_budget}) : ignore")
         return args.pgd_steps
+    if len(bornes) < 2:
+        print(f"  [PLAN] [warn] --plan-budget sans depart ni fin "
+              f"({args.plan_budget}) : ignore")
+        return args.pgd_steps
     alpha = args.pgd_alpha if args.pgd_alpha else args.eps / 10.0
     t = (epoch - 1) / max(1, args.epochs - 1)
-    budget = deb + (fin - deb) * t          # en multiples de eps
+    if len(bornes) == 2:
+        budget = bornes[0] + (bornes[1] - bornes[0]) * t   # en multiples de eps
+    else:
+        # Plan a plusieurs segments : rampes lineaires successives, chacune sur
+        # une fraction EGALE du run. Exemple `0.2,2,0.2` = montee de 0.2 a 2 eps
+        # sur la premiere moitie, descente de 2 a 0.2 sur la seconde : c'est
+        # l'intervention qui separe "croissance monotone" et "depart doux"
+        # (voir memoire du 2026-09-14). Algorithme generique : N bornes = N-1
+        # segments.
+        seg = len(bornes) - 1
+        x = t * seg
+        i = min(int(x), seg - 1)
+        budget = bornes[i] + (bornes[i + 1] - bornes[i]) * (x - i)
     return max(1, int(round(budget * args.eps / alpha)))
 
 
