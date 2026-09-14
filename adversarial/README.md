@@ -1107,7 +1107,14 @@ mesurable sur les deux jeux a recette appariée :
 Sur les deux jeux, meme ensemble de budgets, meme cout, ordre inverse : l'ecart
 officiel est **plus grand** que l'ecart maison (22 -> 32.1 sur MNIST, 41 -> 49.5
 sur KMNIST). Le chiffre-phare de l'article est donc mesure officiellement des deux
-cotes, et le juge non biaise AMPLIFIE l'effet au lieu de le reduire.
+cotes, et AutoAttack AMPLIFIE l'effet au lieu de le reduire.
+
+Positionnement a ne pas perdre de vue (retour Maraa du 14/09) : le plan croissant
+n'est pas une invention, c'est le principe du **Curriculum Adversarial Training**
+(Cai, Liu et Song, IJCAI 2018). Ce que l'article revendique, c'est la mesure
+controlee (le meme jeu de budgets dans l'ordre inverse, a cout identique et sur la
+meme architecture), le diagnostic par les logs et la replication KMNIST. Ajoute en
+S.4.4 et S.5.1 de l'article FR et EN.
 
 Sur KMNIST, meme ensemble de budgets, meme cout, ordre inverse : **49.5 points
 d'ecart en officiel** (contre 41 en maison). Le chiffre-phare de l'article cesse

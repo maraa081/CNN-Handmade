@@ -29,8 +29,8 @@ seed is **21.8 points**, seven times the dispersion.
 And the official judge **amplifies** the effect instead of reducing it. Under
 AutoAttack on 10,000 images, the two members of the pair give **82.40%** against
 **50.35%**, a **32-point gap** — larger than the one measured by our own attack
-suite. It is the first time in this work that an unbiased measurement moves in
-the same direction as the biased one, and further.
+suite. It is the first time in this work that a judge **stronger** than our suite
+moves in the direction of the law, and amplifies the gap instead of reducing it.
 
 The result replicates on a second dataset (KMNIST, Japanese cursive kana), where
 the official gap between the two orders reaches **49.5 points** (51.03% against
@@ -109,8 +109,9 @@ architecture is strictly identical everywhere: two convolutional layers (32 then
 comparison in this document mixes two architectures.
 
 The threat model is the same from beginning to end: L-infinity perturbations of
-at most **eps = 0.30**, on images normalized to `[0,1]`. This is not an arbitrary
-choice: **it is the MNIST testbed value used in the literature**, by Madry et al.
+at most **eps = 0.30**, on images normalized to `[0,1]`. eps is a **norm cap**,
+i.e. the radius of a ball, not a distance travelled: an attack projected into
+that ball may use only part of it (S.4.2). This is not an arbitrary choice: **it is the MNIST testbed value used in the literature**, by Madry et al.
 (2017) and by TRADES (Zhang et al., 2019) — which is exactly what makes the
 anchor in S.5.1 legitimate. It is also the regime where an undefended model
 collapses to **0.0%**, which makes it an unambiguous ground for observing defence
@@ -220,8 +221,11 @@ budget of epochs. This document now applies 120 epochs everywhere.
 
 Everything is kept fixed (120 epochs, PGD-20, eps = 0.30, augmentation, 60,000
 images, seed 42) and only the **fineness of the step** of the inner attack is
-changed. The displacement budget, that is to say the maximal distance the attack
-can travel, is `step x number of steps`.
+changed. The displacement budget -- the **norm cap** of the ball into which the
+inner attack is projected -- is `step x number of steps`. It is not a distance
+travelled: at every step PGD is projected back into the L-infinity ball of
+radius eps, so the perturbation actually applied may stay below the cap and only
+reaches it by saturating the ball.
 
 | recipe | inner budget | worst case (in-house) | clean accuracy |
 |---|---|---|---|
@@ -297,6 +301,19 @@ A neighbouring theoretical lead is the **min-min** objective of FAT (Wong et al.
 ICML 2020): the early stopping of the inner attack changes the nature of the
 optimization problem.
 
+**The principle is not new, and it must be said plainly.** Ordering the
+difficulty during adversarial training is the idea behind *Curriculum
+Adversarial Training* (Cai, Liu and Song, IJCAI 2018): start from weaker attacks
+and gradually increase their strength over the epochs, with evaluation on MNIST
+and CIFAR-10. Our increasing plan belongs to that family, and this work
+**rediscovers** it rather than inventing it. What is added here is therefore not
+the principle but the measurement: **the same set of budgets presented in
+reverse order**, at identical cost and on the same architecture -- which CAT does
+not test; the quantified gap between the two orders, in-house and then at the
+official judge; the mechanism read from the logs (S.4.5); and the negative
+neighbour, namely that a high starting budget (constant or decreasing) does not
+merely work less well, it degenerates (S.4.5, `abl_c`).
+
 **Two caveats on this result, to be written in black and white.**
 
 1. **The flagship figure, now official on both sides.** `A6` and `A9` have both
@@ -307,7 +324,7 @@ optimization problem.
 | MNIST | `0.2 -> 2 eps`: **82.40%** | `2 -> 0.2 eps`: **50.35%** | 22.0 | **32.1** |
 | KMNIST | `0.2 -> 1 eps`: **51.03%** | `1 -> 0.2 eps`: **1.49%** | 41.0 | **49.5** |
 
-Both gaps **grow** under the unbiased judge. The natural objection ("what if the
+Both gaps **grow** under AutoAttack. The natural objection ("what if the
 22-point gap were only an artefact of your optimistic suite?") therefore turns
 around: it is the opposite, and by 10 points on MNIST as well as 8.5 points on
 KMNIST. A prediction had been written before the measurement of `A9` (48 to
@@ -503,6 +520,14 @@ document are not out of touch with reality. Second, and that is the subject:
 difference (50.71% against 91.25%). The article does not claim a record; it
 explains that gap.
 
+One word on ordering, otherwise the reading would be wrong: the winning recipe
+of this document (an increasing plan) is **not** a discovery -- it is the
+principle of *Curriculum Adversarial Training* (Cai et al., IJCAI 2018), and more
+generally of curriculum learning. Our contribution is not the direction of the
+ramp, it is its **controlled measurement**: same architecture, same budgets, same
+cost, reversed order, plus the log-based diagnosis and the replication on KMNIST
+(S.4.4 and S.7).
+
 ### 5.2 What remained open
 
 **Our implementation of TRADES does not reproduce the reference.** Two runs,
@@ -525,7 +550,14 @@ compensates for a badly tuned loss" would be unsupported by these measurements.
 ## 6. The official judge
 
 All the figures announced in this document come from AutoAttack (`standard`
-version: APGD-CE, APGD-T, FAB-T, Square), on 10,000 images, at eps = 0.30. Eight
+version: APGD-CE, APGD-T, FAB-T, Square), on 10,000 images, at eps = 0.30.
+AutoAttack is not an "unbiased" judge: it is a **standardised** judge, stronger
+than our suite -- which is precisely why we report it. It remains an attack:
+nothing guarantees it finds the worst case, and it flags by itself when one of
+its components makes progress (last observation of this section). "Official"
+therefore means here "stronger and standardised", not "truth".
+
+Eight
 models were put through the judge (the two matched-recipe pairs are among them,
 which is what makes the flagship result verifiable):
 

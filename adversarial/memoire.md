@@ -2067,3 +2067,26 @@ d=json.loads(p.read_text()); d['valide']=False; p.write_text(json.dumps(d,indent
 ```
 
 Le catalogue des runs ne bouge pas : `a6_gradient_doux` y est deja note INVALIDE.
+
+### 2026-09-14 - Corrections d'ecriture demandees par Maraa (article)
+
+Trois remarques de relecture, appliquees a l'article FR et EN :
+
+1. **eps n'est plus appele "distance maximale".** eps est un plafond de norme
+   (rayon de boule) dans lequel PGD est projete : la perturbation reellement
+   appliquee peut rester en dessous. Precision ajoutee en S.2.1 et S.4.2.
+2. **AutoAttack n'est plus qualifie de "non biaise".** Formulation retenue :
+   juge **standardise et plus fort** que notre suite, avec ses propres limites
+   (rien ne garantit qu'il trouve le pire cas, il signale lui-meme ses progres
+   internes). Le mot disparait du resume, de S.4.4, de S.6, du README et de la
+   model card.
+3. **Positionnement vs Curriculum Adversarial Training explicite** (Cai, Liu et
+   Song, IJCAI 2018 ; reference ajoutee en S.4.4 et S.5.1). Le plan croissant
+   n'est pas une invention : c'est le principe de CAT. Ce qui est revendique :
+   la mesure controlee (meme jeu de budgets, ordre inverse, meme cout, meme
+   architecture), le diagnostic par les logs (S.4.5) et la replication KMNIST.
+
+Fichiers touches : `article/ARTICLE-fr.md`, `article/ARTICLE-en.md`,
+`article/TRAME-fr.md` (objections 9 a 11), `README.md`, `huggingface/README.md`.
+Les entrees des 12/09 et 13/09 de ce journal gardent leur formulation d'origine
+(c'est un journal) : la reference pour la redaction est l'entree ci-dessus.

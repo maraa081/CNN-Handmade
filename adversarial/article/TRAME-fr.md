@@ -261,7 +261,7 @@ jeu de donnees (des kana japonais)."
 - **L'ECART D'ORDRE, OFFICIEL DES DEUX COTES (le chiffre-phare) : MESURE SUR LES
   DEUX JEUX.** MNIST : `A6` **82.40%** contre `A9` **50.35%** = **+32.1 points**
   (22 en maison). KMNIST : `0.2 -> 1` **51.03%** contre `1 -> 0.2` **1.49%** =
-  **+49.5 points** (41 en maison). Dans les deux cas, le juge non biaise AMPLIFIE
+  **+49.5 points** (41 en maison). Dans les deux cas, AutoAttack AMPLIFIE
   l'effet au lieu de le reduire. La prediction ecrite avant la mesure d'`A9`
   (48 a 58%) est tombee juste (50.35%).
 - **Le classement : les modeles sains gardent le meme ordre**, et les TROIS plus
@@ -395,6 +395,9 @@ jeu de donnees (des kana japonais)."
 | 6 | forme des plans non decrite | **CORRIGE** : rampe lineaire par epoch, pas fixe eps/10 ; forme non comparee = limite |
 | 7 | TRADES dans le tableau de litterature | **CORRIGE** : ligne annote "variante non conforme" + avertissement |
 | 8 | fenetre de faisabilite non delimitee | **CORRIGE** : S.7.4, la loi est conditionnelle et la fenetre depend du jeu |
+| 9 | eps appele "distance maximale" | **CORRIGE** : eps est un plafond de norme (rayon de boule), pas une distance parcourue ; PGD est projete dedans, la perturbation peut rester en dessous (S.2.1 + S.4.2, FR et EN) |
+| 10 | AutoAttack qualifie de "non biaise" | **CORRIGE** : "standardise et plus fort que notre suite", avec les limites de l'outil ; le mot disparait du resume, de S.4.4, de S.6, du README et de la model card |
+| 11 | resultat non positionne vs Curriculum Adversarial Training | **CORRIGE** : S.4.4 + S.5.1. Le plan croissant est le principe de CAT (Cai, Liu et Song, IJCAI 2018) ; l'apport revendique devient la mesure controlee (meme jeu de budgets, ordre inverse, meme cout), le diagnostic par les logs et la replication KMNIST |
 
 Regle de redaction : pas d'emoji, pas de superlatif ("incroyable", "revolutionnaire"),
 les chiffres maison et officiels toujours etiquetes, et chaque affirmation

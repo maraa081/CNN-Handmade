@@ -41,9 +41,16 @@ eps=0.30, judged by AutoAttack (10,000 images):
 The two schedules `0.2 -> 2` and `2 -> 0.2` visit **exactly the same budgets**,
 the same number of steps, for the same cost. They differ only in order, and they
 are **32.1 points** apart (house suite: 22 points). Reversed on KMNIST (kana),
-the gap is **49.5 points** (house: 41). The unbiased judge amplifies the effect:
-the objection "maybe the gap is an artifact of your optimistic suite" is returned
+the gap is **49.5 points** (house: 41). AutoAttack - a standardised judge,
+stronger than our suite, not an "unbiased" one - amplifies the effect: the
+objection "maybe the gap is an artifact of your optimistic suite" is returned
 to sender.
+
+Note on prior work: an increasing budget schedule is not new, it is the principle
+of *Curriculum Adversarial Training* (Cai et al., IJCAI 2018). The contribution
+claimed here is the controlled comparison - the same set of budgets in reverse
+order, at identical cost, on the same architecture - together with the log-based
+diagnosis and the KMNIST replication.
 
 For reference, on MNIST at eps=0.30 the literature reports 96.01% (Madry et al.,
 PGD-40) and 95.60% (TRADES). Our best is ~5 points below; our constant-budget

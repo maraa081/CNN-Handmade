@@ -30,7 +30,8 @@ Et le juge officiel **amplifie** l'effet au lieu de le réduire. Passés à
 AutoAttack sur 10 000 images, les deux membres de la paire donnent **82.40%**
 contre **50.35%**, soit **32 points d'écart** — un écart plus grand que celui
 mesuré par notre propre suite d'attaques. C'est la première fois dans ce travail
-qu'une mesure non biaisée va dans le sens de la mesure biaisée, en plus fort.
+qu'un juge **plus fort** que notre suite va dans le sens de la loi, et amplifie
+l'écart au lieu de le réduire.
 
 Le résultat se reproduit sur un second jeu de données (KMNIST, kana japonais) où
 l'écart officiel entre les deux ordres atteint **49.5 points** (51.03% contre
@@ -110,8 +111,10 @@ couches convolutives (32 puis 64 canaux), deux max-poolings, une couche dense,
 architectures.
 
 Le modèle de menace est le même du début à la fin : perturbation de norme
-L-infini au plus **eps = 0.30**, sur des images normalisées dans `[0,1]`. Ce
-n'est pas une valeur choisie à l'aveugle : **c'est la valeur du banc d'essai MNIST
+L-infini au plus **eps = 0.30**, sur des images normalisées dans `[0,1]`. eps
+est un **plafond de norme**, c'est-à-dire le rayon d'une boule, et non une
+distance parcourue : une attaque projetée dans cette boule peut n'en utiliser
+qu'une partie (S.4.2). Ce n'est pas une valeur choisie à l'aveugle : **c'est la valeur du banc d'essai MNIST
 de la littérature**, celle utilisée par Madry et al. (2017) et par TRADES (Zhang
 et al., 2019) — c'est exactement ce qui rend l'ancrage du S.5.1 légitime. C'est
 aussi le régime où un modèle non défendu s'effondre à **0.0%**, ce qui en fait un
@@ -227,8 +230,11 @@ budget d'epochs. Ce document applique désormais 120 epochs partout.
 
 On garde tout fixé (120 epochs, PGD-20, eps = 0.30, augmentation, 60 000 images,
 graine 42) et on ne change que la **finesse du pas** de l'attaque interne. Le
-budget de déplacement, c'est-à-dire la distance maximale que l'attaque peut
-parcourir, vaut `pas x nombre de pas`.
+budget de déplacement, c'est-à-dire le **plafond de norme** de la boule dans
+laquelle l'attaque interne est projetée, vaut `pas x nombre de pas`. Ce n'est
+pas une distance parcourue : à chaque pas, PGD est reprojeté dans la boule
+L-infini de rayon eps, donc la perturbation réellement appliquée peut rester en
+dessous du plafond et ne l'atteint qu'en saturant la boule.
 
 | recette | budget interne | pire cas (maison) | précision propre |
 |---|---|---|---|
@@ -304,6 +310,20 @@ théorique voisine est l'objectif **min-min** de FAT (Wong et al., ICML 2020) :
 l'arrêt anticipé de l'attaque interne change la nature du problème
 d'optimisation.
 
+**Le principe n'est pas nouveau, et il faut le dire nettement.** Ordonner la
+difficulté pendant l'entraînement adversarial est l'idée du *Curriculum
+Adversarial Training* (Cai, Liu et Song, IJCAI 2018) : commencer par des
+attaques plus faibles, puis augmenter progressivement leur force au fil des
+epochs, avec évaluation sur MNIST et CIFAR-10. Notre plan croissant appartient à
+cette famille, et ce travail le **retrouve** plutôt qu'il ne l'invente. Ce qui
+est ajouté ici n'est donc pas le principe, mais la mesure : **le même jeu de
+budgets présenté dans l'ordre inverse**, à coût identique et sur la même
+architecture — ce que CAT ne teste pas ; l'écart chiffré entre les deux ordres,
+en maison puis au juge officiel ; la lecture du mécanisme par les logs (S.4.5) ;
+et le voisin négatif, à savoir qu'un budget de départ élevé (constant ou
+décroissant) ne se contente pas de moins bien marcher, il dégénère (S.4.5,
+`abl_c`).
+
 **Deux précautions sur ce résultat, à écrire noir sur blanc.**
 
 1. **Le chiffre-phare, désormais officiel des deux côtés.** `A6` et `A9` sont
@@ -314,7 +334,7 @@ tous les deux passés au juge officiel :
 | MNIST | `0.2 -> 2 eps` : **82.40%** | `2 -> 0.2 eps` : **50.35%** | 22.0 | **32.1** |
 | KMNIST | `0.2 -> 1 eps` : **51.03%** | `1 -> 0.2 eps` : **1.49%** | 41.0 | **49.5** |
 
-Les deux écarts **grandissent** sous le juge non biaisé. L'objection naturelle
+Les deux écarts **grandissent** sous AutoAttack. L'objection naturelle
 ("et si l'écart de 22 points n'était qu'un artefact de votre suite optimiste ?")
 se retourne donc : c'est le contraire, et de 10 points sur MNIST comme de 8.5 points
 sur KMNIST. Une prédiction avait été écrite avant la mesure d'`A9` (48 à 58%) :
@@ -510,6 +530,14 @@ sujet : **dans la même architecture**, le choix de la recette fait 45 points
 d'écart (50.71% contre 91.25%). L'article ne revendique pas un record ; il
 explique cet écart.
 
+Un mot sur l'ordre, sinon la lecture serait fausse : la recette gagnante de ce
+document (le plan croissant) n'est **pas** une découverte — c'est le principe du
+*Curriculum Adversarial Training* (Cai et al., IJCAI 2018), et plus généralement
+du curriculum learning. Notre apport n'est pas la direction de la rampe, c'est
+sa **mesure contrôlée** : même architecture, mêmes budgets, même coût, ordre
+inversé, plus le diagnostic par les logs et la réplication sur KMNIST (S.4.4 et
+S.7).
+
 ### 5.2 Ce qui est resté ouvert
 
 **Notre implémentation de TRADES ne reproduit pas la référence.** Deux runs,
@@ -533,6 +561,13 @@ compense une perte mal réglée » serait non soutenue par ces mesures.
 
 Tous les chiffres annoncés dans ce document viennent d'AutoAttack (version
 `standard` : APGD-CE, APGD-T, FAB-T, Square), sur 10 000 images, à eps = 0.30.
+AutoAttack n'est pas un juge « non biaisé » : c'est un juge **standardisé**, et
+plus fort que notre suite — c'est précisément pour cela qu'on s'y rapporte. Il
+reste une attaque : rien ne garantit qu'il trouve le pire cas, et il signale
+lui-même quand une de ses composantes progresse (dernière observation de cette
+section). « Officiel » veut donc dire ici « plus fort et standardisé », pas
+« vérité ».
+
 Huit modèles ont été croisés (les deux paires à recette appariée y figurent,
 c'est ce qui rend le résultat phare vérifiable) :
 
